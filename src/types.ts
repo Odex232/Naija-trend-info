@@ -303,6 +303,13 @@ export interface EconomicIndexSettings {
   inflationRate: string;
 }
 
+export interface SportsHubSettings {
+  showLiveScoreboardWidget: boolean;
+  featuredLeague: string;
+  enableTransferTicker: boolean;
+  widgetTitle: string;
+}
+
 export interface WebsiteSettings {
   siteName: string;
   siteDescription: string;
@@ -319,6 +326,7 @@ export interface WebsiteSettings {
   adsterraSmartlinkUrl?: string;
   analyticsId?: string;
   economicIndex?: EconomicIndexSettings;
+  sportsHub?: SportsHubSettings;
 }
 
 export interface AuditLog {

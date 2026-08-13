@@ -1047,221 +1047,293 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
-          <nav className="p-3 space-y-1 text-xs font-medium">
-            <button
-              onClick={() => {
-                setActiveTab('overview');
-                setMobileSidebarOpen(false);
-              }}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'overview' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard Overview</span>
-            </button>
+          <nav className="p-3 space-y-4 text-xs font-medium">
+            {/* MAIN DASHBOARD */}
+            <div>
+              <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Main Overview
+              </div>
+              <button
+                onClick={() => {
+                  setActiveTab('overview');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'overview' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard Overview</span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => setActiveTab('articles')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'articles' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>Articles CMS ({articles.length})</span>
-            </button>
+            {/* CONTENTS & MEDIA MANAGEMENT SECTION */}
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Contents & Media Management
+              </div>
 
-            <button
-              onClick={() => setActiveTab('breaking')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'breaking' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Radio className="w-4 h-4 text-red-400" />
-              <span>Breaking News Ticker</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('articles');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'articles' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span>Articles CMS ({articles.length})</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('categories')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'categories' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <FolderTree className="w-4 h-4" />
-              <span>Categories & Tags</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('sports');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'sports' ? 'bg-emerald-600 text-white font-bold border border-amber-500/40 shadow-sm' : 'text-amber-300 hover:bg-slate-800 hover:text-amber-200'
+                }`}
+              >
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span className="font-semibold">Sports Hub & Scoreboard</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('ads')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'ads' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <DollarSign className="w-4 h-4 text-amber-400" />
-              <span>Ads & Placement Manager</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('media');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'media' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <ImageIcon className="w-4 h-4 text-sky-400" />
+                <span>Media Library</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('media')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'media' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4" />
-              <span>Media Library</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('categories');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'categories' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <FolderTree className="w-4 h-4" />
+                <span>Categories & Tags</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('submissions')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'submissions' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Send className="w-4 h-4 text-emerald-400" />
-              <span>News Tips ({submissions.length})</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('breaking');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'breaking' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Radio className="w-4 h-4 text-red-400" />
+                <span>Breaking News Ticker</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('comments')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'comments' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Comments ({comments.length})</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('editorial');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'editorial' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Newspaper className="w-4 h-4 text-emerald-400" />
+                <span>Editorial Desk & Leadership</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('contacts')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'contacts' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Mail className="w-4 h-4 text-emerald-400" />
-              <span>Contact Messages ({contacts.length})</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('pages');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'pages' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <FileCode className="w-4 h-4 text-slate-300" />
+                <span>Pages & Policies (CMS Pages)</span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => setActiveTab('sports')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'sports' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span>Sports Scoreboard</span>
-            </button>
+            {/* AUDIENCE & MESSAGES */}
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Audience & Engagement
+              </div>
 
-            <button
-              onClick={() => setActiveTab('newsletter')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'newsletter' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Mail className="w-4 h-4" />
-              <span>Newsletter & Email</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('submissions');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'submissions' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Send className="w-4 h-4 text-emerald-400" />
+                <span>News Tips ({submissions.length})</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('users');
-                setMobileSidebarOpen(false);
-              }}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'users' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Users & Roles</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('comments');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'comments' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Comments ({comments.length})</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('editorial');
-                setMobileSidebarOpen(false);
-              }}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'editorial' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Newspaper className="w-4 h-4 text-emerald-400" />
-              <span>Editorial Desk & Leadership</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('contacts');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'contacts' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Mail className="w-4 h-4 text-emerald-400" />
+                <span>Contact Messages ({contacts.length})</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('pages');
-                setMobileSidebarOpen(false);
-              }}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'pages' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <FileCode className="w-4 h-4 text-emerald-400" />
-              <span>Pages & Policies (CMS Pages)</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('newsletter');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'newsletter' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Mail className="w-4 h-4 text-sky-400" />
+                <span>Newsletter & Broadcast</span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'settings' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <SettingsIcon className="w-4 h-4" />
-              <span>System Settings</span>
-            </button>
+            {/* MONETIZATION & SYSTEM */}
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Monetization & System
+              </div>
 
-            <button
-              onClick={() => {
-                setActiveTab('economic');
-                setMobileSidebarOpen(false);
-              }}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'economic' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4 text-amber-400" />
-              <span>Economic Index & Rates</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('ads');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'ads' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <DollarSign className="w-4 h-4 text-amber-400" />
+                <span>Ads & Placement Manager</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('social')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'social' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Share2 className="w-4 h-4 text-emerald-400" />
-              <span>Social Media Handles</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('economic');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'economic' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4 text-amber-400" />
+                <span>Economic Index & FX Rates</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('audit')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'audit' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              <span>Audit Log History</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('social');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'social' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Share2 className="w-4 h-4 text-emerald-400" />
+                <span>Social Media Handles</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('backup')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'backup' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Database className="w-4 h-4" />
-              <span>Backup & Recovery</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('users');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'users' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Users & Access Roles</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('seo')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'seo' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Globe className="w-4 h-4 text-sky-400" />
-              <span>SEO & Sitemap XML</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('settings');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'settings' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <SettingsIcon className="w-4 h-4" />
+                <span>System Settings</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('audit');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'audit' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+                <span>Audit Log History</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('backup');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'backup' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Database className="w-4 h-4 text-slate-300" />
+                <span>Backup & Recovery</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('seo');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                  activeTab === 'seo' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Globe className="w-4 h-4 text-sky-400" />
+                <span>SEO & Sitemap XML</span>
+              </button>
+            </div>
           </nav>
 
           <div className="p-3 border-t border-slate-800 space-y-3">
@@ -1844,60 +1916,345 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
 
-          {/* TAB 9: SPORTS SCOREBOARD MANAGER */}
+          {/* TAB 9: SPORTS HUB & SCOREBOARD SETTINGS */}
           {activeTab === 'sports' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              {/* Top Header */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl">
                 <div>
-                  <h1 className="text-2xl font-bold font-serif text-white">Sports Match Scoreboard Manager</h1>
-                  <p className="text-xs text-slate-400 mt-1">Update NPFL, Super Eagles, Premier League fixtures & live scores.</p>
+                  <div className="flex items-center space-x-2">
+                    <span className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
+                      <Trophy className="w-5 h-5" />
+                    </span>
+                    <h1 className="text-2xl font-bold font-serif text-white">NaijaTrendiInfo Sports Hub Settings</h1>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2 max-w-2xl">
+                    Manage Sports Hub contents, media coverage, NPFL & international live match scoreboards, league fixtures, and featured sports settings.
+                  </p>
                 </div>
-                <button
-                  onClick={() => setEditingFixture({ homeTeam: '', awayTeam: '', league: 'NPFL', status: 'UPCOMING' })}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Match Fixture</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const sportsCategory = categories.find((c) => c.slug === 'sports' || c.name.toLowerCase().includes('sport'));
+                      setEditingArticle({
+                        categoryId: sportsCategory?.id || categories[0]?.id || 'sports',
+                        categoryName: sportsCategory?.name || 'Sports',
+                        status: 'published',
+                        tags: ['Sports', 'NPFL', 'SuperEagles', 'NaijaSports'],
+                        authorId: currentUser?.id || 'admin',
+                        authorName: currentUser?.name || 'Sports Editor'
+                      });
+                      setArticleModalOpen(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Publish Sports News</span>
+                  </button>
+                  <button
+                    onClick={() => setEditingFixture({ homeTeam: '', awayTeam: '', league: 'NPFL', status: 'UPCOMING', matchDate: new Date().toISOString() })}
+                    className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-all"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    <span>Add Match Fixture</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sportsFixtures.map((fix) => (
-                  <div key={fix.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
-                    <div className="flex justify-between text-xs font-bold text-amber-400">
-                      <span>{fix.league}</span>
-                      <span>{fix.status}</span>
-                    </div>
-                    <div className="text-sm font-extrabold text-white flex justify-between">
-                      <span>{fix.homeTeam}</span>
-                      <span className="font-mono text-amber-300">{fix.homeScore ?? '-'}</span>
-                    </div>
-                    <div className="text-sm font-extrabold text-white flex justify-between">
-                      <span>{fix.awayTeam}</span>
-                      <span className="font-mono text-amber-300">{fix.awayScore ?? '-'}</span>
-                    </div>
-                    <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800/80">
-                      <button
-                        onClick={() => setEditingFixture(fix)}
-                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
-                        title="Edit Fixture"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        disabled={deletingId === fix.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSportsFixture(fix.id);
-                        }}
-                        className="p-1.5 bg-red-950 text-red-300 hover:bg-red-900 border border-red-800/60 rounded-lg text-xs cursor-pointer disabled:opacity-50"
-                        title="Delete Match Fixture"
-                      >
-                        {deletingId === fix.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
-                      </button>
+              {/* Sports Hub Quick Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Sports Fixtures</div>
+                    <div className="text-xl font-black text-white font-mono">{sportsFixtures.length}</div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl animate-pulse">
+                    <Radio className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Live Matches</div>
+                    <div className="text-xl font-black text-red-400 font-mono">
+                      {sportsFixtures.filter((f) => f.status === 'LIVE').length}
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Sports Articles</div>
+                    <div className="text-xl font-black text-emerald-400 font-mono">
+                      {articles.filter((a) => a.categoryName?.toLowerCase().includes('sport') || a.categoryId === 'sports').length}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
+                  <div className="p-3 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-xl">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Sports Page</div>
+                    <button
+                      onClick={() => onNavigateSite('category/sports')}
+                      className="text-xs text-sky-400 hover:text-sky-300 font-bold underline cursor-pointer mt-0.5 block"
+                    >
+                      View Live Sports Hub →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sports Hub Widget & Global Settings Form */}
+              <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                      <SettingsIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-white">Sports Hub Header & Scoreboard Banner Settings</h2>
+                      <p className="text-xs text-slate-400">Control live score display, featured leagues, and sports widget placement.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                  {/* Widget Enable Toggle */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                    <label className="text-xs font-bold text-white flex items-center justify-between cursor-pointer">
+                      <span>Enable Live Scoreboard Bar</span>
+                      <input
+                        type="checkbox"
+                        checked={localSettings.sportsHub?.showLiveScoreboardWidget ?? true}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            sportsHub: {
+                              showLiveScoreboardWidget: e.target.checked,
+                              featuredLeague: localSettings.sportsHub?.featuredLeague || 'NPFL',
+                              enableTransferTicker: localSettings.sportsHub?.enableTransferTicker ?? true,
+                              widgetTitle: localSettings.sportsHub?.widgetTitle || 'NaijaTrendiInfo Live Sports'
+                            }
+                          })
+                        }
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-900 border-slate-700"
+                      />
+                    </label>
+                    <p className="text-[11px] text-slate-400">Display live sports ticker bar across the top of header and sports homepage.</p>
+                  </div>
+
+                  {/* Featured League Selector */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                    <label className="text-xs font-bold text-white block">Featured League / Tournament</label>
+                    <select
+                      value={localSettings.sportsHub?.featuredLeague || 'NPFL'}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          sportsHub: {
+                            showLiveScoreboardWidget: localSettings.sportsHub?.showLiveScoreboardWidget ?? true,
+                            featuredLeague: e.target.value,
+                            enableTransferTicker: localSettings.sportsHub?.enableTransferTicker ?? true,
+                            widgetTitle: localSettings.sportsHub?.widgetTitle || 'NaijaTrendiInfo Live Sports'
+                          }
+                        })
+                      }
+                      className="w-full bg-slate-900 text-white text-xs p-2.5 rounded-xl border border-slate-800 outline-none"
+                    >
+                      <option value="NPFL">Nigeria Premier Football League (NPFL)</option>
+                      <option value="Super Eagles">Super Eagles & AFCON Qualifiers</option>
+                      <option value="Premier League">English Premier League (EPL)</option>
+                      <option value="Champions League">UEFA Champions League</option>
+                      <option value="La Liga">Spanish La Liga</option>
+                    </select>
+                  </div>
+
+                  {/* Widget Custom Title */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                    <label className="text-xs font-bold text-white block">Sports Scoreboard Title</label>
+                    <input
+                      type="text"
+                      value={localSettings.sportsHub?.widgetTitle || 'NaijaTrendiInfo Sports Hub - Live Matches'}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          sportsHub: {
+                            showLiveScoreboardWidget: localSettings.sportsHub?.showLiveScoreboardWidget ?? true,
+                            featuredLeague: localSettings.sportsHub?.featuredLeague || 'NPFL',
+                            enableTransferTicker: localSettings.sportsHub?.enableTransferTicker ?? true,
+                            widgetTitle: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full bg-slate-900 text-white text-xs p-2.5 rounded-xl border border-slate-800 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-all"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Save Sports Hub Configuration</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Match Fixtures Scoreboard Grid */}
+              <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                      <span>Live Match Scoreboard & Fixture Management</span>
+                      <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                        {sportsFixtures.length} Matches Listed
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">Update live match scores, match status (LIVE, UPCOMING, FINISHED), and team goals.</p>
+                  </div>
+                  <button
+                    onClick={() => setEditingFixture({ homeTeam: '', awayTeam: '', league: 'NPFL', status: 'UPCOMING', matchDate: new Date().toISOString() })}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center space-x-2 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Fixture</span>
+                  </button>
+                </div>
+
+                {sportsFixtures.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-xs">
+                    No match fixtures currently added. Click "Add Match Fixture" to create live match scoreboards.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sportsFixtures.map((fix) => (
+                      <div key={fix.id} className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-3 relative group hover:border-slate-700 transition-all">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className="text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800/60 text-[10px]">
+                            {fix.league}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            fix.status === 'LIVE'
+                              ? 'bg-red-950 text-red-400 border border-red-800 animate-pulse'
+                              : fix.status === 'FINISHED'
+                              ? 'bg-slate-800 text-slate-400'
+                              : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                          }`}>
+                            {fix.status === 'LIVE' ? `🔴 LIVE ${fix.minute ? `(${fix.minute}')` : ''}` : fix.status}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 pt-1">
+                          <div className="text-xs font-bold text-white flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
+                            <span>{fix.homeTeam}</span>
+                            <span className="font-mono text-sm text-amber-300 font-black">{fix.homeScore ?? '-'}</span>
+                          </div>
+                          <div className="text-xs font-bold text-white flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
+                            <span>{fix.awayTeam}</span>
+                            <span className="font-mono text-sm text-amber-300 font-black">{fix.awayScore ?? '-'}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[10px] text-slate-400">
+                          <span>{fix.venue || 'Stadium'}</span>
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => setEditingFixture(fix)}
+                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer"
+                              title="Edit Match Fixture & Score"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              disabled={deletingId === fix.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSportsFixture(fix.id);
+                              }}
+                              className="p-1.5 bg-red-950 text-red-300 hover:bg-red-900 border border-red-800/60 rounded-lg cursor-pointer disabled:opacity-50"
+                              title="Delete Fixture"
+                            >
+                              {deletingId === fix.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Sports Media & Articles Management Card */}
+              <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-emerald-400" />
+                      <span>Sports Articles & Media Coverage</span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">Articles categorized under Sports, NPFL, or Football.</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('articles')}
+                    className="text-xs font-bold text-emerald-400 hover:underline flex items-center space-x-1"
+                  >
+                    <span>Manage All Articles</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {articles.filter((a) => a.categoryName?.toLowerCase().includes('sport') || a.categoryId === 'sports').length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4 text-center">No sports articles found. Click "Publish Sports News" above to publish one.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {articles
+                      .filter((a) => a.categoryName?.toLowerCase().includes('sport') || a.categoryId === 'sports')
+                      .slice(0, 6)
+                      .map((art) => (
+                        <div key={art.id} className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center space-x-3 overflow-hidden">
+                            {art.featuredImage ? (
+                              <img src={art.featuredImage} alt={art.title} className="w-12 h-12 object-cover rounded-xl shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center shrink-0">
+                                <Trophy className="w-5 h-5 text-amber-400" />
+                              </div>
+                            )}
+                            <div className="truncate">
+                              <h4 className="font-bold text-white truncate">{art.title}</h4>
+                              <div className="text-[10px] text-slate-400 flex items-center space-x-2 mt-0.5">
+                                <span>{art.categoryName}</span>
+                                <span>•</span>
+                                <span>{new Date(art.publishedAt).toLocaleDateString()}</span>
+                                <span>•</span>
+                                <span className="text-emerald-400">{art.views || 0} views</span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setEditingArticle(art);
+                              setArticleModalOpen(true);
+                            }}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3 py-1.5 rounded-xl shrink-0 cursor-pointer text-[11px]"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
