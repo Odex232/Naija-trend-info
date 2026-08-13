@@ -1,0 +1,6 @@
+{
+  "name": "NaijaTrendiInfo",
+  "description": "Nigeria's leading digital news, media, and information platform featuring breaking news, politics, business, entertainment, sports, ads manager, and admin dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

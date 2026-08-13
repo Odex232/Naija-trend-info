@@ -1,0 +1,3501 @@
+import React, { useState } from 'react';
+import {
+  Newspaper,
+  LayoutDashboard,
+  FileText,
+  Radio,
+  FolderTree,
+  Image as ImageIcon,
+  DollarSign,
+  MessageSquare,
+  Mail,
+  Users,
+  Settings as SettingsIcon,
+  ShieldAlert,
+  Database,
+  Globe,
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  Check,
+  X,
+  Upload,
+  Send,
+  LogOut,
+  Sparkles,
+  TrendingUp,
+  RotateCcw,
+  Download,
+  AlertCircle,
+  AlertTriangle,
+  Copy,
+  BarChart2,
+  Lock,
+  Layers,
+  Search,
+  Pin,
+  Trophy,
+  Loader2,
+  Menu,
+  CheckCircle2,
+  ExternalLink
+} from 'lucide-react';
+import {
+  Article,
+  Category,
+  BreakingNews,
+  Ad,
+  AdPlacement,
+  WebsiteSettings,
+  User,
+  Comment,
+  NewsSubmission,
+  ContactMessage,
+  AuditLog,
+  QuickLink,
+  EditorialDeskEntry,
+  InformationEntry,
+  SocialMediaLink,
+  MediaFile,
+  SportsFixture,
+  SitePage
+} from '../types';
+import { api } from '../services/api';
+import { WYSIWYGEditor } from '../components/WYSIWYGEditor';
+import { MediaLibrary } from '../components/MediaLibrary';
+import { SocialMediaManager } from '../components/SocialMediaManager';
+import { Share2, FileCode } from 'lucide-react';
+
+interface AdminDashboardViewProps {
+  currentUser: User;
+  articles: Article[];
+  categories: Category[];
+  breakingNews: BreakingNews[];
+  ads: Ad[];
+  adPlacements: AdPlacement[];
+  settings: WebsiteSettings;
+  users: User[];
+  comments: Comment[];
+  submissions: NewsSubmission[];
+  contacts: ContactMessage[];
+  subscribers: any[];
+  auditLogs: AuditLog[];
+  quickLinks: QuickLink[];
+  editorialDesk: EditorialDeskEntry[];
+  information: InformationEntry[];
+  socialLinks: SocialMediaLink[];
+  mediaFiles: MediaFile[];
+  sportsFixtures: SportsFixture[];
+  pages?: SitePage[];
+  onRefreshData: () => void;
+  onLogout: () => void;
+  onNavigateSite: (view: string, param?: string) => void;
+}
+
+export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
+  currentUser,
+  articles,
+  categories,
+  breakingNews,
+  ads,
+  adPlacements,
+  settings,
+  users,
+  comments,
+  submissions,
+  contacts,
+  subscribers,
+  auditLogs,
+  quickLinks,
+  editorialDesk,
+  information,
+  socialLinks,
+  mediaFiles,
+  sportsFixtures,
+  pages: sitePages = [],
+  onRefreshData,
+  onLogout,
+  onNavigateSite
+}) => {
+  const [activeTab, setActiveTab] = useState<
+    | 'overview'
+    | 'articles'
+    | 'breaking'
+    | 'categories'
+    | 'media'
+    | 'ads'
+    | 'submissions'
+    | 'comments'
+    | 'contacts'
+    | 'newsletter'
+    | 'users'
+    | 'settings'
+    | 'economic'
+    | 'social'
+    | 'editorial'
+    | 'pages'
+    | 'audit'
+    | 'backup'
+    | 'seo'
+    | 'sports'
+  >('overview');
+
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Editorial Desk Entry Modal State
+  const [editingEditorialEntry, setEditingEditorialEntry] = useState<Partial<EditorialDeskEntry> | null>(null);
+
+  // Site Page / Legal Policy Modal State
+  const [editingPage, setEditingPage] = useState<Partial<SitePage> | null>(null);
+
+  // Article Modal State
+  const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
+  const [articleModalOpen, setArticleModalOpen] = useState(false);
+
+  // Category Modal State
+  const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
+
+  // Breaking News Modal State
+  const [editingBreaking, setEditingBreaking] = useState<Partial<BreakingNews> | null>(null);
+
+  // Ad Modal State
+  const [editingAd, setEditingAd] = useState<Partial<Ad> | null>(null);
+
+  // Sports Fixture Modal State
+  const [editingFixture, setEditingFixture] = useState<Partial<SportsFixture> | null>(null);
+
+  // User Modal State
+  const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
+
+  // Settings State
+  const [localSettings, setLocalSettings] = useState<WebsiteSettings>(settings);
+
+  // Media Drag Upload State
+  const [uploading, setUploading] = useState(false);
+
+  // Newsletter Broadcast Form
+  const [broadcastSubject, setBroadcastSubject] = useState('');
+  const [broadcastContent, setBroadcastContent] = useState('');
+  const [broadcastSentMsg, setBroadcastSentMsg] = useState('');
+
+  // Notification and Deletion States
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+  const [actionErrorMsg, setActionErrorMsg] = useState('');
+
+  // Custom Confirm Modal Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    isDanger?: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const triggerSuccessNotification = (msg: string) => {
+    setActionSuccessMsg(msg);
+    setTimeout(() => {
+      setActionSuccessMsg('');
+    }, 4000);
+  };
+
+  const triggerErrorNotification = (msg: string) => {
+    setActionErrorMsg(msg);
+    setTimeout(() => {
+      setActionErrorMsg('');
+    }, 5000);
+  };
+
+  const askConfirmation = (
+    title: string,
+    message: string,
+    onConfirm: () => void | Promise<void>,
+    options?: { confirmLabel?: string; cancelLabel?: string; isDanger?: boolean }
+  ) => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      confirmLabel: options?.confirmLabel || 'Confirm',
+      cancelLabel: options?.cancelLabel || 'Cancel',
+      isDanger: options?.isDanger !== false,
+      onConfirm
+    });
+  };
+
+  // Save Settings
+  const handleSaveSettings = async () => {
+    try {
+      await api.updateSettings(localSettings);
+      triggerSuccessNotification('System Settings updated successfully!');
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Error updating settings');
+    }
+  };
+
+  // Save Editorial Desk Entry
+  const handleSaveEditorialEntry = async () => {
+    if (!editingEditorialEntry?.name || !editingEditorialEntry?.department) {
+      triggerErrorNotification('Name and Department/Title are required.');
+      return;
+    }
+    try {
+      let updatedList: EditorialDeskEntry[] = [];
+      if (editingEditorialEntry.id) {
+        updatedList = editorialDesk.map((e) =>
+          e.id === editingEditorialEntry.id ? ({ ...e, ...editingEditorialEntry } as EditorialDeskEntry) : e
+        );
+      } else {
+        const newEntry: EditorialDeskEntry = {
+          id: `ed-${Date.now()}`,
+          department: editingEditorialEntry.department || 'Editorial Desk',
+          name: editingEditorialEntry.name || '',
+          role: editingEditorialEntry.role || 'Editor',
+          email: editingEditorialEntry.email || 'editor@naijatrendinfo.com.ng',
+          phone: editingEditorialEntry.phone || '',
+          bio: editingEditorialEntry.bio || '',
+          photoUrl: editingEditorialEntry.photoUrl || '',
+          isActive: editingEditorialEntry.isActive !== false
+        };
+        updatedList = [...editorialDesk, newEntry];
+      }
+      await api.updateEditorialDesk(updatedList);
+      triggerSuccessNotification('Editorial Desk profile saved successfully!');
+      setEditingEditorialEntry(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save Editorial Desk entry.');
+    }
+  };
+
+  // Delete Editorial Desk Entry
+  const handleDeleteEditorialEntry = (id: string, name?: string) => {
+    const entryName = name ? ` "${name}"` : '';
+    askConfirmation(
+      'Delete Editorial Member',
+      `Are you sure you want to remove${entryName} from the public Editorial Desk Leadership?`,
+      async () => {
+        try {
+          const updated = editorialDesk.filter((e) => e.id !== id);
+          await api.updateEditorialDesk(updated);
+          triggerSuccessNotification('Editorial member profile removed.');
+          onRefreshData();
+        } catch (e: any) {
+          triggerErrorNotification(e.message || 'Failed to remove entry.');
+        }
+      }
+    );
+  };
+
+  // Save Site Page / Policy Page
+  const handleSavePage = async () => {
+    if (!editingPage?.title || !editingPage?.slug || !editingPage?.content) {
+      triggerErrorNotification('Page title, URL slug, and content are required.');
+      return;
+    }
+    try {
+      if (editingPage.id) {
+        await api.updatePage(editingPage.id, editingPage);
+        triggerSuccessNotification(`Page "${editingPage.title}" updated successfully!`);
+      } else {
+        await api.createPage(editingPage);
+        triggerSuccessNotification(`New page "${editingPage.title}" created successfully!`);
+      }
+      setEditingPage(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save page content.');
+    }
+  };
+
+  // Delete Site Page
+  const handleDeletePage = (id: string, title?: string) => {
+    const pageTitle = title ? ` "${title}"` : '';
+    askConfirmation(
+      'Delete Static Page',
+      `Are you sure you want to delete page${pageTitle}? Readers accessing this page link will be affected.`,
+      async () => {
+        try {
+          await api.deletePage(id);
+          triggerSuccessNotification('Page deleted successfully.');
+          onRefreshData();
+        } catch (e: any) {
+          triggerErrorNotification(e.message || 'Failed to delete page.');
+        }
+      }
+    );
+  };
+
+  // Delete Article with confirmation
+  const handleDeleteArticle = (id: string, title?: string) => {
+    const articleTitle = title ? ` "${title}"` : '';
+    askConfirmation(
+      'Delete Article',
+      `Are you sure you want to permanently delete article${articleTitle}? This action cannot be undone.`,
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteArticle(id);
+          if (editingArticle?.id === id) {
+            setArticleModalOpen(false);
+            setEditingArticle(null);
+          }
+          triggerSuccessNotification(res.message || 'Article deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete article failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete article. Please try again.');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Article', isDanger: true }
+    );
+  };
+
+  // Save Article
+  const handleSaveArticle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingArticle?.title || !editingArticle?.categoryId) {
+      triggerErrorNotification('Please fill required article title and select a category.');
+      return;
+    }
+
+    const cat = categories.find((c) => c.id === editingArticle.categoryId);
+    const payload = {
+      ...editingArticle,
+      categoryName: cat ? cat.name : 'General',
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      authorAvatar: currentUser.avatar
+    };
+
+    try {
+      if (editingArticle.id) {
+        await api.updateArticle(editingArticle.id, payload);
+        triggerSuccessNotification('Article updated successfully!');
+      } else {
+        await api.createArticle(payload);
+        triggerSuccessNotification('New article published successfully!');
+      }
+
+      setArticleModalOpen(false);
+      setEditingArticle(null);
+      onRefreshData();
+    } catch (err: any) {
+      triggerErrorNotification(err.message || 'Failed to save article.');
+    }
+  };
+
+  // Delete Category
+  const handleDeleteCategory = (id: string, name: string) => {
+    askConfirmation(
+      'Delete Category',
+      `Are you sure you want to delete category "${name}"?`,
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteCategory(id);
+          if (editingCategory?.id === id) setEditingCategory(null);
+          triggerSuccessNotification(res.message || 'Category deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete category failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete category');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Category', isDanger: true }
+    );
+  };
+
+  // Save Category
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory?.name) return;
+    try {
+      if (editingCategory.id) {
+        await api.updateCategory(editingCategory.id, editingCategory);
+        triggerSuccessNotification('Category updated successfully!');
+      } else {
+        await api.createCategory(editingCategory);
+        triggerSuccessNotification('New category added successfully!');
+      }
+      setEditingCategory(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save category');
+    }
+  };
+
+  // Delete Breaking News
+  const handleDeleteBreaking = (id: string) => {
+    askConfirmation(
+      'Delete Breaking News Alert',
+      'Are you sure you want to delete this breaking news alert?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteBreakingNews(id);
+          if (editingBreaking?.id === id) setEditingBreaking(null);
+          triggerSuccessNotification(res.message || 'Breaking news item deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete breaking news failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete breaking news item');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Alert', isDanger: true }
+    );
+  };
+
+  // Save Breaking News
+  const handleSaveBreaking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBreaking?.title) return;
+    try {
+      if (editingBreaking.id) {
+        await api.updateBreakingNews(editingBreaking.id, editingBreaking);
+        triggerSuccessNotification('Breaking news updated successfully!');
+      } else {
+        await api.createBreakingNews(editingBreaking);
+        triggerSuccessNotification('Breaking news ticker broadcasted!');
+      }
+      setEditingBreaking(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save breaking news');
+    }
+  };
+
+  // Delete Ad
+  const handleDeleteAd = (id: string) => {
+    askConfirmation(
+      'Delete Ad Campaign',
+      'Are you sure you want to delete this advertisement campaign?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteAd(id);
+          if (editingAd?.id === id) setEditingAd(null);
+          triggerSuccessNotification(res.message || 'Ad campaign deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete ad failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete ad campaign');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Ad', isDanger: true }
+    );
+  };
+
+  // Save Ad
+  const handleSaveAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAd?.name) return;
+    try {
+      if (editingAd.id) {
+        await api.updateAd(editingAd.id, editingAd);
+        triggerSuccessNotification('Ad campaign updated!');
+      } else {
+        await api.createAd(editingAd);
+        triggerSuccessNotification('New ad campaign created!');
+      }
+      setEditingAd(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save ad');
+    }
+  };
+
+  // File Upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await api.uploadMedia(file);
+      triggerSuccessNotification('File uploaded to media library!');
+      onRefreshData();
+    } catch (err: any) {
+      triggerErrorNotification(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Delete Media
+  const handleDeleteMedia = (id: string) => {
+    askConfirmation(
+      'Delete Media Asset',
+      'Are you sure you want to permanently delete this media file?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteMedia(id);
+          triggerSuccessNotification(res.message || 'Media file deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete media failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete media asset');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Asset', isDanger: true }
+    );
+  };
+
+  // Newsletter Broadcast
+  const handleBroadcastNewsletter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastSubject || !broadcastContent) return;
+    try {
+      const res = await api.broadcastNewsletter(broadcastSubject, broadcastContent);
+      setBroadcastSentMsg(`Newsletter broadcast sent to ${res.count} subscribers!`);
+      triggerSuccessNotification(`Newsletter sent to ${res.count} subscribers!`);
+      setBroadcastSubject('');
+      setBroadcastContent('');
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to send newsletter broadcast');
+    }
+  };
+
+  // Logout Handler
+  const handleLogoutClick = () => {
+    askConfirmation(
+      'Log Out Admin Session',
+      'Are you sure you want to log out of the Admin Dashboard?',
+      async () => {
+        try {
+          await api.logout();
+        } catch (e) {
+          console.error('Error logging out:', e);
+        }
+        onLogout();
+        onNavigateSite('home');
+      },
+      { confirmLabel: 'Log Out', isDanger: true }
+    );
+  };
+
+  // Delete News Tip Submission
+  const handleDeleteSubmission = (id: string) => {
+    askConfirmation(
+      'Delete News Tip Submission',
+      'Are you sure you want to permanently delete this news tip submission?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteSubmission(id);
+          triggerSuccessNotification(res.message || 'Submission deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete submission failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete submission');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Tip', isDanger: true }
+    );
+  };
+
+  // Delete Comment
+  const handleDeleteComment = (id: string) => {
+    askConfirmation(
+      'Delete User Comment',
+      'Are you sure you want to permanently delete this comment?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteComment(id);
+          triggerSuccessNotification(res.message || 'Comment deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete comment failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete comment');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Comment', isDanger: true }
+    );
+  };
+
+  // Delete Contact Message
+  const handleDeleteContact = (id: string) => {
+    askConfirmation(
+      'Delete Contact Message',
+      'Are you sure you want to permanently delete this contact message?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteContact(id);
+          triggerSuccessNotification(res.message || 'Contact message deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete contact failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete contact message');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Message', isDanger: true }
+    );
+  };
+
+  // Delete Sports Fixture
+  const handleDeleteSportsFixture = (id: string) => {
+    askConfirmation(
+      'Delete Match Fixture',
+      'Are you sure you want to permanently delete this match fixture?',
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteSportsFixture(id);
+          if (editingFixture?.id === id) setEditingFixture(null);
+          triggerSuccessNotification(res.message || 'Match fixture deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete sports fixture failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete fixture');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete Fixture', isDanger: true }
+    );
+  };
+
+  // Save Sports Fixture
+  const handleSaveFixture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFixture?.homeTeam || !editingFixture?.awayTeam) return;
+    try {
+      if (editingFixture.id) {
+        await api.updateSportsFixture(editingFixture.id, editingFixture);
+        triggerSuccessNotification('Sports fixture updated!');
+      } else {
+        await api.createSportsFixture(editingFixture);
+        triggerSuccessNotification('New sports fixture created!');
+      }
+      setEditingFixture(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save fixture');
+    }
+  };
+
+  // Delete Subscriber
+  const handleDeleteSubscriber = (id: string, email: string) => {
+    askConfirmation(
+      'Remove Subscriber',
+      `Are you sure you want to remove subscriber "${email}" from the mailing list?`,
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteSubscriber(id);
+          triggerSuccessNotification(res.message || 'Subscriber removed successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete subscriber failed:', e);
+          triggerErrorNotification(e.message || 'Failed to remove subscriber');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Remove Subscriber', isDanger: true }
+    );
+  };
+
+  // Delete User Account
+  const handleDeleteUser = (id: string, name: string) => {
+    askConfirmation(
+      'Delete User Account',
+      `Are you sure you want to permanently delete user account "${name}"?`,
+      async () => {
+        setDeletingId(id);
+        try {
+          const res = await api.deleteUser(id);
+          if (editingUser?.id === id) setEditingUser(null);
+          triggerSuccessNotification(res.message || 'User account deleted successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete user failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete user account');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete User', isDanger: true }
+    );
+  };
+
+  // Save User Account
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser?.email || !editingUser?.name) return;
+    try {
+      if (editingUser.id) {
+        const resUser = await api.updateUser(editingUser.id, editingUser);
+        if (currentUser && (editingUser.id === currentUser.id || editingUser.email.toLowerCase() === currentUser.email.toLowerCase())) {
+          localStorage.setItem('currentUser', JSON.stringify(resUser));
+        }
+        triggerSuccessNotification('User account updated!');
+      } else {
+        await api.createUser(editingUser);
+        triggerSuccessNotification('New user created!');
+      }
+      setEditingUser(null);
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to save user');
+    }
+  };
+
+  // Clear Audit Logs
+  const handleClearAuditLogs = () => {
+    askConfirmation(
+      'Clear Audit Logs',
+      'Are you sure you want to permanently clear all audit log entries?',
+      async () => {
+        setDeletingId('audit-all');
+        try {
+          const res = await api.clearAuditLogs();
+          triggerSuccessNotification(res.message || 'Audit logs cleared successfully');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Clear audit logs failed:', e);
+          triggerErrorNotification(e.message || 'Failed to clear audit logs');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Clear All Audit Logs', isDanger: true }
+    );
+  };
+
+  // Backup Creation
+  const handleCreateBackup = async () => {
+    try {
+      await api.createBackup();
+      triggerSuccessNotification('Database backup created successfully!');
+      onRefreshData();
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to create backup');
+    }
+  };
+
+  // Backup Restore
+  const handleRestoreBackup = (backupId: string) => {
+    askConfirmation(
+      'Restore Database Snapshot',
+      'Are you sure you want to restore database state from this backup snapshot? Current unsaved changes will be overwritten.',
+      async () => {
+        try {
+          await api.restoreBackup(backupId);
+          triggerSuccessNotification('Database restored successfully!');
+          onRefreshData();
+        } catch (e: any) {
+          triggerErrorNotification(e.message || 'Failed to restore backup');
+        }
+      },
+      { confirmLabel: 'Restore Snapshot', isDanger: true }
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {/* Toast Notification for Admin Actions */}
+      {actionSuccessMsg && (
+        <div className="fixed top-4 right-4 z-[100] bg-emerald-900/95 border border-emerald-500 text-white font-medium text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 backdrop-blur-md animate-fade-in">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-semibold">{actionSuccessMsg}</span>
+          <button onClick={() => setActionSuccessMsg('')} className="ml-2 hover:text-emerald-200 cursor-pointer">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {actionErrorMsg && (
+        <div className="fixed top-4 right-4 z-[100] bg-red-950/95 border border-red-500 text-white font-medium text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 backdrop-blur-md animate-fade-in">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <span className="font-semibold">{actionErrorMsg}</span>
+          <button onClick={() => setActionErrorMsg('')} className="ml-2 hover:text-red-200 cursor-pointer">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Custom Confirm Modal Dialog */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-md w-full shadow-2xl text-slate-100 space-y-4">
+            <div className="flex items-center space-x-3 text-amber-400">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="text-lg font-bold font-serif text-white">{confirmDialog.title}</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              {confirmDialog.message}
+            </p>
+            <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+              >
+                {confirmDialog.cancelLabel || 'Cancel'}
+              </button>
+              <button
+                onClick={async () => {
+                  const onConf = confirmDialog.onConfirm;
+                  setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                  await onConf();
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-colors cursor-pointer shadow-md ${
+                  confirmDialog.isDanger !== false
+                    ? 'bg-red-600 hover:bg-red-500'
+                    : 'bg-emerald-600 hover:bg-emerald-500'
+                }`}
+              >
+                {confirmDialog.confirmLabel || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Top Admin Navigation Header */}
+      <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="md:hidden p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700 cursor-pointer"
+            title="Toggle Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+            <Newspaper className="w-5 h-5 text-amber-300" />
+          </div>
+          <div>
+            <span className="font-extrabold text-base font-serif text-white tracking-tight">
+              NAIJA<span className="text-emerald-400">TRENDI</span>INFO
+            </span>
+            <span className="ml-2 bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded tracking-widest uppercase hidden sm:inline-block">
+              ADMIN CMS
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <button
+            onClick={() => onNavigateSite('home')}
+            className="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-400 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 flex items-center space-x-1"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">View Live Site</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('users');
+              setEditingUser(currentUser);
+            }}
+            className="flex items-center space-x-2 pl-2 sm:pl-4 border-l border-slate-800 hover:bg-slate-800/60 p-1 rounded-xl transition-all text-left cursor-pointer group"
+            title="Click to edit your profile"
+          >
+            <div className="w-7 h-7 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xs font-bold shrink-0 border border-emerald-500/40 group-hover:border-emerald-400">
+              {currentUser.avatar ? (
+                <img src={currentUser.avatar} alt={currentUser.name} className="w-7 h-7 rounded-full object-cover" />
+              ) : (
+                currentUser.name.charAt(0)
+              )}
+            </div>
+            <div className="hidden sm:block text-left text-xs">
+              <div className="font-bold text-white group-hover:text-emerald-400 transition-colors">{currentUser.name}</div>
+              <div className="text-[10px] text-amber-400 flex items-center gap-1">
+                <span>{currentUser.role}</span>
+                <Edit className="w-2.5 h-2.5 text-slate-400 group-hover:text-emerald-400" />
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={handleLogoutClick}
+            className="bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-200 hover:text-white text-xs font-bold px-2.5 sm:px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Log Out Admin Session"
+          >
+            <LogOut className="w-3.5 h-3.5 text-red-400" />
+            <span className="hidden sm:inline">Log Out</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Layout (Sidebar + Content Area) */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            onClick={() => setMobileSidebarOpen(false)}
+            className="md:hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm"
+          />
+        )}
+
+        {/* Admin Left Sidebar */}
+        <aside
+          className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 overflow-y-auto transition-transform duration-200 ${
+            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
+        >
+          <nav className="p-3 space-y-1 text-xs font-medium">
+            <button
+              onClick={() => {
+                setActiveTab('overview');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'overview' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Dashboard Overview</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('articles')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'articles' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Articles CMS ({articles.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('breaking')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'breaking' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Radio className="w-4 h-4 text-red-400" />
+              <span>Breaking News Ticker</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'categories' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <FolderTree className="w-4 h-4" />
+              <span>Categories & Tags</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('ads')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'ads' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <DollarSign className="w-4 h-4 text-amber-400" />
+              <span>Ads & Placement Manager</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('media')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'media' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <ImageIcon className="w-4 h-4" />
+              <span>Media Library</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('submissions')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'submissions' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Send className="w-4 h-4 text-emerald-400" />
+              <span>News Tips ({submissions.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'comments' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Comments ({comments.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('contacts')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'contacts' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Mail className="w-4 h-4 text-emerald-400" />
+              <span>Contact Messages ({contacts.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('sports')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'sports' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>Sports Scoreboard</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('newsletter')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'newsletter' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              <span>Newsletter & Email</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('users');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'users' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Users & Roles</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('editorial');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'editorial' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Newspaper className="w-4 h-4 text-emerald-400" />
+              <span>Editorial Desk & Leadership</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('pages');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'pages' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <FileCode className="w-4 h-4 text-emerald-400" />
+              <span>Pages & Policies (CMS Pages)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'settings' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <SettingsIcon className="w-4 h-4" />
+              <span>System Settings</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('economic');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'economic' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 text-amber-400" />
+              <span>Economic Index & Rates</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('social')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'social' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Share2 className="w-4 h-4 text-emerald-400" />
+              <span>Social Media Handles</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'audit' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <span>Audit Log History</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('backup')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'backup' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              <span>Backup & Recovery</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('seo')}
+              className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'seo' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Globe className="w-4 h-4 text-sky-400" />
+              <span>SEO & Sitemap XML</span>
+            </button>
+          </nav>
+
+          <div className="p-3 border-t border-slate-800 space-y-3">
+            <button
+              onClick={handleLogoutClick}
+              className="w-full bg-red-950/70 hover:bg-red-900 border border-red-800/80 text-red-200 hover:text-white rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center space-x-2 transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <LogOut className="w-4 h-4 text-red-400" />
+              <span>Log Out Session</span>
+            </button>
+            <div className="text-[11px] text-slate-500 text-center">
+              <div>Custom Domain Status:</div>
+              <div className="text-emerald-400 font-mono font-bold mt-0.5">https://naijatrendinfo.com.ng</div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Admin Content Canvas */}
+        <main className="flex-1 bg-slate-950 p-6 overflow-y-auto">
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">
+                    Welcome back, {currentUser.name}!
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Centralized management for NaijaTrendiInfo articles, advertisements, media, and site settings.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEditingArticle({ title: '', content: '', summary: '', categoryId: categories[0]?.id });
+                    setArticleModalOpen(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Publish New Article</span>
+                </button>
+              </div>
+
+              {/* Stats Cards Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                    <span>Total Published Stories</span>
+                    <FileText className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-white mt-2 font-mono">
+                    {articles.filter((a) => a.status === 'published').length}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">across {categories.length} categories</div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                    <span>Total Audience Pageviews</span>
+                    <Eye className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-white mt-2 font-mono">
+                    {articles.reduce((acc, a) => acc + (a.views || 0), 0).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-emerald-400 mt-1">+12.4% this week</div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                    <span>Active Ad Campaigns</span>
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-white mt-2 font-mono">
+                    {ads.filter((a) => a.isActive).length}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">Google AdSense, Adsterra, Custom</div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                    <span>Pending News Submissions</span>
+                    <Send className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-white mt-2 font-mono">
+                    {submissions.filter((s) => s.status === 'pending').length}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">Requires editorial review</div>
+                </div>
+              </div>
+
+              {/* Recent Activity & Recent Articles */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                    <FileText className="w-4 h-4 text-emerald-400" />
+                    <span>Recent Editorial Content</span>
+                  </h3>
+
+                  <div className="divide-y divide-slate-800">
+                    {articles.slice(0, 5).map((art) => (
+                      <div key={art.id} className="py-3 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-white hover:text-emerald-400 cursor-pointer" onClick={() => onNavigateSite('article', art.slug)}>
+                            {art.title}
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            {art.categoryName} • {art.authorName} • {art.views} views
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${art.status === 'published' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
+                            {art.status}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingArticle(art);
+                              setArticleModalOpen(true);
+                            }}
+                            className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                            title="Edit Article"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            disabled={deletingId === art.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteArticle(art.id, art.title);
+                            }}
+                            className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 rounded-lg transition-colors cursor-pointer border border-red-800/50 disabled:opacity-50"
+                            title="Delete Article"
+                          >
+                            {deletingId === art.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                    <ShieldAlert className="w-4 h-4 text-amber-400" />
+                    <span>Audit Log Feed</span>
+                  </h3>
+
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {auditLogs.slice(0, 6).map((log) => (
+                      <div key={log.id} className="text-[11px] bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
+                        <div className="flex justify-between font-bold text-slate-300">
+                          <span>{log.action}</span>
+                          <span className="text-[10px] text-slate-500">{new Date(log.createdAt).toLocaleTimeString()}</span>
+                        </div>
+                        <div className="text-slate-400 text-[10px]">{log.details}</div>
+                        <div className="text-[9px] text-emerald-400">{log.userName} ({log.resource})</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ARTICLES CMS */}
+          {activeTab === 'articles' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Articles CMS</h1>
+                  <p className="text-xs text-slate-400 mt-1">Create, edit, schedule, publish, or delete news articles.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingArticle({ title: '', content: '', summary: '', categoryId: categories[0]?.id });
+                    setArticleModalOpen(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Article</span>
+                </button>
+              </div>
+
+              {/* Articles Table */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="p-4">Title & Category</th>
+                      <th className="p-4">Author</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Flags</th>
+                      <th className="p-4">Views</th>
+                      <th className="p-4">Date</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {articles.map((art) => (
+                      <tr key={art.id} className="hover:bg-slate-800/50">
+                        <td className="p-4">
+                          <div className="font-bold text-white hover:text-emerald-400 cursor-pointer" onClick={() => onNavigateSite('article', art.slug)}>
+                            {art.title}
+                          </div>
+                          <div className="text-[11px] text-emerald-400 mt-0.5">{art.categoryName}</div>
+                        </td>
+                        <td className="p-4 text-slate-300 font-medium">{art.authorName}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${art.status === 'published' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
+                            {art.status}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-1">
+                            {art.isFeatured && <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[9px] font-bold">Featured</span>}
+                            {art.isPinned && <span className="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[9px] font-bold">Pinned</span>}
+                            {art.isBreaking && <span className="bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded text-[9px] font-bold">Breaking</span>}
+                          </div>
+                        </td>
+                        <td className="p-4 font-mono">{art.views.toLocaleString()}</td>
+                        <td className="p-4 text-slate-400">{new Date(art.publishedAt).toLocaleDateString()}</td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingArticle(art);
+                              setArticleModalOpen(true);
+                            }}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Article"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            disabled={deletingId === art.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteArticle(art.id, art.title);
+                            }}
+                            className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                            title="Delete Article"
+                          >
+                            {deletingId === art.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: BREAKING NEWS */}
+          {activeTab === 'breaking' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Breaking News Ticker Manager</h1>
+                  <p className="text-xs text-slate-400 mt-1">Manage real-time news alerts displayed across the top header ticker.</p>
+                </div>
+                <button
+                  onClick={() => setEditingBreaking({ title: '', isActive: true })}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Alert</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {breakingNews.map((bn) => (
+                  <div key={bn.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className={`w-2 h-2 rounded-full ${bn.isActive ? 'bg-red-500 animate-pulse' : 'bg-slate-600'}`}></span>
+                        <h4 className="font-bold text-sm text-white">{bn.title}</h4>
+                      </div>
+                      <div className="text-xs text-slate-400">Link: {bn.linkUrl || 'None'}</div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        disabled={deletingId === bn.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBreaking(bn.id);
+                        }}
+                        className="p-2 bg-red-950/90 text-red-300 hover:bg-red-900 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        title="Delete Breaking Alert"
+                      >
+                        {deletingId === bn.id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: CATEGORIES & TAGS */}
+          {activeTab === 'categories' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Categories & Tags Manager</h1>
+                  <p className="text-xs text-slate-400 mt-1">Organize news topics and channel hierarchies.</p>
+                </div>
+                <button
+                  onClick={() => setEditingCategory({ name: '', isVisible: true })}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Category</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map((cat) => (
+                  <div key={cat.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-extrabold text-base text-white">{cat.name}</h3>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cat.isVisible ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-500'}`}>
+                          {cat.isVisible ? 'Visible' : 'Hidden'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">{cat.description}</p>
+                      <div className="text-[10px] text-amber-400 mt-2">Slug: /{cat.slug}</div>
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCategory(cat);
+                        }}
+                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs cursor-pointer"
+                        title="Edit Category"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        disabled={deletingId === cat.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategory(cat.id, cat.name);
+                        }}
+                        className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg text-xs cursor-pointer disabled:opacity-50"
+                        title="Delete Category"
+                      >
+                        {deletingId === cat.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: ADS & PLACEMENTS */}
+          {activeTab === 'ads' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Ads & Placement Manager</h1>
+                  <p className="text-xs text-slate-400 mt-1">Configure Google AdSense, Adsterra, and Custom Advertiser Banners.</p>
+                </div>
+                <button
+                  onClick={() => setEditingAd({ name: '', type: 'custom', isActive: true, desktopVisible: true, mobileVisible: true })}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Ad Campaign</span>
+                </button>
+              </div>
+
+              {/* Placements Matrix */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <h3 className="font-bold text-sm text-white">Visual Ad Placement Configuration</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {adPlacements.map((p) => (
+                    <div key={p.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                      <div className="font-bold text-emerald-400">{p.position}</div>
+                      <div className="text-slate-300">Network: <span className="font-semibold uppercase text-amber-300">{p.networkType}</span></div>
+                      <div className="text-[10px] text-slate-500">Target: {p.deviceTarget}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ads List */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-sm text-white">Active Ad Campaigns</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {ads.map((ad) => (
+                    <div key={ad.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-sm text-white">{ad.name}</h4>
+                          <span className="text-[10px] font-bold text-amber-400 uppercase">{ad.type}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ad.isActive ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-500'}`}>
+                          {ad.isActive ? 'Active' : 'Paused'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl text-center text-xs font-mono">
+                        <div>
+                          <div className="text-slate-500 text-[10px]">Impressions</div>
+                          <div className="text-white font-bold">{ad.impressions.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500 text-[10px]">Clicks</div>
+                          <div className="text-emerald-400 font-bold">{ad.clicks.toLocaleString()}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingAd(ad);
+                          }}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs cursor-pointer"
+                          title="Edit Ad"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          disabled={deletingId === ad.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAd(ad.id);
+                          }}
+                          className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg text-xs cursor-pointer disabled:opacity-50"
+                          title="Delete Ad Campaign"
+                        >
+                          {deletingId === ad.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MEDIA LIBRARY */}
+          {activeTab === 'media' && (
+            <MediaLibrary
+              mediaFiles={mediaFiles}
+              onRefresh={onRefreshData}
+              onAskConfirmation={(opts) =>
+                askConfirmation(opts.title, opts.message, opts.onConfirm, {
+                  confirmLabel: opts.confirmText,
+                  cancelLabel: opts.cancelText,
+                  isDanger: opts.type === 'danger'
+                })
+              }
+              onErrorNotification={triggerErrorNotification}
+              mode="standalone"
+            />
+          )}
+
+          {/* TAB 7: NEWS SUBMISSIONS */}
+          {activeTab === 'submissions' && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold font-serif text-white">Eyewitness News Tips & Submissions</h1>
+              <div className="space-y-4">
+                {submissions.length === 0 ? (
+                  <p className="text-xs text-slate-500">No audience news tips submitted yet.</p>
+                ) : (
+                  submissions.map((sub) => (
+                    <div key={sub.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-bold text-base text-white">{sub.title}</h3>
+                          <div className="text-xs text-emerald-400">From: {sub.senderName} ({sub.senderEmail})</div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-[10px] text-slate-400">{new Date(sub.submittedAt).toLocaleString()}</span>
+                          <button
+                            disabled={deletingId === sub.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSubmission(sub.id);
+                            }}
+                            className="p-1.5 bg-red-950/90 hover:bg-red-900 text-red-300 rounded-lg transition-colors cursor-pointer border border-red-800/50 disabled:opacity-50"
+                            title="Delete Submission"
+                          >
+                            {deletingId === sub.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        {sub.content}
+                      </p>
+                      {sub.mediaUrl && (
+                        <div className="text-xs text-amber-400">Media Attachment: <a href={sub.mediaUrl} target="_blank" rel="noreferrer" className="underline">{sub.mediaUrl}</a></div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: COMMENTS MODERATION */}
+          {activeTab === 'comments' && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold font-serif text-white">Audience Comments Moderation</h1>
+              <div className="space-y-3">
+                {comments.length === 0 ? (
+                  <p className="text-xs text-slate-500">No comments posted yet.</p>
+                ) : (
+                  comments.map((c) => (
+                    <div key={c.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="font-bold text-white text-xs">{c.authorName} ({c.authorEmail})</div>
+                        <div className="text-xs text-slate-300">{c.content}</div>
+                        <div className="text-[10px] text-slate-500">On: {c.articleTitle || c.articleId}</div>
+                      </div>
+                      <button
+                        disabled={deletingId === c.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteComment(c.id);
+                        }}
+                        className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        title="Delete Comment"
+                      >
+                        {deletingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: CONTACT MESSAGES INBOX */}
+          {activeTab === 'contacts' && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold font-serif text-white">Contact Messages Inbox</h1>
+              <div className="space-y-3">
+                {contacts.length === 0 ? (
+                  <p className="text-xs text-slate-500">No contact messages received.</p>
+                ) : (
+                  contacts.map((msg) => (
+                    <div key={msg.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-bold text-sm text-white">{msg.subject || 'Contact Inquiry'}</h3>
+                          <div className="text-xs text-emerald-400">From: {msg.name} ({msg.email}) {msg.phone ? `• ${msg.phone}` : ''}</div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-[10px] text-slate-400">{new Date(msg.sentAt).toLocaleString()}</span>
+                          <button
+                            disabled={deletingId === msg.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteContact(msg.id);
+                            }}
+                            className="p-1.5 bg-red-950/90 hover:bg-red-900 text-red-300 rounded-lg transition-colors cursor-pointer border border-red-800/50 disabled:opacity-50"
+                            title="Delete Contact Message"
+                          >
+                            {deletingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800 whitespace-pre-wrap">
+                        {msg.message}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: SPORTS SCOREBOARD MANAGER */}
+          {activeTab === 'sports' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Sports Match Scoreboard Manager</h1>
+                  <p className="text-xs text-slate-400 mt-1">Update NPFL, Super Eagles, Premier League fixtures & live scores.</p>
+                </div>
+                <button
+                  onClick={() => setEditingFixture({ homeTeam: '', awayTeam: '', league: 'NPFL', status: 'UPCOMING' })}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Match Fixture</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {sportsFixtures.map((fix) => (
+                  <div key={fix.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-amber-400">
+                      <span>{fix.league}</span>
+                      <span>{fix.status}</span>
+                    </div>
+                    <div className="text-sm font-extrabold text-white flex justify-between">
+                      <span>{fix.homeTeam}</span>
+                      <span className="font-mono text-amber-300">{fix.homeScore ?? '-'}</span>
+                    </div>
+                    <div className="text-sm font-extrabold text-white flex justify-between">
+                      <span>{fix.awayTeam}</span>
+                      <span className="font-mono text-amber-300">{fix.awayScore ?? '-'}</span>
+                    </div>
+                    <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800/80">
+                      <button
+                        onClick={() => setEditingFixture(fix)}
+                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
+                        title="Edit Fixture"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        disabled={deletingId === fix.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSportsFixture(fix.id);
+                        }}
+                        className="p-1.5 bg-red-950 text-red-300 hover:bg-red-900 border border-red-800/60 rounded-lg text-xs cursor-pointer disabled:opacity-50"
+                        title="Delete Match Fixture"
+                      >
+                        {deletingId === fix.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 10: NEWSLETTER & EMAIL */}
+          {activeTab === 'newsletter' && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold font-serif text-white">Newsletter & Subscriber Broadcast</h1>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Subscriber List Table */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
+                  <h3 className="font-bold text-sm text-white flex items-center justify-between">
+                    <span>Mailing List Subscribers</span>
+                    <span className="bg-emerald-950 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-800">
+                      {subscribers.length} total
+                    </span>
+                  </h3>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-800 pr-1">
+                    {subscribers.length === 0 ? (
+                      <p className="text-xs text-slate-500 py-4">No subscribers yet.</p>
+                    ) : (
+                      subscribers.map((s) => (
+                        <div key={s.id} className="py-2.5 flex justify-between items-center text-xs">
+                          <div>
+                            <div className="font-bold text-white">{s.email}</div>
+                            <div className="text-[10px] text-slate-500">Joined {new Date(s.subscribedAt || Date.now()).toLocaleDateString()}</div>
+                          </div>
+                          <button
+                            disabled={deletingId === s.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSubscriber(s.id, s.email);
+                            }}
+                            className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                            title="Remove Subscriber"
+                          >
+                            {deletingId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Email Broadcast Form */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
+                  <h3 className="font-bold text-sm text-white">Send Broadcast Newsletter</h3>
+
+                  {broadcastSentMsg && (
+                    <div className="p-3 bg-emerald-900 text-emerald-200 text-xs rounded-xl border border-emerald-700">
+                      {broadcastSentMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleBroadcastNewsletter} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Newsletter Email Subject</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. NaijaTrendiInfo Daily Digest - CBN Reforms & Sports Updates"
+                        value={broadcastSubject}
+                        onChange={(e) => setBroadcastSubject(e.target.value)}
+                        className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Email Body Content</label>
+                      <textarea
+                        required
+                        rows={5}
+                        placeholder="Write your email broadcast copy..."
+                        value={broadcastContent}
+                        onChange={(e) => setBroadcastContent(e.target.value)}
+                        className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:ring-2 focus:ring-emerald-500"
+                      ></textarea>
+                    </div>
+
+                    <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md">
+                      <Send className="w-4 h-4" />
+                      <span>Send Broadcast Campaign</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 11: USERS & ACCESS CONTROL */}
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Users & Role Access Control</h1>
+                  <p className="text-xs text-slate-400 mt-1">Manage admin team members, editors, and reporters.</p>
+                </div>
+                <button
+                  onClick={() => setEditingUser({ name: '', email: '', role: 'Editor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' })}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New User Account</span>
+                </button>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="p-4">User Account</th>
+                      <th className="p-4">Role</th>
+                      <th className="p-4">Created Date</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {users.map((usr) => (
+                      <tr key={usr.id} className="hover:bg-slate-800/50">
+                        <td className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <img src={usr.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={usr.name} className="w-8 h-8 rounded-full object-cover border border-slate-700" />
+                            <div>
+                              <div className="font-bold text-white">{usr.name}</div>
+                              <div className="text-[11px] text-slate-400">{usr.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
+                            usr.role === 'Admin' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'
+                          }`}>
+                            {usr.role}
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-400 text-[11px]">
+                          {usr.createdAt ? new Date(usr.createdAt).toLocaleDateString() : 'Active'}
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => setEditingUser(usr)}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors cursor-pointer"
+                            title="Edit User"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            disabled={deletingId === usr.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteUser(usr.id, usr.name);
+                            }}
+                            className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                            title="Delete User"
+                          >
+                            {deletingId === usr.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 12: SYSTEM SETTINGS */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6 max-w-3xl">
+              <h1 className="text-2xl font-bold font-serif text-white">Centralized System Settings</h1>
+
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Website Name</label>
+                  <input
+                    type="text"
+                    value={localSettings.siteName || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, siteName: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Site Description / Slogan</label>
+                  <textarea
+                    rows={3}
+                    value={localSettings.siteDescription || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, siteDescription: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Production Site URL (Custom Domain)</label>
+                  <input
+                    type="text"
+                    value={localSettings.siteUrl || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, siteUrl: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Contact Email</label>
+                    <input
+                      type="email"
+                      value={localSettings.contactEmail || ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, contactEmail: e.target.value })}
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Contact Phone</label>
+                    <input
+                      type="text"
+                      value={localSettings.contactPhone || ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, contactPhone: e.target.value })}
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Office Address</label>
+                  <input
+                    type="text"
+                    value={localSettings.officeAddress || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, officeAddress: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+
+                <button onClick={handleSaveSettings} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl cursor-pointer shadow-md">
+                  Save All System Settings
+                </button>
+              </div>
+
+              {/* Editorial Desk Callout Box in System Settings */}
+              <div className="bg-emerald-950/40 border border-emerald-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <Newspaper className="w-4 h-4 text-emerald-400" />
+                    <span>Editorial Desk & Leadership Profiles</span>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Edit Editor-in-Chief, Managing Editor, Bureau Chiefs, and Department Leads displayed on the live site's Editorial Desk page.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('editorial')}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-md"
+                >
+                  Manage Editorial Profiles
+                </button>
+              </div>
+
+              {/* Pages & Legal Policies Callout Box in System Settings */}
+              <div className="bg-emerald-950/40 border border-emerald-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <FileCode className="w-4 h-4 text-emerald-400" />
+                    <span>Privacy Policy, Terms of Service, Disclaimer, Cookie Policy & About Us</span>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Edit the published text and HTML content for Privacy Policy, Terms of Service, Disclaimer, Cookie Policy, About Us, and custom pages.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('pages')}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-md"
+                >
+                  Edit Pages & Policies
+                </button>
+              </div>
+
+              {/* Economic Index Callout Box in System Settings */}
+              <div className="bg-amber-950/40 border border-amber-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-amber-400" />
+                    <span>Nigeria Economic Index & Foreign Exchange Rates Control</span>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Control USD/NGN Official & Parallel rates, PMS Petrol price, Inflation rate, and show, hide or delete the top bar ticker or homepage widget.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('economic')}
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-md"
+                >
+                  Manage Economic Rates
+                </button>
+              </div>
+
+              {/* Social Media Manager embedded in System Settings */}
+              <div className="pt-6 border-t border-slate-800">
+                <SocialMediaManager
+                  socialLinks={socialLinks}
+                  onRefresh={onRefreshData}
+                  onAskConfirmation={(opts) =>
+                    askConfirmation(opts.title, opts.message, opts.onConfirm, {
+                      confirmLabel: opts.confirmText,
+                      cancelLabel: opts.cancelText,
+                      isDanger: opts.type === 'danger'
+                    })
+                  }
+                  onErrorNotification={triggerErrorNotification}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 12.1: ECONOMIC INDEX & EXCHANGE RATES MANAGEMENT */}
+          {activeTab === 'economic' && (
+            <div className="space-y-6 max-w-4xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white flex items-center gap-2.5">
+                    <TrendingUp className="w-6 h-6 text-emerald-400" />
+                    <span>Nigeria Economic Index & Exchange Control</span>
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Manage currency rates (USD/NGN Official & Parallel), PMS Petrol price, Inflation rate, and display options for the top header ticker and homepage sidebar widget.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center space-x-2 shadow-lg cursor-pointer transition-all active:scale-95"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Save & Publish Changes</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Access Control Status Banner */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-200">1. Top Header Utility Ticker</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
+                      localSettings.economicIndex?.showTopTicker !== false ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-red-950 text-red-300 border border-red-500/40'
+                    }`}>
+                      {localSettings.economicIndex?.showTopTicker !== false ? 'VISIBLE ON FRONTEND' : 'HIDDEN'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Displays current exchange rate (e.g. USD/NGN: {localSettings.economicIndex?.usdNgnRate || '₦1,485.50'}) and NGX Index at the top left of every page.
+                  </p>
+                  <div className="flex items-center space-x-3 pt-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={localSettings.economicIndex?.showTopTicker !== false}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            economicIndex: {
+                              ...(localSettings.economicIndex || {
+                                showTopTicker: true,
+                                usdNgnRate: '₦1,485.50',
+                                ngxIndex: '+0.42%',
+                                showEconomicWidget: true,
+                                widgetTitle: 'Nigeria Economic Index',
+                                widgetSource: 'CBN / NNPC',
+                                officialRate: '₦1,485.50',
+                                parallelRate: '₦1,510.00',
+                                petrolPrice: '₦895 / L',
+                                inflationRate: '22.8%'
+                              }),
+                              showTopTicker: e.target.checked
+                            }
+                          })
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                      <span className="ml-2 text-xs font-semibold text-slate-300">Display Top Header Ticker</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-200">2. Middle Homepage Sidebar Widget</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
+                      localSettings.economicIndex?.showEconomicWidget !== false ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-red-950 text-red-300 border border-red-500/40'
+                    }`}>
+                      {localSettings.economicIndex?.showEconomicWidget !== false ? 'PUBLISHED ON HOMEPAGE' : 'DELETED / HIDDEN'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    The "Nigeria Economic Index" box displayed in the middle sidebar of the website home page.
+                  </p>
+                  <div className="flex items-center space-x-3 pt-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={localSettings.economicIndex?.showEconomicWidget !== false}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            economicIndex: {
+                              ...(localSettings.economicIndex || {
+                                showTopTicker: true,
+                                usdNgnRate: '₦1,485.50',
+                                ngxIndex: '+0.42%',
+                                showEconomicWidget: true,
+                                widgetTitle: 'Nigeria Economic Index',
+                                widgetSource: 'CBN / NNPC',
+                                officialRate: '₦1,485.50',
+                                parallelRate: '₦1,510.00',
+                                petrolPrice: '₦895 / L',
+                                inflationRate: '22.8%'
+                              }),
+                              showEconomicWidget: e.target.checked
+                            }
+                          })
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                      <span className="ml-2 text-xs font-semibold text-slate-300">Display Homepage Widget</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Inputs for Rates */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-6">
+                <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  <span>Edit Economic Rates & Indicators</span>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Top Ticker USD / NGN Rate</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.usdNgnRate || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            usdNgnRate: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="e.g. ₦1,485.50"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Top Ticker NGX Stock Index</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.ngxIndex || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            ngxIndex: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="e.g. +0.42%"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Widget Box Title</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.widgetTitle || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            widgetTitle: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="Nigeria Economic Index"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Widget Box Source Label</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.widgetSource || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            widgetSource: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="CBN / NNPC"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Official NGN / USD Rate</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.officialRate || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            officialRate: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="e.g. ₦1,485.50"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Parallel NGN / USD Rate</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.parallelRate || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            parallelRate: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="e.g. ₦1,510.00"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">PMS Petrol Price (Lagos)</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.petrolPrice || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            petrolPrice: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="e.g. ₦895 / L"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Inflation Rate</label>
+                    <input
+                      type="text"
+                      value={localSettings.economicIndex?.inflationRate || ''}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          economicIndex: {
+                            ...(localSettings.economicIndex || {
+                              showTopTicker: true,
+                              usdNgnRate: '₦1,485.50',
+                              ngxIndex: '+0.42%',
+                              showEconomicWidget: true,
+                              widgetTitle: 'Nigeria Economic Index',
+                              widgetSource: 'CBN / NNPC',
+                              officialRate: '₦1,485.50',
+                              parallelRate: '₦1,510.00',
+                              petrolPrice: '₦895 / L',
+                              inflationRate: '22.8%'
+                            }),
+                            inflationRate: e.target.value
+                          }
+                        })
+                      }
+                      placeholder="e.g. 22.8%"
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      askConfirmation(
+                        'Delete Economic Widget & Ticker',
+                        'Are you sure you want to delete and hide the economic index widget and exchange rate ticker from the homepage?',
+                        async () => {
+                          const updated = {
+                            ...localSettings,
+                            economicIndex: {
+                              ...(localSettings.economicIndex || {
+                                showTopTicker: true,
+                                usdNgnRate: '₦1,485.50',
+                                ngxIndex: '+0.42%',
+                                showEconomicWidget: true,
+                                widgetTitle: 'Nigeria Economic Index',
+                                widgetSource: 'CBN / NNPC',
+                                officialRate: '₦1,485.50',
+                                parallelRate: '₦1,510.00',
+                                petrolPrice: '₦895 / L',
+                                inflationRate: '22.8%'
+                              }),
+                              showEconomicWidget: false,
+                              showTopTicker: false
+                            }
+                          };
+                          setLocalSettings(updated);
+                          await api.updateSettings(updated);
+                          triggerSuccessNotification('Economic Widget & Ticker hidden from live site!');
+                          onRefreshData();
+                        },
+                        { confirmLabel: 'Delete/Hide Widget', isDanger: true }
+                      );
+                    }}
+                    className="bg-red-950 hover:bg-red-900 border border-red-800/80 text-red-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                    <span>Delete / Hide Widget From Homepage</span>
+                  </button>
+
+                  <button
+                    onClick={handleSaveSettings}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer flex items-center space-x-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Save & Publish Economic Rates</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 12.5: SOCIAL MEDIA HANDLES STANDALONE */}
+          {activeTab === 'social' && (
+            <SocialMediaManager
+              socialLinks={socialLinks}
+              onRefresh={onRefreshData}
+              onAskConfirmation={(opts) =>
+                askConfirmation(opts.title, opts.message, opts.onConfirm, {
+                  confirmLabel: opts.confirmText,
+                  cancelLabel: opts.cancelText,
+                  isDanger: opts.type === 'danger'
+                })
+              }
+              onErrorNotification={triggerErrorNotification}
+            />
+          )}
+
+          {/* TAB 12.8: EDITORIAL DESK & LEADERSHIP MANAGEMENT */}
+          {activeTab === 'editorial' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white flex items-center gap-2">
+                    <Newspaper className="w-6 h-6 text-emerald-400" />
+                    <span>Editorial Desk & Newsroom Leadership</span>
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Manage Executive Editors, Managing Editors, Bureau Chiefs, and Desk Editors displayed on the public site's Editorial Desk page.
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setEditingEditorialEntry({
+                      department: 'Editorial Desk',
+                      name: '',
+                      role: 'Editor',
+                      email: 'editor@naijatrendinfo.com.ng',
+                      phone: '',
+                      bio: '',
+                      photoUrl: '',
+                      isActive: true
+                    })
+                  }
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shrink-0 cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Editorial Leader</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {editorialDesk.map((ed) => (
+                  <div key={ed.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative group shadow-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold overflow-hidden shrink-0">
+                          {ed.photoUrl ? (
+                            <img src={ed.photoUrl} alt={ed.name} className="w-full h-full object-cover" />
+                          ) : (
+                            ed.name.charAt(0)
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                            {ed.department}
+                          </span>
+                          <h3 className="font-bold text-white text-base mt-1">{ed.name}</h3>
+                          <p className="text-xs text-slate-300 font-medium">{ed.role}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setEditingEditorialEntry(ed)}
+                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors cursor-pointer"
+                          title="Edit Editorial Profile"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEditorialEntry(ed.id, ed.name)}
+                          className="p-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-xl transition-colors cursor-pointer"
+                          title="Delete Editorial Profile"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-400 space-y-1 pt-2 border-t border-slate-800">
+                      <div><strong className="text-slate-300">Email:</strong> {ed.email}</div>
+                      {ed.phone && <div><strong className="text-slate-300">Phone:</strong> {ed.phone}</div>}
+                      {ed.bio && <p className="text-slate-300 italic pt-1 leading-relaxed">"{ed.bio}"</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Modal Dialog for Editing or Creating Editorial Desk Entry */}
+              {editingEditorialEntry && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+                  <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 text-xs">
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+                      <h3 className="text-base font-bold text-white font-serif">
+                        {editingEditorialEntry.id ? 'Edit Editorial Desk Member' : 'Add New Editorial Leader'}
+                      </h3>
+                      <button onClick={() => setEditingEditorialEntry(null)} className="text-slate-400 hover:text-white cursor-pointer">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Ajayi Odunayo"
+                          value={editingEditorialEntry.name || ''}
+                          onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, name: e.target.value })}
+                          className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Department / Desk Title *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Editor-in-Chief or Politics & State House"
+                          value={editingEditorialEntry.department || ''}
+                          onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, department: e.target.value })}
+                          className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Official Role Designation</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Executive Managing Editor & Publisher"
+                          value={editingEditorialEntry.role || ''}
+                          onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, role: e.target.value })}
+                          className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-300 font-semibold mb-1">Official Email</label>
+                          <input
+                            type="email"
+                            placeholder="editor@naijatrendinfo.com.ng"
+                            value={editingEditorialEntry.email || ''}
+                            onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, email: e.target.value })}
+                            className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-semibold mb-1">Direct Phone</label>
+                          <input
+                            type="text"
+                            placeholder="+234 803 111 2233"
+                            value={editingEditorialEntry.phone || ''}
+                            onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, phone: e.target.value })}
+                            className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Photo / Avatar Image URL</label>
+                        <input
+                          type="text"
+                          placeholder="https://..."
+                          value={editingEditorialEntry.photoUrl || ''}
+                          onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, photoUrl: e.target.value })}
+                          className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Biography / Editorial Profile</label>
+                        <textarea
+                          rows={3}
+                          placeholder="Brief professional background, experience, and bureau responsibilities..."
+                          value={editingEditorialEntry.bio || ''}
+                          onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, bio: e.target.value })}
+                          className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+                      <button
+                        onClick={() => setEditingEditorialEntry(null)}
+                        className="px-4 py-2 rounded-xl text-slate-300 bg-slate-800 hover:bg-slate-700 font-semibold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEditorialEntry}
+                        className="px-5 py-2 rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 font-bold cursor-pointer shadow-md"
+                      >
+                        Save Editorial Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 12.9: PAGES & POLICIES (CMS PAGES) */}
+          {activeTab === 'pages' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white flex items-center gap-2">
+                    <FileCode className="w-6 h-6 text-emerald-400" />
+                    <span>Pages & Legal Policies (CMS Content)</span>
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Manage and edit Privacy Policy, Terms of Service, Disclaimer, Cookie Policy, About Us, and static website pages.
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setEditingPage({
+                      title: '',
+                      slug: '',
+                      seoTitle: '',
+                      seoDescription: '',
+                      content: '<p>Write page content here...</p>',
+                      status: 'published',
+                      visibility: 'public',
+                      navigationPlacement: 'footer',
+                      authorName: currentUser.name
+                    })
+                  }
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shrink-0 cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Custom Page</span>
+                </button>
+              </div>
+
+              {/* Standard Policy Pages Quick-Access Banner */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Standard Legal & Website Pages</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  These key pages are linked in the website header and footer. Click any card below to edit its published text:
+                </p>
+              </div>
+
+              {/* Grid of Pages */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sitePages.map((page) => (
+                  <div key={page.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-lg hover:border-slate-700 transition-all">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                          page.status === 'published' ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60' : 'bg-amber-950/80 text-amber-400 border-amber-800/60'
+                        }`}>
+                          {page.status}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">/{page.slug}</span>
+                      </div>
+                      <h3 className="font-bold text-white text-base mt-2">{page.title}</h3>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                        {page.seoDescription || page.content.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...'}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                      <button
+                        onClick={() => onNavigateSite('page', page.slug)}
+                        className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
+                        title="View Live Page"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View Live</span>
+                      </button>
+
+                      <div className="flex items-center space-x-1.5">
+                        <button
+                          onClick={() => setEditingPage(page)}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeletePage(page.id, page.title)}
+                          className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-xl transition-colors cursor-pointer"
+                          title="Delete Page"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Page Editor Modal */}
+              {editingPage && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+                  <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-3xl w-full my-8 shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
+                      <h3 className="text-base font-bold text-white font-serif flex items-center gap-2">
+                        <FileCode className="w-5 h-5 text-emerald-400" />
+                        <span>{editingPage.id ? `Edit Page: ${editingPage.title}` : 'Create New Page'}</span>
+                      </h3>
+                      <button onClick={() => setEditingPage(null)} className="text-slate-400 hover:text-white cursor-pointer">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-300 font-semibold mb-1">Page Title *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Privacy Policy"
+                            value={editingPage.title || ''}
+                            onChange={(e) => {
+                              const title = e.target.value;
+                              const slug = editingPage.id ? editingPage.slug : title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                              setEditingPage({ ...editingPage, title, slug });
+                            }}
+                            className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-semibold mb-1">URL Slug (e.g. privacy-policy) *</label>
+                          <div className="flex items-center bg-slate-950 rounded-xl border border-slate-800 px-3">
+                            <span className="text-slate-500 font-mono select-none">/pages/</span>
+                            <input
+                              type="text"
+                              placeholder="privacy-policy"
+                              value={editingPage.slug || ''}
+                              onChange={(e) => setEditingPage({ ...editingPage, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                              className="w-full bg-transparent text-emerald-400 p-2.5 outline-none font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-300 font-semibold mb-1">SEO Title Tag</label>
+                          <input
+                            type="text"
+                            placeholder="Privacy Policy | NaijaTrendiInfo"
+                            value={editingPage.seoTitle || ''}
+                            onChange={(e) => setEditingPage({ ...editingPage, seoTitle: e.target.value })}
+                            className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-semibold mb-1">Publication Status</label>
+                          <select
+                            value={editingPage.status || 'published'}
+                            onChange={(e) => setEditingPage({ ...editingPage, status: e.target.value as any })}
+                            className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                          >
+                            <option value="published">Published (Live)</option>
+                            <option value="draft">Draft (Hidden)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Meta Description / Summary</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Brief summary of page contents for search engines..."
+                          value={editingPage.seoDescription || ''}
+                          onChange={(e) => setEditingPage({ ...editingPage, seoDescription: e.target.value })}
+                          className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Page Body Content (HTML / Rich Text) *</label>
+                        <WYSIWYGEditor
+                          value={editingPage.content || ''}
+                          onChange={(content) => setEditingPage({ ...editingPage, content })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800 sticky bottom-0 bg-slate-900 z-10">
+                      <button
+                        onClick={() => setEditingPage(null)}
+                        className="px-4 py-2 rounded-xl text-slate-300 bg-slate-800 hover:bg-slate-700 font-semibold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSavePage}
+                        className="px-5 py-2 rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 font-bold cursor-pointer shadow-md"
+                      >
+                        Save Page Content
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === 'audit' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold font-serif text-white">Admin Audit Log</h1>
+                {auditLogs.length > 0 && (
+                  <button
+                    disabled={deletingId === 'audit-all'}
+                    onClick={handleClearAuditLogs}
+                    className="bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 font-bold text-xs px-4 py-2 rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === 'audit-all' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5 text-red-400" />}
+                    <span>Clear All Audit Logs</span>
+                  </button>
+                )}
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div className="space-y-2">
+                  {auditLogs.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-2">No audit log entries recorded.</p>
+                  ) : (
+                    auditLogs.map((log) => (
+                      <div key={log.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                        <div>
+                          <span className="font-bold text-white">{log.action}</span>
+                          <span className="text-slate-400 ml-2">— {log.details}</span>
+                          <div className="text-[10px] text-emerald-400">{log.userName} ({log.userEmail}) • Resource: {log.resource}</div>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">{new Date(log.createdAt).toLocaleString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 13: BACKUP & RECOVERY */}
+          {activeTab === 'backup' && (
+            <div className="space-y-6 max-w-2xl">
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold font-serif text-white">Database Backup & Recovery</h1>
+                <button onClick={handleCreateBackup} className="bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl">
+                  Create Instant Snapshot
+                </button>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                <p className="text-xs text-slate-400">All backup snapshots are stored securely and can be restored with a single click.</p>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 14: SEO & SITEMAP */}
+          {activeTab === 'seo' && (
+            <div className="space-y-6 max-w-2xl">
+              <h1 className="text-2xl font-bold font-serif text-white">SEO & Sitemap XML Controls</h1>
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 text-xs">
+                <div className="flex justify-between items-center p-3 bg-slate-950 rounded-xl">
+                  <div>
+                    <div className="font-bold text-white">Dynamic XML Sitemap</div>
+                    <div className="text-[11px] text-slate-400">https://naijatrendinfo.com.ng/sitemap.xml</div>
+                  </div>
+                  <a href="/sitemap.xml" target="_blank" className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded text-xs">View XML</a>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-slate-950 rounded-xl">
+                  <div>
+                    <div className="font-bold text-white">RSS Feed XML</div>
+                    <div className="text-[11px] text-slate-400">https://naijatrendinfo.com.ng/rss.xml</div>
+                  </div>
+                  <a href="/rss.xml" target="_blank" className="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded text-xs">View RSS</a>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Article Edit Modal */}
+      {articleModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto text-xs space-y-4 text-white">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+              <h3 className="font-extrabold text-lg font-serif">
+                {editingArticle?.id ? 'Edit Article' : 'Create New Article'}
+              </h3>
+              <button onClick={() => setArticleModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveArticle} className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1">Headline Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingArticle?.title || ''}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, title: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-3 rounded-xl border border-slate-800 text-sm font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold mb-1">Category *</label>
+                  <select
+                    value={editingArticle?.categoryId || ''}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, categoryId: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-1">Status</label>
+                  <select
+                    value={editingArticle?.status || 'published'}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, status: e.target.value as any })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  >
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Featured Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={editingArticle?.featuredImage || ''}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, featuredImage: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Short Summary / Deck</label>
+                <textarea
+                  rows={2}
+                  value={editingArticle?.summary || ''}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, summary: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Full Article Body Content</label>
+                <WYSIWYGEditor
+                  value={editingArticle?.content || ''}
+                  onChange={(val) => setEditingArticle({ ...editingArticle, content: val })}
+                  topicTitle={editingArticle?.title}
+                  mediaFiles={mediaFiles}
+                  onRefreshMedia={onRefreshData}
+                />
+              </div>
+
+              <div className="flex gap-4 font-bold pt-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingArticle?.isFeatured || false}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, isFeatured: e.target.checked })}
+                  />
+                  <span>Feature on Hero</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingArticle?.isPinned || false}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, isPinned: e.target.checked })}
+                  />
+                  <span>Pin Story</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingArticle?.isBreaking || false}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, isBreaking: e.target.checked })}
+                  />
+                  <span>Mark Breaking</span>
+                </label>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-slate-800">
+                {editingArticle?.id ? (
+                  <button
+                    type="button"
+                    disabled={deletingId === editingArticle.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDeleteArticle(editingArticle.id!, editingArticle.title);
+                    }}
+                    className="px-4 py-2.5 bg-red-950/90 hover:bg-red-900 border border-red-800/80 text-red-200 font-bold rounded-xl flex items-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === editingArticle.id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4 text-red-400" />}
+                    <span>Delete Post</span>
+                  </button>
+                ) : <div />}
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setArticleModalOpen(false)}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-md cursor-pointer"
+                  >
+                    Save Article
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Category Edit Modal */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white">
+            <h3 className="font-bold text-base font-serif">
+              {editingCategory.id ? 'Edit Category' : 'New Category'}
+            </h3>
+            <form onSubmit={handleSaveCategory} className="space-y-3">
+              <div>
+                <label className="block font-semibold mb-1">Category Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCategory.name || ''}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Description</label>
+                <input
+                  type="text"
+                  value={editingCategory.description || ''}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setEditingCategory(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Breaking News Modal */}
+      {editingBreaking && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white">
+            <h3 className="font-bold text-base font-serif">Breaking News Alert</h3>
+            <form onSubmit={handleSaveBreaking} className="space-y-3">
+              <div>
+                <label className="block font-semibold mb-1">Headline Alert Text *</label>
+                <textarea
+                  required
+                  rows={2}
+                  value={editingBreaking.title || ''}
+                  onChange={(e) => setEditingBreaking({ ...editingBreaking, title: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                ></textarea>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Target Article Link (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="/article/cbn-monetary-policy-rate-update"
+                  value={editingBreaking.linkUrl || ''}
+                  onChange={(e) => setEditingBreaking({ ...editingBreaking, linkUrl: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setEditingBreaking(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
+                  Publish Alert
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ad Campaign Modal */}
+      {editingAd && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full text-xs space-y-4 text-white">
+            <h3 className="font-bold text-base font-serif">Ad Campaign Setup</h3>
+            <form onSubmit={handleSaveAd} className="space-y-3">
+              <div>
+                <label className="block font-semibold mb-1">Campaign Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingAd.name || ''}
+                  onChange={(e) => setEditingAd({ ...editingAd, name: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Ad Network Type</label>
+                <select
+                  value={editingAd.type || 'custom'}
+                  onChange={(e) => setEditingAd({ ...editingAd, type: e.target.value as any })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                >
+                  <option value="google_adsense">Google AdSense</option>
+                  <option value="adsterra">Adsterra</option>
+                  <option value="custom">Custom Advertiser Banner</option>
+                </select>
+              </div>
+
+              {editingAd.type === 'custom' && (
+                <>
+                  <div>
+                    <label className="block font-semibold mb-1">Banner Image URL</label>
+                    <input
+                      type="url"
+                      value={editingAd.bannerUrl || ''}
+                      onChange={(e) => setEditingAd({ ...editingAd, bannerUrl: e.target.value })}
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Destination URL</label>
+                    <input
+                      type="url"
+                      value={editingAd.destinationUrl || ''}
+                      onChange={(e) => setEditingAd({ ...editingAd, destinationUrl: e.target.value })}
+                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                    />
+                  </div>
+                </>
+              )}
+
+              {(editingAd.type === 'google_adsense' || editingAd.type === 'adsterra') && (
+                <div>
+                  <label className="block font-semibold mb-1">Ad Unit HTML/Script Code</label>
+                  <textarea
+                    rows={3}
+                    value={editingAd.adCode || ''}
+                    onChange={(e) => setEditingAd({ ...editingAd, adCode: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono text-[11px]"
+                  ></textarea>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setEditingAd(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
+                  Save Campaign
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sports Fixture Modal */}
+      {editingFixture && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white">
+            <h3 className="font-bold text-base font-serif">
+              {editingFixture.id ? 'Edit Sports Match' : 'Add Match Fixture'}
+            </h3>
+            <form onSubmit={handleSaveFixture} className="space-y-3">
+              <div>
+                <label className="block font-semibold mb-1">League / Tournament</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. NPFL, Super Eagles, Premier League"
+                  value={editingFixture.league || ''}
+                  onChange={(e) => setEditingFixture({ ...editingFixture, league: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Home Team *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingFixture.homeTeam || ''}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, homeTeam: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Away Team *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingFixture.awayTeam || ''}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, awayTeam: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Home Score</label>
+                  <input
+                    type="number"
+                    value={editingFixture.homeScore ?? ''}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, homeScore: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Away Score</label>
+                  <input
+                    type="number"
+                    value={editingFixture.awayScore ?? ''}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, awayScore: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Match Status</label>
+                <select
+                  value={editingFixture.status || 'UPCOMING'}
+                  onChange={(e) => setEditingFixture({ ...editingFixture, status: e.target.value as any })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                >
+                  <option value="UPCOMING">Upcoming</option>
+                  <option value="LIVE">Live</option>
+                  <option value="FINISHED">Finished</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setEditingFixture(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
+                  Save Fixture
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Account Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white">
+            <h3 className="font-bold text-base font-serif">
+              {editingUser.id ? 'Edit User Permissions' : 'New Admin/Editor Account'}
+            </h3>
+            <form onSubmit={handleSaveUser} className="space-y-3">
+              <div>
+                <label className="block font-semibold mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingUser.name || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={editingUser.email || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Role & Permissions</label>
+                <select
+                  value={editingUser.role || 'Editor'}
+                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                >
+                  <option value="Admin">Administrator (Full Access)</option>
+                  <option value="Editor">Editor (Publish & Edit)</option>
+                  <option value="Reporter">Reporter (Draft & Submit)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Avatar Image URL</label>
+                <input
+                  type="url"
+                  value={editingUser.avatar || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, avatar: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
+                  Save Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
