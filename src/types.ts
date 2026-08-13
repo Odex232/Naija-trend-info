@@ -8,6 +8,8 @@ export interface User {
   avatar?: string;
   bio?: string;
   createdAt: string;
+  password?: string;
+  lastPasswordChangedAt?: string;
 }
 
 export type ArticleStatus = 'published' | 'draft' | 'scheduled' | 'archived';

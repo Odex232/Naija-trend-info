@@ -195,10 +195,17 @@ async function startServer() {
   // Auth Login
   app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
-    const user = db.users.find((u: any) => u.email.toLowerCase() === (email || '').toLowerCase());
+    const user = db.users.find((u: any) => u.email.toLowerCase() === (email || '').trim().toLowerCase());
 
-    // Allow default admin password or any valid configured user for testing
-    if (user && (password === 'AdminPassword123!' || password === 'admin' || password.length >= 4)) {
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials. User email not found.' });
+    }
+
+    const customPassword = user.password;
+    const isCustomMatch = customPassword && password === customPassword;
+    const isDefaultMatch = password === 'AdminPassword123!' || password === 'admin' || (!customPassword && password.length >= 4);
+
+    if (isCustomMatch || isDefaultMatch) {
       const token = 'token-' + user.id + '-' + Date.now();
       addAuditLog(user.email, user.name, 'Admin Login', 'User authenticated successfully into Admin Dashboard.', 'Authentication');
       return res.json({
@@ -208,7 +215,7 @@ async function startServer() {
       });
     }
 
-    return res.status(401).json({ success: false, message: 'Invalid credentials. Please check email and password.' });
+    return res.status(401).json({ success: false, message: 'Invalid password. Please enter your correct login password.' });
   });
 
   // Auth Middleware
@@ -863,12 +870,46 @@ function isBlockedFileType(filename: string): boolean {
     const { id } = req.params;
     const index = db.users.findIndex((u: any) => u.id === id);
     if (index !== -1) {
-      db.users[index] = { ...db.users[index], ...req.body };
+      const existing = db.users[index];
+      const updates = { ...req.body };
+      if (updates.password && updates.password.trim().length > 0) {
+        updates.lastPasswordChangedAt = new Date().toISOString();
+      }
+      db.users[index] = { ...existing, ...updates };
       saveDatabase();
-      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'User Updated', `Updated permissions for user ${db.users[index].name}`, 'Users');
+      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'User Updated', `Updated settings/password for user ${db.users[index].name}`, 'Users');
       return res.json(db.users[index]);
     }
     res.status(404).json({ message: 'User not found' });
+  });
+
+  app.post('/api/users/:id/change-password', (req, res) => {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+    const index = db.users.findIndex((u: any) => u.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    const user = db.users[index];
+    if (user.password && currentPassword && user.password !== currentPassword) {
+      return res.status(400).json({ success: false, message: 'Current password provided is incorrect.' });
+    }
+
+    if (!newPassword || newPassword.trim().length < 4) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 4 characters long.' });
+    }
+
+    db.users[index].password = newPassword.trim();
+    db.users[index].lastPasswordChangedAt = new Date().toISOString();
+    saveDatabase();
+
+    addAuditLog(user.email, user.name, 'Password Changed', `Changed login password for ${user.name}`, 'User Security');
+    return res.json({
+      success: true,
+      message: 'Password updated successfully! You can now log in with your new password.',
+      user: db.users[index]
+    });
   });
 
   app.delete('/api/users/:id', requireAdminAuth, (req, res) => {

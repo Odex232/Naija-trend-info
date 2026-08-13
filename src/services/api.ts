@@ -164,14 +164,54 @@ export const api = {
     } catch (e) {
       console.warn('Backend auth API unavailable, performing secure local credential match:', e);
       const allUsers = getLocalData('naija_users', INITIAL_USERS);
-      const matchedUser = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      if (matchedUser && password && password.length >= 4) {
-        const token = 'token-admin-' + Date.now();
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('currentUser', JSON.stringify(matchedUser));
-        return { success: true, token, user: matchedUser };
+      const matchedUser = allUsers.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+      if (matchedUser) {
+        const customPass = matchedUser.password;
+        const isMatch = customPass ? password === customPass : (password === 'AdminPassword123!' || password === 'admin' || password.length >= 4);
+        if (isMatch) {
+          const token = 'token-admin-' + Date.now();
+          localStorage.setItem('authToken', token);
+          localStorage.setItem('currentUser', JSON.stringify(matchedUser));
+          return { success: true, token, user: matchedUser };
+        }
       }
       return { success: false, error: 'Invalid Email or Password' };
+    }
+  },
+
+  changeUserPassword: async (userId: string, currentPassword?: string, newPassword?: string) => {
+    try {
+      const res = await fetchJson<{ success: boolean; message: string; user?: User }>(`/api/users/${userId}/change-password`, {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      if (res.user) {
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (currentUserStr) {
+          const parsed = JSON.parse(currentUserStr);
+          if (parsed.id === userId) {
+            localStorage.setItem('currentUser', JSON.stringify(res.user));
+          }
+        }
+      }
+      return res;
+    } catch (e: any) {
+      const users = getLocalData<User[]>('naija_users', INITIAL_USERS);
+      const userIndex = users.findIndex((u) => u.id === userId);
+      if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        users[userIndex].lastPasswordChangedAt = new Date().toISOString();
+        setLocalData('naija_users', users);
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (currentUserStr) {
+          const parsed = JSON.parse(currentUserStr);
+          if (parsed.id === userId) {
+            localStorage.setItem('currentUser', JSON.stringify(users[userIndex]));
+          }
+        }
+        return { success: true, message: 'Password updated successfully!', user: users[userIndex] };
+      }
+      throw new Error(e.message || 'Failed to update password.');
     }
   },
 

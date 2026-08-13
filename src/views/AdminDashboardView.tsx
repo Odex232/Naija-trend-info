@@ -39,7 +39,11 @@ import {
   Loader2,
   Menu,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Key,
+  ShieldCheck,
+  EyeOff,
+  RefreshCw
 } from 'lucide-react';
 import {
   Article,
@@ -167,6 +171,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // User Modal State
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
+
+  // Password Manager State
+  const [passCurrent, setPassCurrent] = useState('');
+  const [passNew, setPassNew] = useState('');
+  const [passConfirm, setPassConfirm] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [passUpdating, setPassUpdating] = useState(false);
+  const [passSuccessMsg, setPassSuccessMsg] = useState('');
+  const [passErrorMsg, setPassErrorMsg] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [copiedGenPass, setCopiedGenPass] = useState(false);
+  const [quickResetUser, setQuickResetUser] = useState<User | null>(null);
+  const [quickResetPass, setQuickResetPass] = useState('');
+  const [showQuickResetPass, setShowQuickResetPass] = useState(false);
 
   // Settings State
   const [localSettings, setLocalSettings] = useState<WebsiteSettings>(settings);
@@ -765,6 +785,70 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       onRefreshData();
     } catch (e: any) {
       triggerErrorNotification(e.message || 'Failed to save user');
+    }
+  };
+
+  // Generate Strong Password
+  const generateStrongPassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=';
+    let res = '';
+    for (let i = 0; i < 16; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassNew(res);
+    setPassConfirm(res);
+    setGeneratedPassword(res);
+  };
+
+  // Handle Update Admin Login Password
+  const handleUpdateMyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassErrorMsg('');
+    setPassSuccessMsg('');
+
+    if (!passNew || passNew.trim().length < 4) {
+      setPassErrorMsg('New password must be at least 4 characters long.');
+      return;
+    }
+
+    if (passNew !== passConfirm) {
+      setPassErrorMsg('New password and password confirmation do not match.');
+      return;
+    }
+
+    setPassUpdating(true);
+    try {
+      const userId = currentUser?.id || 'usr-1';
+      const res = await api.changeUserPassword(userId, passCurrent, passNew);
+      if (res && res.success) {
+        setPassSuccessMsg(res.message || 'Password updated successfully! Next time you log in, use your new password.');
+        triggerSuccessNotification('Admin password updated successfully!');
+        setPassCurrent('');
+        setPassNew('');
+        setPassConfirm('');
+        onRefreshData();
+      } else {
+        setPassErrorMsg(res.message || 'Failed to update password.');
+      }
+    } catch (err: any) {
+      setPassErrorMsg(err.message || 'Failed to update password.');
+    } finally {
+      setPassUpdating(false);
+    }
+  };
+
+  // Handle Quick Password Reset for any team member
+  const handleSaveQuickResetUserPass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickResetUser || !quickResetPass) return;
+    try {
+      await api.changeUserPassword(quickResetUser.id, '', quickResetPass);
+      triggerSuccessNotification(`Password for ${quickResetUser.name} updated successfully!`);
+      setQuickResetUser(null);
+      setQuickResetPass('');
+      onRefreshData();
+    } catch (err: any) {
+      triggerErrorNotification(err.message || 'Failed to update user password.');
     }
   };
 
@@ -1905,29 +1989,261 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
 
-          {/* TAB 11: USERS & ACCESS CONTROL */}
+          {/* TAB 11: USERS, ROLES & PASSWORD MANAGER */}
           {activeTab === 'users' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold font-serif text-white">Users & Role Access Control</h1>
-                  <p className="text-xs text-slate-400 mt-1">Manage admin team members, editors, and reporters.</p>
+                  <div className="flex items-center space-x-2">
+                    <h1 className="text-2xl font-bold font-serif text-white">Users, Role Access & Password Manager</h1>
+                    <span className="bg-amber-950 text-amber-400 border border-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>Security Central</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Manage admin team members, password security, login credentials, and user access roles.</p>
                 </div>
                 <button
                   onClick={() => setEditingUser({ name: '', email: '', role: 'Editor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' })}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add New User Account</span>
                 </button>
               </div>
 
+              {/* Top Security & Password Management Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* CARD 1: CHANGE MY ADMIN LOGIN PASSWORD */}
+                <div className="lg:col-span-2 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                        <Key className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                          <span>Change Admin Login Password</span>
+                          <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                            Active Admin
+                          </span>
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                          Account: <span className="text-slate-200 font-semibold">{currentUser?.name || 'Ajayi Odunayo'}</span> ({currentUser?.email || 'admin@naijatrendinfo.com.ng'})
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={generateStrongPassword}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs px-3 py-1.5 rounded-xl border border-slate-700 flex items-center space-x-1.5 transition-colors cursor-pointer"
+                      title="Auto-generate a strong password"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Auto-Generate</span>
+                    </button>
+                  </div>
+
+                  {passSuccessMsg && (
+                    <div className="bg-emerald-950/80 border border-emerald-800 text-emerald-300 p-3.5 rounded-2xl text-xs flex items-center space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>{passSuccessMsg}</span>
+                    </div>
+                  )}
+
+                  {passErrorMsg && (
+                    <div className="bg-red-950/80 border border-red-800 text-red-300 p-3.5 rounded-2xl text-xs flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>{passErrorMsg}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleUpdateMyPassword} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Current Password */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1.5">Current Password</label>
+                        <div className="relative">
+                          <input
+                            type={showCurrentPass ? 'text' : 'password'}
+                            placeholder="Current login password"
+                            value={passCurrent}
+                            onChange={(e) => setPassCurrent(e.target.value)}
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 pr-10 border border-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPass(!showCurrentPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          >
+                            {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* New Password */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Password *</label>
+                        <div className="relative">
+                          <input
+                            type={showNewPass ? 'text' : 'password'}
+                            required
+                            placeholder="At least 4-8+ chars"
+                            value={passNew}
+                            onChange={(e) => setPassNew(e.target.value)}
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 pr-10 border border-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPass(!showNewPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          >
+                            {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm New Password */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1.5">Confirm New Password *</label>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPass ? 'text' : 'password'}
+                            required
+                            placeholder="Re-type new password"
+                            value={passConfirm}
+                            onChange={(e) => setPassConfirm(e.target.value)}
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 pr-10 border border-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPass(!showConfirmPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          >
+                            {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Password Strength Indicator */}
+                    {passNew.length > 0 && (
+                      <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400 font-medium">Password Strength:</span>
+                          <span className={`font-bold ${
+                            passNew.length >= 10 && /[A-Z]/.test(passNew) && /[0-9!@#$%^&*]/.test(passNew)
+                              ? 'text-emerald-400'
+                              : passNew.length >= 6
+                              ? 'text-amber-400'
+                              : 'text-red-400'
+                          }`}>
+                            {passNew.length >= 10 && /[A-Z]/.test(passNew) && /[0-9!@#$%^&*]/.test(passNew)
+                              ? 'Strong & Secure'
+                              : passNew.length >= 6
+                              ? 'Moderate'
+                              : 'Weak'}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              passNew.length >= 10 && /[A-Z]/.test(passNew) && /[0-9!@#$%^&*]/.test(passNew)
+                                ? 'w-full bg-emerald-500'
+                                : passNew.length >= 6
+                                ? 'w-2/3 bg-amber-500'
+                                : 'w-1/3 bg-red-500'
+                            }`}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-2">
+                      <p className="text-[11px] text-slate-400">
+                        Password updates take effect immediately for both Netlify static host sessions and backend API authentication.
+                      </p>
+                      <button
+                        type="submit"
+                        disabled={passUpdating}
+                        className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs px-6 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-lg transition-colors disabled:opacity-50 shrink-0"
+                      >
+                        {passUpdating ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <Key className="w-4 h-4 text-slate-950" />}
+                        <span>Save & Set Admin Password</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* CARD 2: QUICK PASSWORD GENERATOR & VAULT */}
+                <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <ShieldCheck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-bold text-white">Password Vault & Key Generator</h2>
+                        <p className="text-xs text-slate-400">Generate high-entropy keys for team members or database logins.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+                        <code className="text-xs font-mono text-amber-300 break-all select-all">
+                          {generatedPassword || 'Click "Generate" below'}
+                        </code>
+                        {generatedPassword && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedPassword);
+                              setCopiedGenPass(true);
+                              setTimeout(() => setCopiedGenPass(false), 2000);
+                            }}
+                            className="ml-2 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg shrink-0 cursor-pointer transition-colors"
+                            title="Copy Password"
+                          >
+                            {copiedGenPass ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={generateStrongPassword}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs py-2.5 rounded-xl border border-slate-700 flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Generate 16-Char Strong Key</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                    <div className="font-semibold text-slate-300">Default Credentials Note:</div>
+                    <p>Default login password for fresh user accounts is <code className="text-amber-400">AdminPassword123!</code>. You can reset passwords for any team member below.</p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* USERS TABLE */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span>Team Accounts & Role Access Matrix</span>
+                  </h3>
+                  <span className="text-xs text-slate-400">{users.length} Active Accounts</span>
+                </div>
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
                     <tr>
                       <th className="p-4">User Account</th>
                       <th className="p-4">Role</th>
+                      <th className="p-4">Password Security Status</th>
                       <th className="p-4">Created Date</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
@@ -1946,19 +2262,43 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         </td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
-                            usr.role === 'Admin' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'
+                            usr.role === 'Admin' || usr.role === 'Super Admin' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'
                           }`}>
                             {usr.role}
                           </span>
+                        </td>
+                        <td className="p-4">
+                          {usr.password || usr.lastPasswordChangedAt ? (
+                            <span className="inline-flex items-center space-x-1 text-emerald-400 font-medium text-[11px] bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-800/60">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Custom Password Active</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 text-slate-400 font-medium text-[11px] bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700">
+                              <Lock className="w-3 h-3" />
+                              <span>Default Password Set</span>
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 text-slate-400 text-[11px]">
                           {usr.createdAt ? new Date(usr.createdAt).toLocaleDateString() : 'Active'}
                         </td>
                         <td className="p-4 text-right space-x-2">
                           <button
+                            onClick={() => {
+                              setQuickResetUser(usr);
+                              setQuickResetPass('');
+                            }}
+                            className="px-2.5 py-1.5 bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800/80 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer inline-flex items-center space-x-1"
+                            title="Reset / Change Login Password"
+                          >
+                            <Key className="w-3 h-3 text-amber-400" />
+                            <span>Password</span>
+                          </button>
+                          <button
                             onClick={() => setEditingUser(usr)}
                             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors cursor-pointer"
-                            title="Edit User"
+                            title="Edit User Account"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
@@ -1969,7 +2309,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               handleDeleteUser(usr.id, usr.name);
                             }}
                             className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                            title="Delete User"
+                            title="Delete User Account"
                           >
                             {deletingId === usr.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
                           </button>
@@ -3439,8 +3779,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       {editingUser && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white">
-            <h3 className="font-bold text-base font-serif">
-              {editingUser.id ? 'Edit User Permissions' : 'New Admin/Editor Account'}
+            <h3 className="font-bold text-base font-serif flex items-center space-x-2">
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>{editingUser.id ? 'Edit User Account & Security' : 'New Admin/Editor Account'}</span>
             </h3>
             <form onSubmit={handleSaveUser} className="space-y-3">
               <div>
@@ -3476,6 +3817,33 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </select>
               </div>
               <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold flex items-center space-x-1">
+                    <Key className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Account Login Password</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+                      let res = '';
+                      for (let i = 0; i < 12; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+                      setEditingUser({ ...editingUser, password: res });
+                    }}
+                    className="text-[10px] text-amber-400 hover:underline cursor-pointer"
+                  >
+                    Auto-Generate
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Set login password (or leave blank to keep unchanged)"
+                  value={editingUser.password || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
+                />
+              </div>
+              <div>
                 <label className="block font-semibold mb-1">Avatar Image URL</label>
                 <input
                   type="url"
@@ -3485,11 +3853,82 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-2">
-                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
+                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2 bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-700">
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
+                <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl cursor-pointer">
                   Save Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Password Reset Modal */}
+      {quickResetUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white shadow-2xl">
+            <div className="flex items-center space-x-3 border-b border-slate-800 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <Key className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base font-serif">Change Password for {quickResetUser.name}</h3>
+                <p className="text-[11px] text-slate-400">{quickResetUser.email}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveQuickResetUserPass} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-semibold text-slate-200">New Login Password *</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+                      let res = '';
+                      for (let i = 0; i < 14; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+                      setQuickResetPass(res);
+                    }}
+                    className="text-[11px] text-amber-400 hover:underline cursor-pointer flex items-center space-x-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Auto-Generate</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showQuickResetPass ? 'text' : 'password'}
+                    required
+                    placeholder="Enter new password for this user"
+                    value={quickResetPass}
+                    onChange={(e) => setQuickResetPass(e.target.value)}
+                    className="w-full bg-slate-950 text-white p-3 pr-10 rounded-xl border border-slate-800 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickResetPass(!showQuickResetPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                  >
+                    {showQuickResetPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickResetUser(null);
+                    setQuickResetPass('');
+                  }}
+                  className="px-4 py-2 bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-amber-600 hover:bg-amber-500 font-bold rounded-xl text-slate-950 cursor-pointer">
+                  Update Password
                 </button>
               </div>
             </form>
