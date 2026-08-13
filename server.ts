@@ -94,11 +94,14 @@ function loadDatabase() {
   if (!loadedDb.pageVersions) loadedDb.pageVersions = [];
   if (!loadedDb.quickLinks || loadedDb.quickLinks.length === 0) loadedDb.quickLinks = INITIAL_QUICK_LINKS;
 
-  // Sync admin user name update if needed
+  // Sync admin user credentials
   if (loadedDb.users) {
-    const adminUser = loadedDb.users.find((u: any) => u.id === 'usr-1' || u.email === 'admin@naijatrendinfo.com.ng');
-    if (adminUser && adminUser.name === 'Chidubem Okechukwu') {
+    const adminUser = loadedDb.users.find((u: any) => u.id === 'usr-1' || u.email.toLowerCase() === 'admin@naijatrendinfo.com.ng' || u.email.toLowerCase() === 'ajayiodunayo28@gmail.com');
+    if (adminUser) {
       adminUser.name = 'Ajayi Odunayo';
+      adminUser.email = 'Ajayiodunayo28@gmail.com';
+      adminUser.password = 'Habiodun1990';
+      adminUser.role = 'Super Admin';
     }
   }
   if (loadedDb.editorialDesk) {
@@ -195,17 +198,18 @@ async function startServer() {
   // Auth Login
   app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
-    const user = db.users.find((u: any) => u.email.toLowerCase() === (email || '').trim().toLowerCase());
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    const user = db.users.find((u: any) => u.email.toLowerCase() === cleanEmail);
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials. User email not found.' });
     }
 
-    const customPassword = user.password;
-    const isCustomMatch = customPassword && password === customPassword;
-    const isDefaultMatch = password === 'AdminPassword123!' || password === 'admin' || (!customPassword && password.length >= 4);
+    const expectedPassword = user.password || (cleanEmail === 'ajayiodunayo28@gmail.com' ? 'Habiodun1990' : null);
 
-    if (isCustomMatch || isDefaultMatch) {
+    if (expectedPassword && cleanPass === expectedPassword) {
       const token = 'token-' + user.id + '-' + Date.now();
       addAuditLog(user.email, user.name, 'Admin Login', 'User authenticated successfully into Admin Dashboard.', 'Authentication');
       return res.json({
@@ -862,7 +866,7 @@ function isBlockedFileType(filename: string): boolean {
 
     db.users.push(user);
     saveDatabase();
-    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'User Created', `Created user account for ${user.name} (${user.role})`, 'Users');
+    addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Created', `Created user account for ${user.name} (${user.role})`, 'Users');
     res.json(user);
   });
 
@@ -877,7 +881,7 @@ function isBlockedFileType(filename: string): boolean {
       }
       db.users[index] = { ...existing, ...updates };
       saveDatabase();
-      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'User Updated', `Updated settings/password for user ${db.users[index].name}`, 'Users');
+      addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Updated', `Updated settings/password for user ${db.users[index].name}`, 'Users');
       return res.json(db.users[index]);
     }
     res.status(404).json({ message: 'User not found' });

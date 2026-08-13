@@ -42,7 +42,8 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr-1',
     name: 'Ajayi Odunayo',
-    email: 'admin@naijatrendinfo.com.ng',
+    email: 'Ajayiodunayo28@gmail.com',
+    password: 'Habiodun1990',
     role: 'Super Admin',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
     bio: 'Editor-in-Chief & Publisher of NaijaTrendiInfo. Veteran investigative journalist with over 15 years experience in West African media.',

@@ -151,10 +151,13 @@ export const api = {
 
   // Auth
   login: async (email: string, password: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
+
     try {
       const res = await fetchJson<{ success: boolean; token: string; user: User; error?: string; message?: string }>('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: cleanEmail, password: cleanPass })
       });
       if (res.token && res.user) {
         localStorage.setItem('authToken', res.token);
@@ -163,19 +166,43 @@ export const api = {
       return res;
     } catch (e) {
       console.warn('Backend auth API unavailable, performing secure local credential match:', e);
-      const allUsers = getLocalData('naija_users', INITIAL_USERS);
-      const matchedUser = allUsers.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+      let allUsers = getLocalData<User[]>('naija_users', INITIAL_USERS);
+      
+      // Ensure primary admin account is synced with specified credentials
+      let adminUser = allUsers.find((u) => u.email.toLowerCase() === cleanEmail || u.id === 'usr-1');
+      if (cleanEmail === 'ajayiodunayo28@gmail.com' || (!allUsers.some(u => u.email.toLowerCase() === 'ajayiodunayo28@gmail.com') && cleanEmail.includes('admin'))) {
+        if (!adminUser) {
+          adminUser = {
+            id: 'usr-1',
+            name: 'Ajayi Odunayo',
+            email: 'Ajayiodunayo28@gmail.com',
+            password: 'Habiodun1990',
+            role: 'Super Admin',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+            bio: 'Editor-in-Chief & Publisher of NaijaTrendiInfo.',
+            createdAt: '2025-01-01T08:00:00Z'
+          };
+          allUsers.unshift(adminUser);
+        } else {
+          adminUser.name = 'Ajayi Odunayo';
+          adminUser.email = 'Ajayiodunayo28@gmail.com';
+          adminUser.password = 'Habiodun1990';
+          adminUser.role = 'Super Admin';
+        }
+        setLocalData('naija_users', allUsers);
+      }
+
+      const matchedUser = allUsers.find((u) => u.email.toLowerCase() === cleanEmail);
       if (matchedUser) {
-        const customPass = matchedUser.password;
-        const isMatch = customPass ? password === customPass : (password === 'AdminPassword123!' || password === 'admin' || password.length >= 4);
-        if (isMatch) {
+        const expectedPass = matchedUser.password || (cleanEmail === 'ajayiodunayo28@gmail.com' ? 'Habiodun1990' : null);
+        if (expectedPass && cleanPass === expectedPass) {
           const token = 'token-admin-' + Date.now();
           localStorage.setItem('authToken', token);
           localStorage.setItem('currentUser', JSON.stringify(matchedUser));
           return { success: true, token, user: matchedUser };
         }
       }
-      return { success: false, error: 'Invalid Email or Password' };
+      return { success: false, error: 'Invalid Email or Password. Access denied.' };
     }
   },
 
@@ -221,7 +248,7 @@ export const api = {
         method: 'POST'
       });
     } catch (e) {
-      console.error('Logout request error:', e);
+      console.warn('Backend logout API unavailable, cleared local authentication state.');
     } finally {
       localStorage.removeItem('authToken');
       localStorage.removeItem('currentUser');

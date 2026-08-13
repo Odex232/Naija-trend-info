@@ -313,7 +313,7 @@ export default function App() {
     try {
       await api.logout();
     } catch (e) {
-      console.error('Error logging out:', e);
+      // Ignore network errors on logout
     }
     localStorage.removeItem('currentUser');
     localStorage.removeItem('authToken');

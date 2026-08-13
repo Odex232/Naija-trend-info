@@ -2030,7 +2030,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           </span>
                         </h2>
                         <p className="text-xs text-slate-400">
-                          Account: <span className="text-slate-200 font-semibold">{currentUser?.name || 'Ajayi Odunayo'}</span> ({currentUser?.email || 'admin@naijatrendinfo.com.ng'})
+                          Account: <span className="text-slate-200 font-semibold">{currentUser?.name || 'Ajayi Odunayo'}</span> ({currentUser?.email || 'Ajayiodunayo28@gmail.com'})
                         </p>
                       </div>
                     </div>
