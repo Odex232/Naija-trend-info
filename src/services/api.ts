@@ -78,9 +78,10 @@ function setLocalData<T>(key: string, value: T): void {
 
 async function syncLocalArticlesToServer(serverArticles: Article[]) {
   try {
+    const deletedList = new Set(getLocalData<string[]>('naija_deleted_articles', []));
     const localArticles = getLocalData<Article[]>('naija_articles', []);
     const serverIds = new Set((serverArticles || []).map((a) => a.id));
-    const pendingToSync = localArticles.filter((a) => !serverIds.has(a.id));
+    const pendingToSync = localArticles.filter((a) => !serverIds.has(a.id) && !deletedList.has(a.id) && !deletedList.has(a.slug));
 
     if (pendingToSync.length > 0) {
       console.log(`Syncing ${pendingToSync.length} locally created posts to production database...`);
@@ -147,9 +148,11 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Bootstrap state
   bootstrap: async () => {
+    const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
     try {
       const data = await fetchJson<any>('/api/bootstrap');
       if (data && typeof data === 'object' && Array.isArray(data.articles)) {
+        data.articles = data.articles.filter((a: any) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
         await syncLocalArticlesToServer(data.articles);
         setLocalData('naija_articles', data.articles);
         if (data.categories) setLocalData('naija_categories', data.categories);
@@ -166,10 +169,11 @@ export const api = {
     let storedArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
     const articleIds = new Set(storedArticles.map((a) => a.id));
     for (const initArt of INITIAL_ARTICLES) {
-      if (!articleIds.has(initArt.id)) {
+      if (!articleIds.has(initArt.id) && !deletedIds.has(initArt.id) && !deletedIds.has(initArt.slug)) {
         storedArticles.push(initArt);
       }
     }
+    storedArticles = storedArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
     storedArticles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
     return {
@@ -323,6 +327,7 @@ export const api = {
 
   // Articles CRUD with LocalStorage Fallback & Real-Time Sync
   getArticles: async (params?: { category?: string; tag?: string; search?: string; status?: string; featured?: boolean; breaking?: boolean }) => {
+    const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
     try {
       const q = new URLSearchParams();
       if (params?.category) q.set('category', params.category);
@@ -331,8 +336,9 @@ export const api = {
       if (params?.status) q.set('status', params.status);
       if (params?.featured) q.set('featured', 'true');
       if (params?.breaking) q.set('breaking', 'true');
-      const apiArticles = await fetchJson<Article[]>(`/api/articles?${q.toString()}`);
+      let apiArticles = await fetchJson<Article[]>(`/api/articles?${q.toString()}`);
       if (Array.isArray(apiArticles)) {
+        apiArticles = apiArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
         if (!params || Object.keys(params).length === 0) {
           syncLocalArticlesToServer(apiArticles).catch(() => {});
         }
@@ -346,10 +352,12 @@ export const api = {
     let articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
     const existingIds = new Set(articles.map((a) => a.id));
     for (const initArt of INITIAL_ARTICLES) {
-      if (!existingIds.has(initArt.id)) {
+      if (!existingIds.has(initArt.id) && !deletedIds.has(initArt.id) && !deletedIds.has(initArt.slug)) {
         articles.push(initArt);
       }
     }
+
+    articles = articles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
 
     if (params?.category) articles = articles.filter((a) => a.categoryId === params.category || a.categoryName.toLowerCase() === params.category.toLowerCase());
     if (params?.tag) articles = articles.filter((a) => a.tags?.some((t) => t.toLowerCase() === params.tag?.toLowerCase()));
@@ -489,19 +497,33 @@ export const api = {
   },
 
   deleteArticle: async (id: string) => {
+    // 1. Instantly record in deleted IDs list in localStorage
+    const deletedList = getLocalData<string[]>('naija_deleted_articles', []);
+    if (!deletedList.includes(id)) {
+      deletedList.push(id);
+    }
+
+    // Also check if we can find the article's slug in local storage to add slug too
+    const localArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const targetArt = localArticles.find((a) => a.id === id || a.slug === id);
+    if (targetArt) {
+      if (targetArt.id && !deletedList.includes(targetArt.id)) deletedList.push(targetArt.id);
+      if (targetArt.slug && !deletedList.includes(targetArt.slug)) deletedList.push(targetArt.slug);
+    }
+    setLocalData('naija_deleted_articles', deletedList);
+
+    // 2. Filter out from local storage articles instantly
+    const updated = localArticles.filter((a) => a.id !== id && a.slug !== id && (targetArt ? a.id !== targetArt.id && a.slug !== targetArt.slug : true));
+    setLocalData('naija_articles', updated);
+
+    // 3. Perform backend API delete request
     try {
       const res = await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/articles/${id}`, {
         method: 'DELETE'
       });
-      const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
-      const updated = articles.filter((a) => a.id !== id);
-      setLocalData('naija_articles', updated);
-      return res;
+      return res || { success: true, id, message: 'Article deleted successfully' };
     } catch (e) {
-      console.warn('Backend API unavailable, deleting article locally:', e);
-      const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
-      const updated = articles.filter((a) => a.id !== id);
-      setLocalData('naija_articles', updated);
+      console.warn('Backend API delete note:', e);
       return { success: true, id, message: 'Article deleted successfully' };
     }
   },
