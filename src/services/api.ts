@@ -40,9 +40,24 @@ import {
   INITIAL_INFORMATION
 } from '../data/initialData';
 
-const API_BASE_URL = ((import.meta as any).env?.VITE_API_URL || '').replace(/\/$/, '');
+const DEFAULT_REMOTE_API = 'https://ais-pre-dwirriwzus4adftcq6hige-24821517127.europe-west1.run.app';
 
-// Local Storage Helper Utilities for Static Host Fallback (e.g., Netlify)
+function getApiBaseUrl(): string {
+  const envUrl = ((import.meta as any).env?.VITE_API_URL || '').replace(/\/$/, '');
+  if (envUrl) return envUrl;
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('netlify.app') || host.includes('naijatrendinfo.com.ng')) {
+      return DEFAULT_REMOTE_API;
+    }
+  }
+  return '';
+}
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Local Storage Helper Utilities for Offline/Fallback Sync
 function getLocalData<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -61,6 +76,30 @@ function setLocalData<T>(key: string, value: T): void {
   }
 }
 
+async function syncLocalArticlesToServer(serverArticles: Article[]) {
+  try {
+    const localArticles = getLocalData<Article[]>('naija_articles', []);
+    const serverIds = new Set((serverArticles || []).map((a) => a.id));
+    const pendingToSync = localArticles.filter((a) => !serverIds.has(a.id));
+
+    if (pendingToSync.length > 0) {
+      console.log(`Syncing ${pendingToSync.length} locally created posts to production database...`);
+      for (const item of pendingToSync) {
+        try {
+          await fetchJson<Article>('/api/articles', {
+            method: 'POST',
+            body: JSON.stringify(item)
+          });
+        } catch (err) {
+          console.warn('Failed to sync item to server:', item.id, err);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error during local article sync:', e);
+  }
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('authToken');
   const headers: Record<string, string> = {
@@ -72,7 +111,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const fullUrl = url.startsWith('/api/') && API_BASE_URL ? `${API_BASE_URL}${url}` : url;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const res = await fetch(fullUrl, {
@@ -111,6 +150,7 @@ export const api = {
     try {
       const data = await fetchJson<any>('/api/bootstrap');
       if (data && typeof data === 'object' && Array.isArray(data.articles)) {
+        await syncLocalArticlesToServer(data.articles);
         setLocalData('naija_articles', data.articles);
         if (data.categories) setLocalData('naija_categories', data.categories);
         if (data.breakingNews) setLocalData('naija_breaking_news', data.breakingNews);
@@ -293,6 +333,9 @@ export const api = {
       if (params?.breaking) q.set('breaking', 'true');
       const apiArticles = await fetchJson<Article[]>(`/api/articles?${q.toString()}`);
       if (Array.isArray(apiArticles)) {
+        if (!params || Object.keys(params).length === 0) {
+          syncLocalArticlesToServer(apiArticles).catch(() => {});
+        }
         setLocalData('naija_articles', apiArticles);
         return apiArticles;
       }
