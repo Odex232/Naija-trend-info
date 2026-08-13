@@ -23,6 +23,23 @@ import {
   AdvertisingPackage
 } from './types';
 import { api } from './services/api';
+import {
+  INITIAL_CATEGORIES,
+  INITIAL_USERS,
+  INITIAL_BREAKING_NEWS,
+  INITIAL_ARTICLES,
+  INITIAL_ADS,
+  INITIAL_AD_PLACEMENTS,
+  INITIAL_SETTINGS,
+  INITIAL_SOCIAL_LINKS,
+  INITIAL_QUICK_LINKS,
+  INITIAL_PAGES,
+  INITIAL_COOKIE_SETTINGS,
+  INITIAL_FOOTER_SETTINGS,
+  INITIAL_ADVERTISING_PACKAGES,
+  INITIAL_EDITORIAL_DESK,
+  INITIAL_INFORMATION
+} from './data/initialData';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CookieBanner } from './components/CookieBanner';
@@ -40,29 +57,29 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
-  // Core Entity State
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [breakingNews, setBreakingNews] = useState<BreakingNews[]>([]);
-  const [ads, setAds] = useState<Ad[]>([]);
-  const [adPlacements, setAdPlacements] = useState<AdPlacement[]>([]);
-  const [settings, setSettings] = useState<WebsiteSettings | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  // Core Entity State with complete fallback defaults
+  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [breakingNews, setBreakingNews] = useState<BreakingNews[]>(INITIAL_BREAKING_NEWS);
+  const [ads, setAds] = useState<Ad[]>(INITIAL_ADS);
+  const [adPlacements, setAdPlacements] = useState<AdPlacement[]>(INITIAL_AD_PLACEMENTS);
+  const [settings, setSettings] = useState<WebsiteSettings>(INITIAL_SETTINGS);
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [comments, setComments] = useState<Comment[]>([]);
   const [submissions, setSubmissions] = useState<NewsSubmission[]>([]);
   const [contacts, setContacts] = useState<ContactMessage[]>([]);
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
-  const [editorialDesk, setEditorialDesk] = useState<EditorialDeskEntry[]>([]);
-  const [information, setInformation] = useState<InformationEntry[]>([]);
-  const [socialLinks, setSocialLinks] = useState<SocialMediaLink[]>([]);
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>(INITIAL_QUICK_LINKS);
+  const [editorialDesk, setEditorialDesk] = useState<EditorialDeskEntry[]>(INITIAL_EDITORIAL_DESK);
+  const [information, setInformation] = useState<InformationEntry[]>(INITIAL_INFORMATION);
+  const [socialLinks, setSocialLinks] = useState<SocialMediaLink[]>(INITIAL_SOCIAL_LINKS);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [sportsFixtures, setSportsFixtures] = useState<SportsFixture[]>([]);
-  const [pages, setPages] = useState<SitePage[]>([]);
-  const [cookieSettings, setCookieSettings] = useState<CookieSettings | null>(null);
-  const [footerSettings, setFooterSettings] = useState<FooterSettings | null>(null);
-  const [advertisingPackages, setAdvertisingPackages] = useState<AdvertisingPackage[]>([]);
+  const [pages, setPages] = useState<SitePage[]>(INITIAL_PAGES);
+  const [cookieSettings, setCookieSettings] = useState<CookieSettings | null>(INITIAL_COOKIE_SETTINGS);
+  const [footerSettings, setFooterSettings] = useState<FooterSettings | null>(INITIAL_FOOTER_SETTINGS);
+  const [advertisingPackages, setAdvertisingPackages] = useState<AdvertisingPackage[]>(INITIAL_ADVERTISING_PACKAGES);
 
   // Navigation State
   const [currentView, setCurrentView] = useState<'home' | 'article' | 'category' | 'sports' | 'search' | 'info' | 'admin'>('home');
@@ -159,7 +176,22 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadData();
+    let isMounted = true;
+    const timer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 3000);
+
+    loadData().finally(() => {
+      if (isMounted) {
+        setLoading(false);
+        clearTimeout(timer);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Sync dark class on html document root
@@ -298,15 +330,15 @@ export default function App() {
     setLoginError('');
     setLoginLoading(true);
     try {
-      const res = await api.login(loginEmail, loginPassword);
-      if (res.user) {
+      const res: any = await api.login(loginEmail, loginPassword);
+      if (res && res.user) {
         setCurrentUser(res.user);
         setLoginModalOpen(false);
         setLoginEmail('');
         setLoginPassword('');
         setCurrentView('admin');
       } else {
-        setLoginError(res.error || 'Invalid Admin Credentials');
+        setLoginError(res?.error || 'Invalid Admin Credentials');
       }
     } catch (err) {
       setLoginError('Authentication error');
@@ -315,7 +347,7 @@ export default function App() {
     }
   };
 
-  if (loading || !settings) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
