@@ -34,9 +34,10 @@ export const PublicMediaDownloadsSection: React.FC<PublicMediaDownloadsSectionPr
   const fetchPublishedMedia = async () => {
     try {
       const data = await api.getMedia(true);
-      setMediaList(data || []);
+      setMediaList(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Failed to fetch public media files:', err);
+      console.warn('Unable to fetch public media files from API:', err);
+      setMediaList([]);
     } finally {
       setLoading(false);
     }
