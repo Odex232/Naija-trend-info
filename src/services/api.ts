@@ -111,16 +111,31 @@ export const api = {
     try {
       const data = await fetchJson<any>('/api/bootstrap');
       if (data && typeof data === 'object' && Array.isArray(data.articles)) {
+        setLocalData('naija_articles', data.articles);
+        if (data.categories) setLocalData('naija_categories', data.categories);
+        if (data.breakingNews) setLocalData('naija_breaking_news', data.breakingNews);
+        if (data.settings) setLocalData('naija_settings', data.settings);
+        if (data.ads) setLocalData('naija_ads', data.ads);
+        if (data.users) setLocalData('naija_users', data.users);
         return data;
       }
     } catch (e) {
       console.warn('Backend API bootstrap unavailable, loading local stored dataset:', e);
     }
 
+    let storedArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const articleIds = new Set(storedArticles.map((a) => a.id));
+    for (const initArt of INITIAL_ARTICLES) {
+      if (!articleIds.has(initArt.id)) {
+        storedArticles.push(initArt);
+      }
+    }
+    storedArticles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+
     return {
       settings: getLocalData('naija_settings', INITIAL_SETTINGS),
       categories: getLocalData('naija_categories', INITIAL_CATEGORIES),
-      articles: getLocalData('naija_articles', INITIAL_ARTICLES),
+      articles: storedArticles,
       breakingNews: getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS),
       ads: getLocalData('naija_ads', INITIAL_ADS),
       adPlacements: INITIAL_AD_PLACEMENTS,
@@ -266,7 +281,7 @@ export const api = {
       message: 'Password reset link sent to your registered email.'
     })),
 
-  // Articles CRUD with LocalStorage Fallback
+  // Articles CRUD with LocalStorage Fallback & Real-Time Sync
   getArticles: async (params?: { category?: string; tag?: string; search?: string; status?: string; featured?: boolean; breaking?: boolean }) => {
     try {
       const q = new URLSearchParams();
@@ -276,135 +291,172 @@ export const api = {
       if (params?.status) q.set('status', params.status);
       if (params?.featured) q.set('featured', 'true');
       if (params?.breaking) q.set('breaking', 'true');
-      return await fetchJson<Article[]>(`/api/articles?${q.toString()}`);
-    } catch (e) {
-      let articles = getLocalData('naija_articles', INITIAL_ARTICLES);
-      if (params?.category) articles = articles.filter((a) => a.categoryId === params.category || a.categoryName === params.category);
-      if (params?.search) {
-        const q = params.search.toLowerCase();
-        articles = articles.filter((a) => a.title.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q) || a.content.toLowerCase().includes(q));
+      const apiArticles = await fetchJson<Article[]>(`/api/articles?${q.toString()}`);
+      if (Array.isArray(apiArticles)) {
+        setLocalData('naija_articles', apiArticles);
+        return apiArticles;
       }
-      if (params?.status) articles = articles.filter((a) => a.status === params.status);
-      if (params?.featured) articles = articles.filter((a) => a.isFeatured);
-      if (params?.breaking) articles = articles.filter((a) => a.isBreaking);
-      return articles;
+    } catch (e) {
+      console.warn('Backend API unavailable, serving filtered local articles:', e);
     }
+
+    let articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const existingIds = new Set(articles.map((a) => a.id));
+    for (const initArt of INITIAL_ARTICLES) {
+      if (!existingIds.has(initArt.id)) {
+        articles.push(initArt);
+      }
+    }
+
+    if (params?.category) articles = articles.filter((a) => a.categoryId === params.category || a.categoryName.toLowerCase() === params.category.toLowerCase());
+    if (params?.tag) articles = articles.filter((a) => a.tags?.some((t) => t.toLowerCase() === params.tag?.toLowerCase()));
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      articles = articles.filter((a) => a.title.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q) || a.content.toLowerCase().includes(q));
+    }
+    if (params?.status) articles = articles.filter((a) => a.status === params.status);
+    if (params?.featured) articles = articles.filter((a) => a.isFeatured);
+    if (params?.breaking) articles = articles.filter((a) => a.isBreaking);
+
+    articles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+    return articles;
   },
 
   getArticleBySlugOrId: async (slugOrId: string) => {
     try {
       return await fetchJson<Article>(`/api/articles/${slugOrId}`);
     } catch (e) {
-      const articles = getLocalData('naija_articles', INITIAL_ARTICLES);
-      const found = articles.find((a) => a.slug === slugOrId || a.id === slugOrId);
+      let articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+      let found = articles.find((a) => a.slug === slugOrId || a.id === slugOrId);
+      if (!found) {
+        found = INITIAL_ARTICLES.find((a) => a.slug === slugOrId || a.id === slugOrId);
+      }
       if (found) return found;
       throw new Error('Article not found');
     }
   },
 
   createArticle: async (article: Partial<Article>) => {
+    const now = new Date().toISOString();
+    const slug = article.slug || (article.title ? article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `article-${Date.now()}`);
+
+    const newArticle: Article = {
+      id: article.id || `art-${Date.now()}`,
+      title: article.title || 'Untitled Article',
+      slug,
+      summary: article.summary || '',
+      content: article.content || '',
+      categoryId: article.categoryId || 'cat-politics',
+      categoryName: article.categoryName || 'General',
+      tags: Array.isArray(article.tags) ? article.tags : [],
+      featuredImage: article.featuredImage || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
+      imageCaption: article.imageCaption || '',
+      imageCredit: article.imageCredit || '',
+      galleryImages: article.galleryImages || [],
+      authorId: article.authorId || 'usr-1',
+      authorName: article.authorName || 'Ajayi Odunayo',
+      authorAvatar: article.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      status: article.status || 'published',
+      isFeatured: !!article.isFeatured,
+      isPinned: !!article.isPinned,
+      isBreaking: !!article.isBreaking,
+      isEditorPick: !!article.isEditorPick,
+      views: article.views || 0,
+      readTimeMinutes: article.readTimeMinutes || Math.max(1, Math.ceil((article.content || '').split(' ').length / 200)),
+      publishedAt: article.publishedAt || now,
+      updatedAt: now
+    };
+
     try {
-      return await fetchJson<Article>('/api/articles', {
+      const serverRes = await fetchJson<Article>('/api/articles', {
         method: 'POST',
+        body: JSON.stringify(newArticle)
+      });
+      if (serverRes) {
+        const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+        const updated = [serverRes, ...articles.filter((a) => a.id !== serverRes.id)];
+        setLocalData('naija_articles', updated);
+        return serverRes;
+      }
+    } catch (e) {
+      console.warn('Backend API unavailable, publishing article directly to local storage:', e);
+    }
+
+    const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const updated = [newArticle, ...articles.filter((a) => a.id !== newArticle.id)];
+    setLocalData('naija_articles', updated);
+    return newArticle;
+  },
+
+  updateArticle: async (id: string, article: Partial<Article>) => {
+    try {
+      const serverRes = await fetchJson<Article>(`/api/articles/${id}`, {
+        method: 'PUT',
         body: JSON.stringify(article)
       });
+      if (serverRes) {
+        const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+        const updatedList = articles.map((a) => (a.id === id ? serverRes : a));
+        setLocalData('naija_articles', updatedList);
+        return serverRes;
+      }
     } catch (e) {
-      console.warn('Backend API unavailable, publishing article to local storage:', e);
-      const articles = getLocalData('naija_articles', INITIAL_ARTICLES);
-      const now = new Date().toISOString();
-      const slug = article.slug || (article.title ? article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `article-${Date.now()}`);
+      console.warn('Backend API unavailable, updating article in local storage:', e);
+    }
 
-      const newArticle: Article = {
-        id: article.id || `art-${Date.now()}`,
+    const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    let updatedItem: Article | null = null;
+    const updatedList = articles.map((a) => {
+      if (a.id === id) {
+        updatedItem = { ...a, ...article, updatedAt: new Date().toISOString() };
+        return updatedItem;
+      }
+      return a;
+    });
+
+    if (!updatedItem) {
+      const now = new Date().toISOString();
+      updatedItem = {
+        id,
         title: article.title || 'Untitled Article',
-        slug,
+        slug: article.slug || `article-${Date.now()}`,
         summary: article.summary || '',
         content: article.content || '',
         categoryId: article.categoryId || 'cat-politics',
         categoryName: article.categoryName || 'General',
         tags: Array.isArray(article.tags) ? article.tags : [],
         featuredImage: article.featuredImage || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
-        imageCaption: article.imageCaption || '',
-        imageCredit: article.imageCredit || '',
-        galleryImages: article.galleryImages || [],
-        authorId: article.authorId || 'usr-admin',
-        authorName: article.authorName || 'Editor-in-Chief',
-        authorAvatar: article.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+        authorId: article.authorId || 'usr-1',
+        authorName: article.authorName || 'Ajayi Odunayo',
         status: article.status || 'published',
         isFeatured: !!article.isFeatured,
         isPinned: !!article.isPinned,
         isBreaking: !!article.isBreaking,
         isEditorPick: !!article.isEditorPick,
         views: article.views || 0,
-        readTimeMinutes: article.readTimeMinutes || Math.max(1, Math.ceil((article.content || '').split(' ').length / 200)),
+        readTimeMinutes: article.readTimeMinutes || 3,
         publishedAt: article.publishedAt || now,
         updatedAt: now
       };
-
-      const updated = [newArticle, ...articles];
-      setLocalData('naija_articles', updated);
-      return newArticle;
+      updatedList.unshift(updatedItem);
     }
-  },
 
-  updateArticle: async (id: string, article: Partial<Article>) => {
-    try {
-      return await fetchJson<Article>(`/api/articles/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(article)
-      });
-    } catch (e) {
-      console.warn('Backend API unavailable, updating article in local storage:', e);
-      const articles = getLocalData('naija_articles', INITIAL_ARTICLES);
-      let updatedItem: Article | null = null;
-      const updatedList = articles.map((a) => {
-        if (a.id === id) {
-          updatedItem = { ...a, ...article, updatedAt: new Date().toISOString() };
-          return updatedItem;
-        }
-        return a;
-      });
-
-      if (!updatedItem) {
-        const now = new Date().toISOString();
-        updatedItem = {
-          id,
-          title: article.title || 'Untitled Article',
-          slug: article.slug || `article-${Date.now()}`,
-          summary: article.summary || '',
-          content: article.content || '',
-          categoryId: article.categoryId || 'cat-politics',
-          categoryName: article.categoryName || 'General',
-          tags: Array.isArray(article.tags) ? article.tags : [],
-          featuredImage: article.featuredImage || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
-          authorId: article.authorId || 'usr-admin',
-          authorName: article.authorName || 'Editor-in-Chief',
-          status: article.status || 'published',
-          isFeatured: !!article.isFeatured,
-          isPinned: !!article.isPinned,
-          isBreaking: !!article.isBreaking,
-          isEditorPick: !!article.isEditorPick,
-          views: article.views || 0,
-          readTimeMinutes: article.readTimeMinutes || 3,
-          publishedAt: article.publishedAt || now,
-          updatedAt: now
-        };
-        updatedList.unshift(updatedItem);
-      }
-
-      setLocalData('naija_articles', updatedList);
-      return updatedItem;
-    }
+    setLocalData('naija_articles', updatedList);
+    return updatedItem;
   },
 
   deleteArticle: async (id: string) => {
     try {
-      return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/articles/${id}`, {
+      const res = await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/articles/${id}`, {
         method: 'DELETE'
       });
+      const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+      const updated = articles.filter((a) => a.id !== id);
+      setLocalData('naija_articles', updated);
+      return res;
     } catch (e) {
       console.warn('Backend API unavailable, deleting article locally:', e);
-      const articles = getLocalData('naija_articles', INITIAL_ARTICLES);
+      const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
       const updated = articles.filter((a) => a.id !== id);
       setLocalData('naija_articles', updated);
       return { success: true, id, message: 'Article deleted successfully' };
