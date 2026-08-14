@@ -6,22 +6,23 @@
   X-Content-Type-Options: nosniff
   X-XSS-Protection: 1; mode=block
   Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Accept, Origin, *
 
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate, max-age=0
   Pragma: no-cache
   Expires: 0
+  Access-Control-Allow-Origin: *
 
-# Prevent mobile browser caching (Opera Mini, Phoenix, UC Browser, Safari Mobile, Chrome Mobile) on API proxy calls
+# Prevent mobile browser caching on API proxy calls
 /api/*
   Cache-Control: no-cache, no-store, must-revalidate, max-age=0
   Pragma: no-cache
   Expires: 0
   Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Accept, Origin, *
 
 # Allow fast asset loading for hashed bundles
 /assets/*

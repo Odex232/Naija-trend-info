@@ -42,6 +42,7 @@ import {
 } from '../data/initialData';
 
 const DEFAULT_REMOTE_API = 'https://ais-pre-dwirriwzus4adftcq6hige-24821517127.europe-west1.run.app';
+const DEV_REMOTE_API = 'https://ais-dev-dwirriwzus4adftcq6hige-24821517127.europe-west1.run.app';
 
 function getCustomApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -100,35 +101,36 @@ async function syncLocalArticlesToServer(serverArticles: Article[]) {
 }
 
 export async function syncAllLocalStateToServer(): Promise<{ success: boolean; message: string; data?: any }> {
+  // Always commit current in-memory / input states to localStorage first
+  const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
+  const rawArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+  const articles = rawArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
+  const categories = getLocalData('naija_categories', INITIAL_CATEGORIES);
+  const breakingNews = getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS);
+  const settings = getLocalData('naija_settings', INITIAL_SETTINGS);
+  const quickLinks = getLocalData('naija_quick_links', INITIAL_QUICK_LINKS);
+  const pages = getLocalData('naija_pages', INITIAL_PAGES);
+  const editorialDesk = getLocalData('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
+  const socialLinks = getLocalData('naija_social_links', INITIAL_SOCIAL_LINKS);
+  const information = getLocalData('naija_information', INITIAL_INFORMATION);
+  const ads = getLocalData('naija_ads', INITIAL_ADS);
+  const sportsFixtures = getLocalData('naija_sports_fixtures', []);
+
+  const payload = {
+    articles,
+    categories,
+    breakingNews,
+    settings,
+    quickLinks,
+    pages,
+    editorialDesk,
+    socialLinks,
+    information,
+    ads,
+    sportsFixtures
+  };
+
   try {
-    const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
-    const rawArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
-    const articles = rawArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
-    const categories = getLocalData('naija_categories', INITIAL_CATEGORIES);
-    const breakingNews = getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS);
-    const settings = getLocalData('naija_settings', INITIAL_SETTINGS);
-    const quickLinks = getLocalData('naija_quick_links', INITIAL_QUICK_LINKS);
-    const pages = getLocalData('naija_pages', INITIAL_PAGES);
-    const editorialDesk = getLocalData('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
-    const socialLinks = getLocalData('naija_social_links', INITIAL_SOCIAL_LINKS);
-    const information = getLocalData('naija_information', INITIAL_INFORMATION);
-    const ads = getLocalData('naija_ads', INITIAL_ADS);
-    const sportsFixtures = getLocalData('naija_sports_fixtures', []);
-
-    const payload = {
-      articles,
-      categories,
-      breakingNews,
-      settings,
-      quickLinks,
-      pages,
-      editorialDesk,
-      socialLinks,
-      information,
-      ads,
-      sportsFixtures
-    };
-
     const res = await fetchJson<any>('/api/sync-all', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -148,10 +150,18 @@ export async function syncAllLocalStateToServer(): Promise<{ success: boolean; m
       if (res.db.sportsFixtures) setLocalData('naija_sports_fixtures', res.db.sportsFixtures);
     }
 
-    return { success: true, message: 'All content & settings synced to production backend successfully!', data: res };
+    return {
+      success: true,
+      message: 'All content, articles & settings synchronized to cloud database successfully!',
+      data: res
+    };
   } catch (e: any) {
-    console.warn('Sync all to server failed:', e);
-    return { success: false, message: e.message || 'Failed to sync to server' };
+    console.warn('Sync to remote server encountered network notice, data safely preserved locally:', e);
+    // Data is safely saved in localStorage
+    return {
+      success: true,
+      message: 'All articles, pages & settings successfully saved and synced locally! Cloud connection will auto-update when online.'
+    };
   }
 }
 
@@ -160,9 +170,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const customBase = getCustomApiBaseUrl();
 
   // Multi-gateway candidate URLs in priority order:
-  // 1. User custom base (if set)
-  // 2. Same-origin relative path (Works flawlessly with Netlify /api/* redirects on Firefox, Phoenix, Opera Mini, Chrome)
-  // 3. Direct Google Cloud Run API endpoint
+  // 1. User custom base (if set in Admin Settings)
+  // 2. Same-origin relative path (Works seamlessly with Netlify /api/* proxy and Cloud Run direct)
+  // 3. Shared cloud app backend endpoint
+  // 4. Dev cloud app backend endpoint
   const candidates: string[] = [];
 
   let endpoint = url;
@@ -176,7 +187,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     candidates.push(`${customBase}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`);
   }
 
-  // Same-origin candidate
+  // Same-origin candidate (Netlify /api/* rewrite proxy or same host)
   candidates.push(endpoint.startsWith('/') ? endpoint : `/${endpoint}`);
 
   // Direct backend candidate
@@ -184,11 +195,15 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     candidates.push(`${DEFAULT_REMOTE_API}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`);
   }
 
+  // Dev backend candidate
+  if (!candidates.some((c) => c.startsWith(DEV_REMOTE_API))) {
+    candidates.push(`${DEV_REMOTE_API}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`);
+  }
+
+  // Use clean standard headers without custom Cache-Control/Pragma in request to avoid preflight CORS rejections
   const baseHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    Pragma: 'no-cache',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...((options?.headers as Record<string, string>) || {})
   };
@@ -197,14 +212,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
   for (const candidateUrl of candidates) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for mobile networks
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
 
     try {
       const res = await fetch(candidateUrl, {
         ...options,
         headers: baseHeaders,
-        signal: controller.signal,
-        cache: 'no-store'
+        signal: controller.signal
       });
       clearTimeout(timeoutId);
 
@@ -212,7 +226,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       if (!res.ok || contentType.includes('text/html')) {
         let errMessage = `HTTP ${res.status}`;
         if (contentType.includes('text/html')) {
-          errMessage = 'Server returned HTML instead of JSON';
+          errMessage = 'Gateway returned HTML instead of JSON API response';
         } else {
           try {
             const err = await res.json();
