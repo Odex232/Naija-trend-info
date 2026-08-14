@@ -847,6 +847,20 @@ function isBlockedFileType(filename: string): boolean {
     res.json({ success: true, message: 'Your message has been sent to NaijaTrendiInfo desk.' });
   });
 
+  app.put('/api/contacts/:id', (req, res) => {
+    const { id } = req.params;
+    const index = (db.contacts || []).findIndex((c: any) => c.id === id);
+    if (index !== -1) {
+      db.contacts[index] = {
+        ...db.contacts[index],
+        ...req.body
+      };
+      saveDatabase();
+      return res.json(db.contacts[index]);
+    }
+    res.status(404).json({ success: false, message: 'Contact message not found' });
+  });
+
   app.delete('/api/contacts/:id', requireAdminAuth, (req, res) => {
     const { id } = req.params;
     const exists = (db.contacts || []).some((c: any) => c.id === id);

@@ -12,7 +12,14 @@ import {
   Zap,
   DollarSign,
   ChevronDown,
-  LogOut
+  LogOut,
+  Radio,
+  Clock,
+  Sparkles,
+  Flame,
+  Globe,
+  Share2,
+  ExternalLink
 } from 'lucide-react';
 import { Category, BreakingNews, WebsiteSettings, SocialMediaLink } from '../types';
 
@@ -55,6 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
       }
       return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
     });
+
   const visibleCategories = (categories || []).filter((c) => c?.isVisible);
   const mainNavCategories = visibleCategories.slice(0, 8);
   const extraCategories = visibleCategories.slice(8);
@@ -76,65 +84,97 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="w-full bg-slate-900/60 backdrop-blur-xl border-b border-white/10 text-slate-50 sticky top-0 z-40 shadow-xl transition-all">
-      {/* Top Utility Bar */}
-      <div className="bg-slate-950/80 backdrop-blur-md text-emerald-100 text-xs py-1.5 px-4 sm:px-6 border-b border-white/5">
+    <header className="w-full bg-[#07111F] text-slate-100 sticky top-0 z-40 shadow-2xl border-b border-slate-800 transition-colors">
+      {/* 1. TOP UTILITY & MARKET TICKER BAR */}
+      <div className="bg-[#050B14] text-slate-300 text-xs py-1.5 px-4 sm:px-6 border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          {/* Left: Date & Market Indices */}
-          <div className="flex items-center space-x-4 overflow-x-auto text-slate-300 text-[11px] whitespace-nowrap">
-            <span className="font-semibold text-emerald-400">{currentDateString}</span>
+          {/* Left: Date, Location & Live Rates */}
+          <div className="flex items-center space-x-3 overflow-x-auto text-[11px] whitespace-nowrap scrollbar-none">
+            <div className="flex items-center space-x-1.5 font-medium text-slate-300">
+              <Clock className="w-3 h-3 text-[#00B87C]" />
+              <span>{currentDateString}</span>
+            </div>
+
+            <span className="text-slate-700">|</span>
+
+            {/* Edition */}
+            <span className="bg-slate-800/80 text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-700/60">
+              Nigeria Edition
+            </span>
+
             {settings?.economicIndex?.showTopTicker !== false && (
               <>
-                <span className="text-white/20">|</span>
+                <span className="text-slate-700">|</span>
                 <span className="flex items-center space-x-1">
-                  <DollarSign className="w-3 h-3 text-amber-400" />
-                  <span>USD/NGN: <strong className="text-emerald-400 font-mono">{settings?.economicIndex?.usdNgnRate || '₦1,485.50'}</strong></span>
+                  <DollarSign className="w-3 h-3 text-[#F5B942]" />
+                  <span>USD/NGN: <strong className="text-[#00B87C] font-mono">{settings?.economicIndex?.usdNgnRate || '₦1,485.50'}</strong></span>
                 </span>
-                <span className="hidden md:inline text-white/20">|</span>
+                <span className="hidden md:inline text-slate-700">|</span>
                 <span className="hidden md:inline-flex items-center space-x-1">
-                  <TrendingUp className="w-3 h-3 text-emerald-400" />
-                  <span>NGX Index: <strong className="text-emerald-400 font-mono">{settings?.economicIndex?.ngxIndex || '+0.42%'}</strong></span>
+                  <TrendingUp className="w-3 h-3 text-[#00B87C]" />
+                  <span>NGX Index: <strong className="text-[#00B87C] font-mono">{settings?.economicIndex?.ngxIndex || '+0.42%'}</strong></span>
                 </span>
               </>
             )}
           </div>
 
-          {/* Right: Social Links & Controls */}
+          {/* Right: Quick Links, Social Icons, Theme & Auth */}
           <div className="flex items-center space-x-3 text-xs">
+            {/* Quick Links */}
+            <div className="hidden md:flex items-center space-x-3 text-[11px] text-slate-400 font-medium">
+              <button
+                onClick={() => onNavigate('editorial-desk')}
+                className="hover:text-[#00B87C] transition-colors cursor-pointer"
+              >
+                Editorial Desk
+              </button>
+              <span>•</span>
+              <button
+                onClick={() => onNavigate('contact')}
+                className="hover:text-[#00B87C] transition-colors cursor-pointer"
+              >
+                Contact & Bureaus
+              </button>
+            </div>
+
+            <span className="hidden md:inline text-slate-700">|</span>
+
             {/* Social Links Icons */}
             {(socialLinks || []).filter((s) => s?.isActive).length > 0 && (
-              <div className="hidden lg:flex items-center space-x-2 border-r border-white/10 pr-3 mr-1">
-                {(socialLinks || []).filter((s) => s?.isActive).slice(0, 6).map((s) => (
+              <div className="hidden lg:flex items-center space-x-2 border-r border-slate-800 pr-3 mr-1">
+                {(socialLinks || []).filter((s) => s?.isActive).slice(0, 5).map((s) => (
                   <a
                     key={s.id}
                     href={s.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-slate-400 hover:text-emerald-400 transition-colors font-semibold text-[11px] capitalize"
+                    className="text-slate-400 hover:text-[#00B87C] transition-colors font-semibold text-[11px] capitalize"
                     title={s.displayName || s.platform}
                   >
-                    {s.platform === 'facebook' ? 'FB' : s.platform === 'twitter' ? 'X' : s.platform === 'instagram' ? 'IG' : s.platform === 'youtube' ? 'YT' : s.platform === 'tiktok' ? 'TT' : s.platform === 'whatsapp' ? 'WA' : s.platform === 'telegram' ? 'TG' : s.displayName || s.platform}
+                    {s.platform === 'facebook' ? 'FB' : s.platform === 'twitter' ? 'X' : s.platform === 'instagram' ? 'IG' : s.platform === 'youtube' ? 'YT' : s.platform === 'whatsapp' ? 'WA' : s.displayName || s.platform}
                   </a>
                 ))}
               </div>
             )}
 
+            {/* Dark/Light Mode Toggle */}
             <button
               onClick={onToggleDarkMode}
-              className="flex items-center space-x-1 text-slate-300 hover:text-amber-300 transition-colors px-2 py-0.5 rounded-full bg-white/5 border border-white/10 cursor-pointer"
+              className="flex items-center space-x-1 text-slate-300 hover:text-[#F5B942] transition-colors px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700/60 cursor-pointer"
               title="Toggle Dark/Light Mode"
             >
-              {darkMode ? <Sun className="w-3 h-3 text-amber-300" /> : <Moon className="w-3 h-3 text-emerald-300" />}
+              {darkMode ? <Sun className="w-3 h-3 text-[#F5B942]" /> : <Moon className="w-3 h-3 text-[#00B87C]" />}
               <span className="hidden sm:inline text-[11px] font-medium">{darkMode ? 'Light' : 'Dark'}</span>
             </button>
 
-            <span className="text-white/20">|</span>
+            <span className="text-slate-700">|</span>
 
+            {/* Admin or Editor Login */}
             {isAdminLoggedIn ? (
               <div className="flex items-center space-x-2">
                 <button
                   onClick={onOpenAdmin}
-                  className="flex items-center space-x-1 bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-md font-bold hover:bg-amber-400 transition-colors text-xs cursor-pointer"
+                  className="flex items-center space-x-1 bg-[#F5B942] text-slate-950 px-2.5 py-0.5 rounded-md font-bold hover:bg-amber-400 transition-colors text-xs cursor-pointer shadow-sm"
                   title="Open Admin Dashboard"
                 >
                   <Shield className="w-3.5 h-3.5" />
@@ -143,10 +183,10 @@ export const Header: React.FC<HeaderProps> = ({
                 {onLogout && (
                   <button
                     onClick={onLogout}
-                    className="flex items-center space-x-1 bg-red-900/60 text-red-200 border border-red-700/50 px-2 py-0.5 rounded-md text-xs hover:bg-red-800 transition-colors cursor-pointer"
+                    className="flex items-center space-x-1 bg-red-950/80 text-red-300 border border-red-800/60 px-2 py-0.5 rounded-md text-xs hover:bg-red-900 transition-colors cursor-pointer"
                     title="Log Out"
                   >
-                    <LogOut className="w-3 h-3 text-red-300" />
+                    <LogOut className="w-3 h-3 text-red-400" />
                     <span className="hidden sm:inline">Logout</span>
                   </button>
                 )}
@@ -154,9 +194,9 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <button
                 onClick={onOpenAdmin}
-                className="flex items-center space-x-1 text-slate-300 hover:text-emerald-400 transition-colors text-xs font-medium cursor-pointer"
+                className="flex items-center space-x-1 text-slate-300 hover:text-[#00B87C] transition-colors text-xs font-medium cursor-pointer"
               >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <UserCheck className="w-3.5 h-3.5 text-[#00B87C]" />
                 <span>Editor Login</span>
               </button>
             )}
@@ -164,68 +204,89 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Main Branding & Header Banner */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
-        {/* Brand Logo */}
+      {/* 2. MAIN BRANDING BAR */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+        {/* Brand Logo & Editorial Motto */}
         <div
           onClick={() => onNavigate('home')}
-          className="cursor-pointer group flex items-center space-x-3 select-none"
+          className="cursor-pointer group flex items-center space-x-3.5 select-none"
         >
-          <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-            <span className="text-white font-black text-xl font-serif">N</span>
+          {/* Insignia Icon */}
+          <div className="w-11 h-11 bg-gradient-to-br from-[#00B87C] to-emerald-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/30 group-hover:scale-105 transition-transform border border-emerald-400/30">
+            <span className="text-white font-black text-2xl font-serif">N</span>
           </div>
+
           <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-2xl tracking-tight text-white font-serif">
-                NAIJA<span className="text-emerald-400">TRENDI</span>
+            <div className="flex items-center space-x-2">
+              <span className="font-black text-2xl sm:text-3xl tracking-tight text-white font-serif">
+                NAIJA<span className="text-[#00B87C]">TRENDI</span>
               </span>
-              <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded tracking-widest uppercase">
+              <span className="bg-[#F5B942] text-slate-950 text-[10px] font-black px-2 py-0.5 rounded tracking-widest uppercase shadow-sm">
                 INFO
               </span>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-              Truth • Speed • Credibility in Journalism
+            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase flex items-center space-x-1.5 mt-0.5">
+              <span>Truth</span>
+              <span className="text-[#00B87C]">•</span>
+              <span>Speed</span>
+              <span className="text-[#00B87C]">•</span>
+              <span>Credibility in Journalism</span>
             </p>
           </div>
         </div>
 
-        {/* Search Bar - Desktop */}
-        <form onSubmit={handleSearchSubmit} className="hidden lg:flex items-center relative max-w-sm w-full">
-          <input
-            type="text"
-            placeholder="Search news, topics, authors..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/5 backdrop-blur-md text-white placeholder-slate-400 text-xs rounded-full pl-4 pr-10 py-2 border border-white/10 focus:outline-none focus:border-emerald-500 focus:bg-white/10 transition-all"
-          />
-          <button
-            type="submit"
-            className="absolute right-1 p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition-colors shadow-sm"
-          >
-            <Search className="w-3.5 h-3.5" />
-          </button>
-        </form>
+        {/* Center Search Bar - Desktop */}
+        <div className="hidden lg:flex flex-col items-center max-w-md w-full">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <input
+              type="text"
+              placeholder="Search breaking stories, politics, business, sport..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-900 text-white placeholder-slate-500 text-xs rounded-full pl-4 pr-10 py-2.5 border border-slate-700 focus:outline-none focus:border-[#00B87C] focus:ring-1 focus:ring-[#00B87C] transition-all shadow-inner"
+            />
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-[#00B87C] hover:bg-emerald-500 text-white rounded-full transition-colors shadow-sm cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        </div>
 
-        {/* Mobile Hamburger Toggle */}
+        {/* Right Action: Tip Submission & Live Radar */}
+        <div className="hidden md:flex items-center space-x-3">
+          <button
+            onClick={() => onNavigate('submit-news')}
+            className="bg-gradient-to-r from-[#00B87C] to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-900/30 transition-all flex items-center space-x-2 cursor-pointer border border-emerald-400/30"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#F5B942]" />
+            <span>Submit News Tip</span>
+          </button>
+        </div>
+
+        {/* Mobile Menu Hamburger */}
         <div className="flex items-center space-x-2 lg:hidden">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-slate-200 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl"
-            aria-label="Toggle Navigation"
+            className="p-2 text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl cursor-pointer"
+            aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Main Navigation Bar */}
-      <nav className="hidden lg:block border-t border-white/5 bg-slate-950/40 backdrop-blur-md">
+      {/* 3. MAIN CATEGORY NAVIGATION BAR */}
+      <nav className="hidden lg:block border-t border-slate-800 bg-[#050B14]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between text-xs font-semibold tracking-wide">
-          <div className="flex items-center space-x-1.5 overflow-x-auto py-2">
+          <div className="flex items-center space-x-1 overflow-x-auto py-2">
             <button
               onClick={() => onNavigate('home')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                currentView === 'home' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold' : 'hover:bg-white/5 text-slate-300'
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                currentView === 'home'
+                  ? 'bg-[#00B87C] text-white font-bold shadow-md shadow-emerald-950/40'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
               Home
@@ -235,8 +296,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={cat.id}
                 onClick={() => onNavigate('category', cat.slug)}
-                className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-                  currentView === `category-${cat.slug}` ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold' : 'hover:bg-white/5 text-slate-300'
+                className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                  currentView === `category-${cat.slug}`
+                    ? 'bg-[#00B87C] text-white font-bold shadow-md shadow-emerald-950/40'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
                 {cat.name}
@@ -248,15 +311,15 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="px-3 py-1.5 rounded-lg hover:bg-white/5 text-slate-300 flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center space-x-1 cursor-pointer"
                 >
-                  <span>More</span>
+                  <span>More Sections</span>
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
                 {dropdownOpen && (
                   <div
                     onMouseLeave={() => setDropdownOpen(false)}
-                    className="absolute left-0 mt-1 w-48 bg-slate-900/95 border border-white/10 backdrop-blur-xl rounded-xl shadow-2xl py-2 z-50 grid grid-cols-1"
+                    className="absolute left-0 mt-1 w-52 bg-[#07111F] border border-slate-700 rounded-xl shadow-2xl py-2 z-50 grid grid-cols-1"
                   >
                     {extraCategories.map((cat) => (
                       <button
@@ -265,7 +328,7 @@ export const Header: React.FC<HeaderProps> = ({
                           onNavigate('category', cat.slug);
                           setDropdownOpen(false);
                         }}
-                        className="text-left px-4 py-2 text-xs text-slate-200 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
+                        className="text-left px-4 py-2 text-xs text-slate-200 hover:bg-emerald-950/80 hover:text-[#00B87C] transition-colors cursor-pointer"
                       >
                         {cat.name}
                       </button>
@@ -275,47 +338,48 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
+            {/* Sports Hub with Gold Highlight */}
             <button
               onClick={() => onNavigate('sports')}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 ${
-                currentView === 'sports' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-slate-950'
+              className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 cursor-pointer ml-1 ${
+                currentView === 'sports'
+                  ? 'bg-[#F5B942] text-slate-950 font-bold shadow-md'
+                  : 'bg-[#F5B942]/15 text-[#F5B942] border border-[#F5B942]/40 hover:bg-[#F5B942] hover:text-slate-950'
               }`}
             >
               <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>Sports Hub</span>
+              <span>Sports Hub & Live Scores</span>
             </button>
           </div>
 
-          <div className="flex items-center space-x-3 py-1.5">
-            <button
-              onClick={() => onNavigate('submit-news')}
-              className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg transition-all shadow-md shadow-emerald-600/20"
-            >
-              Submit News Tip
-            </button>
+          {/* Quick Trending Indicator */}
+          <div className="flex items-center space-x-2 text-[11px] text-slate-400">
+            <Flame className="w-3.5 h-3.5 text-[#F5B942]" />
+            <span className="font-semibold text-slate-300">Trending in Nigeria:</span>
+            <span className="text-[#00B87C] font-medium">#Tinubu #AFCON #NGX #SuperEagles</span>
           </div>
         </div>
       </nav>
 
-      {/* Breaking News Ticker Bar */}
+      {/* 4. BREAKING NEWS TICKER MARQUEE */}
       {activeBreaking.length > 0 && (
-        <div className="bg-rose-600/90 backdrop-blur-md text-white text-xs py-1.5 px-4 sm:px-6 flex items-center overflow-hidden border-b border-rose-500/30">
+        <div className="bg-[#E63946] text-white text-xs py-1.5 px-4 sm:px-6 flex items-center overflow-hidden border-b border-red-500 shadow-md">
           <div className="max-w-7xl mx-auto w-full flex items-center space-x-3">
-            <span className="bg-rose-800/90 text-white font-bold text-[10px] px-3 py-1 rounded uppercase tracking-widest italic shrink-0 shadow-xs border border-rose-400/30">
-              Breaking
+            <span className="bg-red-950 text-white font-black text-[10px] px-3 py-0.5 rounded uppercase tracking-widest italic shrink-0 border border-red-400/40 animate-pulse">
+              Breaking News
             </span>
 
             <div className="flex-1 overflow-hidden relative flex items-center">
-              <div className="whitespace-nowrap inline-flex animate-marquee hover:pause italic font-medium">
+              <div className="whitespace-nowrap inline-flex animate-marquee hover:pause italic font-semibold">
                 {activeBreaking.map((bn, i) => (
                   <span
                     key={`bn-1-${bn.id}-${i}`}
                     onClick={() => bn.linkUrl && onNavigate('article', bn.linkUrl.replace('/article/', ''))}
                     className="inline-flex items-center mr-8 cursor-pointer hover:underline text-white hover:text-amber-200 transition-colors"
                   >
-                    <span className="text-amber-300 font-bold mr-1.5 text-[11px] font-mono">#{i + 1}</span>
+                    <span className="text-[#F5B942] font-black mr-1.5 text-[11px] font-mono">#{i + 1}</span>
                     {bn.title}
-                    <span className="ml-8 text-rose-300">•</span>
+                    <span className="ml-8 text-red-300 font-normal">•</span>
                   </span>
                 ))}
                 {activeBreaking.map((bn, i) => (
@@ -324,9 +388,9 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => bn.linkUrl && onNavigate('article', bn.linkUrl.replace('/article/', ''))}
                     className="inline-flex items-center mr-8 cursor-pointer hover:underline text-white hover:text-amber-200 transition-colors"
                   >
-                    <span className="text-amber-300 font-bold mr-1.5 text-[11px] font-mono">#{i + 1}</span>
+                    <span className="text-[#F5B942] font-black mr-1.5 text-[11px] font-mono">#{i + 1}</span>
                     {bn.title}
-                    <span className="ml-8 text-rose-300">•</span>
+                    <span className="ml-8 text-red-300 font-normal">•</span>
                   </span>
                 ))}
               </div>
@@ -335,18 +399,18 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      {/* Mobile Menu Drawer */}
+      {/* 5. MOBILE MENU DRAWER */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-slate-900/95 backdrop-blur-2xl text-white px-4 py-4 border-t border-white/10 space-y-4 shadow-2xl">
+        <div className="lg:hidden bg-[#07111F] text-white px-4 py-5 border-t border-slate-800 space-y-4 shadow-2xl">
           <form onSubmit={handleSearchSubmit} className="flex items-center relative">
             <input
               type="text"
-              placeholder="Search news..."
+              placeholder="Search news, topics, authors..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 text-slate-100 text-xs rounded-xl pl-4 pr-10 py-2.5"
+              className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl pl-4 pr-10 py-2.5 focus:outline-none focus:border-[#00B87C]"
             />
-            <button type="submit" className="absolute right-2 p-1.5 text-emerald-400">
+            <button type="submit" className="absolute right-2 p-1.5 text-[#00B87C]">
               <Search className="w-4 h-4" />
             </button>
           </form>
@@ -357,7 +421,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onNavigate('home');
                 setMobileMenuOpen(false);
               }}
-              className="text-left px-3 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-bold"
+              className="text-left px-3 py-2.5 bg-[#00B87C]/20 text-[#00B87C] border border-[#00B87C]/30 rounded-xl font-bold"
             >
               Home
             </button>
@@ -366,9 +430,10 @@ export const Header: React.FC<HeaderProps> = ({
                 onNavigate('sports');
                 setMobileMenuOpen(false);
               }}
-              className="text-left px-3 py-2 bg-amber-500 text-slate-950 font-bold rounded-xl"
+              className="text-left px-3 py-2.5 bg-[#F5B942] text-slate-950 font-bold rounded-xl flex items-center justify-between"
             >
-              Sports Hub
+              <span>Sports Hub</span>
+              <Zap className="w-3.5 h-3.5 fill-current" />
             </button>
 
             {visibleCategories.map((cat) => (
@@ -378,22 +443,22 @@ export const Header: React.FC<HeaderProps> = ({
                   onNavigate('category', cat.slug);
                   setMobileMenuOpen(false);
                 }}
-                className="text-left px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-slate-200"
+                className="text-left px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-200"
               >
                 {cat.name}
               </button>
             ))}
           </div>
 
-          <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs gap-2">
+          <div className="pt-3 border-t border-slate-800 flex flex-wrap justify-between items-center text-xs gap-2">
             <button
               onClick={() => {
                 onNavigate('submit-news');
                 setMobileMenuOpen(false);
               }}
-              className="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl cursor-pointer"
+              className="bg-[#00B87C] hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl cursor-pointer shadow"
             >
-              Submit News
+              Submit News Tip
             </button>
             <div className="flex items-center space-x-2">
               <button
@@ -401,9 +466,9 @@ export const Header: React.FC<HeaderProps> = ({
                   if (onOpenAdmin) onOpenAdmin();
                   setMobileMenuOpen(false);
                 }}
-                className="text-amber-400 font-semibold cursor-pointer"
+                className="text-[#F5B942] font-semibold cursor-pointer text-xs"
               >
-                Admin Dashboard
+                Admin Portal
               </button>
               {isAdminLoggedIn && onLogout && (
                 <button
@@ -411,10 +476,9 @@ export const Header: React.FC<HeaderProps> = ({
                     onLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="bg-red-900/80 text-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer flex items-center space-x-1"
+                  className="bg-red-950 text-red-300 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-red-800"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Logout</span>
+                  Logout
                 </button>
               )}
             </div>
@@ -424,3 +488,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

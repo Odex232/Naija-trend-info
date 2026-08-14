@@ -17,7 +17,8 @@ import {
   Users,
   AlertTriangle,
   Cookie,
-  ExternalLink
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 import { WebsiteSettings, EditorialDeskEntry, InformationEntry, SitePage, AdvertisingPackage } from '../types';
 import { api } from '../services/api';
@@ -252,10 +253,10 @@ export const InfoView: React.FC<InfoViewProps> = ({
           <div className="md:col-span-5 bg-white/5 backdrop-blur-2xl text-white rounded-3xl p-8 border border-white/10 shadow-2xl space-y-6">
             <h1 className="text-2xl font-extrabold font-serif text-white flex items-center gap-2">
               <Mail className="w-6 h-6 text-emerald-400" />
-              <span>Contact Us & Feedback</span>
+              <span>{settings.contactPage?.pageTitle || 'Contact Us & Feedback'}</span>
             </h1>
             <p className="text-xs text-slate-300 leading-relaxed">
-              We welcome inquiries from readers, media partners, advertisers, and institutional stakeholders across Nigeria and globally.
+              {settings.contactPage?.pageSubtitle || 'We welcome inquiries from readers, media partners, advertisers, and institutional stakeholders across Nigeria and globally.'}
             </p>
 
             <div className="space-y-4 text-xs text-slate-300 pt-2 border-t border-white/10">
@@ -263,25 +264,50 @@ export const InfoView: React.FC<InfoViewProps> = ({
                 <MapPin className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <strong className="block text-white font-semibold">Headquarters & Bureau</strong>
-                  <span>{settings.officeAddress}</span>
+                  <span>{settings.contactPage?.officeAddress || settings.officeAddress}</span>
+                  {settings.contactPage?.bureauLocations && settings.contactPage.bureauLocations.length > 0 && (
+                    <div className="mt-1 text-[11px] text-slate-400">
+                      <span className="font-semibold text-emerald-400">Bureaus: </span>
+                      {settings.contactPage.bureauLocations.join(' • ')}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-start space-x-3">
                 <Mail className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-white font-semibold">Email Communications</strong>
-                  <span className="text-emerald-300">{settings.contactEmail}</span>
+                <div className="space-y-1">
+                  <strong className="block text-white font-semibold">Email Inquiries</strong>
+                  <div>General: <span className="text-emerald-300 font-mono">{settings.contactPage?.contactEmail || settings.contactEmail}</span></div>
+                  {settings.contactPage?.pressInquiriesEmail && (
+                    <div>Press & Editorial: <span className="text-emerald-300 font-mono">{settings.contactPage.pressInquiriesEmail}</span></div>
+                  )}
+                  {settings.contactPage?.advertEmail && (
+                    <div>Adverts & Partnerships: <span className="text-amber-300 font-mono">{settings.contactPage.advertEmail}</span></div>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-start space-x-3">
                 <Phone className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-white font-semibold">Editorial Phone Lines</strong>
-                  <span>{settings.contactPhone}</span>
+                <div className="space-y-1">
+                  <strong className="block text-white font-semibold">Telephone & WhatsApp</strong>
+                  <div>Phone: <span className="text-slate-200">{settings.contactPage?.contactPhone || settings.contactPhone}</span></div>
+                  {settings.contactPage?.whatsappSupport && (
+                    <div>WhatsApp Hotline: <span className="text-emerald-400 font-mono font-semibold">{settings.contactPage.whatsappSupport}</span></div>
+                  )}
                 </div>
               </div>
+
+              {settings.contactPage?.workingHours && (
+                <div className="flex items-start space-x-3">
+                  <Clock className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block text-white font-semibold">Newsroom Hours</strong>
+                    <span>{settings.contactPage.workingHours}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-xs space-y-2">
@@ -290,7 +316,7 @@ export const InfoView: React.FC<InfoViewProps> = ({
                 <span>Submit Confidential News Tip</span>
               </div>
               <p className="text-slate-300 text-[11px]">
-                Have an investigative tip or whistleblowing evidence? Send it directly to our secure newsdesk.
+                {settings.contactPage?.newsTipBannerText || 'Have an investigative tip or whistleblowing evidence? Send it directly to our secure newsdesk.'}
               </p>
               <button
                 onClick={() => onNavigate('info', 'submit-news')}

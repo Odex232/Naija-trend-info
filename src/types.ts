@@ -174,10 +174,14 @@ export interface ContactMessage {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   subject: string;
   message: string;
   read: boolean;
   status?: 'new' | 'read' | 'replied' | 'archived' | 'resolved';
+  replyNotes?: string;
+  repliedAt?: string;
+  sentAt?: string;
   createdAt: string;
 }
 
@@ -310,6 +314,21 @@ export interface SportsHubSettings {
   widgetTitle: string;
 }
 
+export interface ContactPageSettings {
+  pageTitle?: string;
+  pageSubtitle?: string;
+  officeAddress?: string;
+  bureauLocations?: string[];
+  contactEmail?: string;
+  pressInquiriesEmail?: string;
+  advertEmail?: string;
+  contactPhone?: string;
+  whatsappSupport?: string;
+  workingHours?: string;
+  enableNewsTipAlert?: boolean;
+  newsTipBannerText?: string;
+}
+
 export interface WebsiteSettings {
   siteName: string;
   siteDescription: string;
@@ -327,6 +346,7 @@ export interface WebsiteSettings {
   analyticsId?: string;
   economicIndex?: EconomicIndexSettings;
   sportsHub?: SportsHubSettings;
+  contactPage?: ContactPageSettings;
 }
 
 export interface AuditLog {

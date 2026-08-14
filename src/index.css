@@ -2,17 +2,37 @@
 
 @layer base {
   body {
-    background-color: #020617;
-    color: #f8fafc;
+    background-color: #07111F;
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(0, 184, 124, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 85% 30%, rgba(6, 182, 212, 0.03) 0%, transparent 40%),
+      radial-gradient(circle at 50% 60%, rgba(245, 185, 66, 0.03) 0%, transparent 40%),
+      radial-gradient(circle at 20% 85%, rgba(0, 184, 124, 0.04) 0%, transparent 40%),
+      linear-gradient(135deg, #050B14 0%, #071827 50%, #08121F 100%);
+    background-attachment: fixed;
+    color: #F8FAFC;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    min-height: 100vh;
   }
 }
 
+.news-card {
+  background-color: #122338;
+  border: 1px solid #20344B;
+  border-radius: 14px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.news-card:hover {
+  background-color: #18304A;
+  border-color: #2D4866;
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.45);
+}
+
 .glass-card {
-  background-color: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #122338;
+  border: 1px solid #20344B;
+  border-radius: 14px;
 }
 
 .glass-card-hover {
@@ -20,22 +40,35 @@
 }
 
 .glass-card-hover:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  background-color: #18304A;
+  border-color: #2D4866;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
 .glass-header {
-  background-color: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(7, 17, 31, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #20344B;
 }
 
 .glass-pill {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(18, 35, 56, 0.8);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid #20344B;
+}
+
+/* Subtle glow helpers */
+.glow-emerald {
+  box-shadow: 0 0 35px -5px rgba(0, 184, 124, 0.15);
+}
+
+.glow-gold {
+  box-shadow: 0 0 35px -5px rgba(245, 185, 66, 0.15);
+}
+
+.glow-blue {
+  box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.15);
 }
 
 @keyframes marquee {
@@ -57,3 +90,4 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+

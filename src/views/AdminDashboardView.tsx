@@ -43,7 +43,11 @@ import {
   Key,
   ShieldCheck,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  Phone,
+  MapPin,
+  Clock,
+  MessageCircle
 } from 'lucide-react';
 import {
   Article,
@@ -190,6 +194,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Settings State
   const [localSettings, setLocalSettings] = useState<WebsiteSettings>(settings);
+
+  // Contact Us & Feedback State
+  const [contactSubTab, setContactSubTab] = useState<'inbox' | 'page_settings'>('inbox');
+  const [contactFilter, setContactFilter] = useState<'all' | 'unread' | 'replied' | 'resolved'>('all');
+  const [contactSearch, setContactSearch] = useState('');
+  const [activeReplyingContact, setActiveReplyingContact] = useState<ContactMessage | null>(null);
+  const [replyNotesDraft, setReplyNotesDraft] = useState('');
+  const [savingContactSettings, setSavingContactSettings] = useState(false);
 
   // Media Drag Upload State
   const [uploading, setUploading] = useState(false);
@@ -677,6 +689,39 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       },
       { confirmLabel: 'Delete Message', isDanger: true }
     );
+  };
+
+  // Contact Message Status / Read / Reply Handlers
+  const handleUpdateContactStatus = async (id: string, status: 'new' | 'read' | 'replied' | 'resolved', replyNotes?: string) => {
+    try {
+      const isRead = status !== 'new';
+      await api.updateContact(id, {
+        status,
+        read: isRead,
+        replyNotes: replyNotes !== undefined ? replyNotes : undefined,
+        repliedAt: status === 'replied' ? new Date().toISOString() : undefined
+      });
+      triggerSuccessNotification(`Contact message updated successfully!`);
+      onRefreshData();
+    } catch (e: any) {
+      console.error('Update contact status error:', e);
+      triggerErrorNotification(e.message || 'Failed to update contact status');
+    }
+  };
+
+  const handleSaveContactPageSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingContactSettings(true);
+    try {
+      await api.updateSettings(localSettings);
+      triggerSuccessNotification('Contact Us & Bureau page settings saved successfully!');
+      onRefreshData();
+    } catch (e: any) {
+      console.error('Save contact page settings error:', e);
+      triggerErrorNotification(e.message || 'Failed to save contact settings');
+    } finally {
+      setSavingContactSettings(false);
+    }
   };
 
   // Delete Sports Fixture
@@ -1207,7 +1252,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 }`}
               >
                 <Mail className="w-4 h-4 text-emerald-400" />
-                <span>Contact Messages ({contacts.length})</span>
+                <span>Contact Us & Feedback ({contacts.length})</span>
               </button>
 
               <button
@@ -1876,45 +1921,698 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
 
-          {/* TAB: CONTACT MESSAGES INBOX */}
-          {activeTab === 'contacts' && (
-            <div className="space-y-6">
-              <h1 className="text-2xl font-bold font-serif text-white">Contact Messages Inbox</h1>
-              <div className="space-y-3">
-                {contacts.length === 0 ? (
-                  <p className="text-xs text-slate-500">No contact messages received.</p>
-                ) : (
-                  contacts.map((msg) => (
-                    <div key={msg.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-sm text-white">{msg.subject || 'Contact Inquiry'}</h3>
-                          <div className="text-xs text-emerald-400">From: {msg.name} ({msg.email}) {msg.phone ? `• ${msg.phone}` : ''}</div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-[10px] text-slate-400">{new Date(msg.sentAt).toLocaleString()}</span>
+          {/* TAB: CONTACT US & FEEDBACK MANAGEMENT */}
+          {activeTab === 'contacts' && (() => {
+            const unreadCount = contacts.filter((c) => !c.read || c.status === 'new').length;
+            const repliedCount = contacts.filter((c) => c.status === 'replied').length;
+            const resolvedCount = contacts.filter((c) => c.status === 'resolved').length;
+
+            const filteredContacts = contacts.filter((msg) => {
+              if (contactFilter === 'unread' && (msg.read && msg.status !== 'new')) return false;
+              if (contactFilter === 'replied' && msg.status !== 'replied') return false;
+              if (contactFilter === 'resolved' && msg.status !== 'resolved') return false;
+              if (contactSearch.trim()) {
+                const q = contactSearch.toLowerCase();
+                const matchName = msg.name?.toLowerCase().includes(q);
+                const matchEmail = msg.email?.toLowerCase().includes(q);
+                const matchPhone = msg.phone?.toLowerCase().includes(q);
+                const matchSubject = msg.subject?.toLowerCase().includes(q);
+                const matchMessage = msg.message?.toLowerCase().includes(q);
+                if (!matchName && !matchEmail && !matchPhone && !matchSubject && !matchMessage) return false;
+              }
+              return true;
+            });
+
+            return (
+              <div className="space-y-6">
+                {/* Header & Sub-tab Bar */}
+                <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <div className="flex items-center space-x-2.5">
+                      <span className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+                        <Mail className="w-5 h-5" />
+                      </span>
+                      <h1 className="text-2xl font-bold font-serif text-white">Contact Us & Feedback</h1>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2 max-w-2xl">
+                      Manage incoming reader feedback, inquiries, whistleblower tips, and customize the public Contact & Bureau page details.
+                    </p>
+                  </div>
+
+                  {/* Sub-Tab Switcher */}
+                  <div className="flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800 self-start md:self-auto">
+                    <button
+                      onClick={() => setContactSubTab('inbox')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+                        contactSubTab === 'inbox'
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Messages & Feedback</span>
+                      {unreadCount > 0 && (
+                        <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full ml-1">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setContactSubTab('page_settings')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+                        contactSubTab === 'page_settings'
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <SettingsIcon className="w-3.5 h-3.5" />
+                      <span>Contact Us Page Editor</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* SUB-TAB 1: MESSAGES & FEEDBACK INBOX */}
+                {contactSubTab === 'inbox' && (
+                  <div className="space-y-4">
+                    {/* Filter Bar & Search */}
+                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => setContactFilter('all')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                            contactFilter === 'all'
+                              ? 'bg-emerald-600 text-white font-bold'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          All ({contacts.length})
+                        </button>
+                        <button
+                          onClick={() => setContactFilter('unread')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                            contactFilter === 'unread'
+                              ? 'bg-amber-500 text-slate-950 font-bold'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span>Unread / New</span>
+                          {unreadCount > 0 && (
+                            <span className="bg-amber-400/30 text-amber-200 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setContactFilter('replied')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                            contactFilter === 'replied'
+                              ? 'bg-sky-600 text-white font-bold'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Replied ({repliedCount})
+                        </button>
+                        <button
+                          onClick={() => setContactFilter('resolved')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                            contactFilter === 'resolved'
+                              ? 'bg-purple-600 text-white font-bold'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Resolved ({resolvedCount})
+                        </button>
+                      </div>
+
+                      {/* Search Bar */}
+                      <div className="relative w-full md:w-72">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search sender, email, keyword..."
+                          value={contactSearch}
+                          onChange={(e) => setContactSearch(e.target.value)}
+                          className="w-full bg-slate-950 text-white placeholder-slate-500 text-xs rounded-xl pl-9 pr-4 py-2 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                        />
+                        {contactSearch && (
                           <button
-                            disabled={deletingId === msg.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteContact(msg.id);
-                            }}
-                            className="p-1.5 bg-red-950/90 hover:bg-red-900 text-red-300 rounded-lg transition-colors cursor-pointer border border-red-800/50 disabled:opacity-50"
-                            title="Delete Contact Message"
+                            onClick={() => setContactSearch('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
                           >
-                            {deletingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            <X className="w-3.5 h-3.5" />
                           </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Messages List */}
+                    <div className="space-y-4">
+                      {filteredContacts.length === 0 ? (
+                        <div className="bg-slate-900/60 border border-slate-800 p-10 rounded-2xl text-center space-y-2">
+                          <Mail className="w-8 h-8 text-slate-600 mx-auto" />
+                          <p className="text-sm font-semibold text-slate-400">No contact messages match your filter.</p>
+                          <p className="text-xs text-slate-600">Messages sent via the public Contact Us page will show up here.</p>
+                        </div>
+                      ) : (
+                        filteredContacts.map((msg) => {
+                          const isUnread = !msg.read || msg.status === 'new';
+                          const isReplied = msg.status === 'replied';
+                          const isResolved = msg.status === 'resolved';
+
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`bg-slate-900 border transition-all p-5 sm:p-6 rounded-2xl space-y-4 shadow-lg ${
+                                isUnread
+                                  ? 'border-amber-500/40 bg-slate-900/90 ring-1 ring-amber-500/20'
+                                  : 'border-slate-800'
+                              }`}
+                            >
+                              {/* Top Bar: Subject & Sender Info */}
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div className="space-y-1.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h3 className="font-bold font-serif text-base text-white">
+                                      {msg.subject || 'General Inquiry'}
+                                    </h3>
+                                    {isUnread && (
+                                      <span className="bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                        New / Unread
+                                      </span>
+                                    )}
+                                    {isReplied && (
+                                      <span className="bg-sky-500/20 border border-sky-500/40 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                        Replied
+                                      </span>
+                                    )}
+                                    {isResolved && (
+                                      <span className="bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                        Resolved
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                    <span className="text-emerald-400 font-semibold">{msg.name}</span>
+                                    <span>•</span>
+                                    <a
+                                      href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || 'NaijaTrendiInfo Inquiry')}`}
+                                      className="text-slate-300 hover:text-emerald-400 underline transition-colors"
+                                      title="Click to email sender"
+                                    >
+                                      {msg.email}
+                                    </a>
+                                    {msg.phone && (
+                                      <>
+                                        <span>•</span>
+                                        <a
+                                          href={`tel:${msg.phone}`}
+                                          className="text-slate-300 hover:text-emerald-400 transition-colors"
+                                        >
+                                          {msg.phone}
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2 self-start">
+                                  <span className="text-[11px] text-slate-500 font-mono">
+                                    {new Date(msg.sentAt || msg.createdAt).toLocaleString('en-NG', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                  <button
+                                    disabled={deletingId === msg.id}
+                                    onClick={() => handleDeleteContact(msg.id)}
+                                    className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 rounded-lg transition-colors cursor-pointer border border-red-800/50 disabled:opacity-50"
+                                    title="Delete Message"
+                                  >
+                                    {deletingId === msg.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Message Content Box */}
+                              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
+                                {msg.message}
+                              </div>
+
+                              {/* Saved Reply Notes Block if present */}
+                              {msg.replyNotes && (
+                                <div className="p-3 bg-slate-950/90 rounded-xl border border-sky-500/20 text-xs space-y-1">
+                                  <div className="flex items-center space-x-1.5 text-sky-400 font-bold text-[11px]">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Editorial Reply Notes:</span>
+                                    {msg.repliedAt && (
+                                      <span className="text-[10px] text-slate-500 font-normal">
+                                        ({new Date(msg.repliedAt).toLocaleString()})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-slate-300 text-xs whitespace-pre-wrap">{msg.replyNotes}</p>
+                                </div>
+                              )}
+
+                              {/* Inline Quick Reply Draft Editor */}
+                              {activeReplyingContact?.id === msg.id && (
+                                <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-3 animate-fade-in">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                      <Send className="w-3.5 h-3.5" />
+                                      <span>Log Response or Editorial Action Notes</span>
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setActiveReplyingContact(null);
+                                        setReplyNotesDraft('');
+                                      }}
+                                      className="text-slate-400 hover:text-white text-xs"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    rows={3}
+                                    placeholder="Enter details of your reply or notes regarding this inquiry..."
+                                    value={replyNotesDraft}
+                                    onChange={(e) => setReplyNotesDraft(e.target.value)}
+                                    className="w-full bg-slate-900 text-white placeholder-slate-500 text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setActiveReplyingContact(null);
+                                        setReplyNotesDraft('');
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        await handleUpdateContactStatus(msg.id, 'replied', replyNotesDraft);
+                                        setActiveReplyingContact(null);
+                                        setReplyNotesDraft('');
+                                      }}
+                                      className="px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow"
+                                    >
+                                      Save Response Notes
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Bottom Action Buttons */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <a
+                                    href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || 'NaijaTrendiInfo Inquiry')}`}
+                                    className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-slate-700"
+                                    title="Open default email client"
+                                  >
+                                    <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>Reply via Email</span>
+                                  </a>
+
+                                  {msg.phone && (
+                                    <a
+                                      href={`https://wa.me/${msg.phone.replace(/[^0-9]/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-emerald-800/50"
+                                      title="Open WhatsApp chat"
+                                    >
+                                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  )}
+
+                                  <button
+                                    onClick={() => {
+                                      if (activeReplyingContact?.id === msg.id) {
+                                        setActiveReplyingContact(null);
+                                        setReplyNotesDraft('');
+                                      } else {
+                                        setActiveReplyingContact(msg);
+                                        setReplyNotesDraft(msg.replyNotes || '');
+                                      }
+                                    }}
+                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border border-slate-700 flex items-center space-x-1"
+                                  >
+                                    <Edit className="w-3.5 h-3.5 text-sky-400" />
+                                    <span>{msg.replyNotes ? 'Edit Notes' : 'Add Reply Notes'}</span>
+                                  </button>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleUpdateContactStatus(msg.id, isUnread ? 'read' : 'new')}
+                                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-700 text-slate-300 transition-colors"
+                                  >
+                                    {isUnread ? 'Mark as Read' : 'Mark as Unread'}
+                                  </button>
+
+                                  {!isReplied && (
+                                    <button
+                                      onClick={() => handleUpdateContactStatus(msg.id, 'replied')}
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-sky-950/60 hover:bg-sky-900 text-sky-300 border border-sky-800/40 transition-colors"
+                                    >
+                                      Mark as Replied
+                                    </button>
+                                  )}
+
+                                  {!isResolved ? (
+                                    <button
+                                      onClick={() => handleUpdateContactStatus(msg.id, 'resolved')}
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-800/40 transition-colors"
+                                    >
+                                      Mark as Resolved
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleUpdateContactStatus(msg.id, 'read')}
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors"
+                                    >
+                                      Reopen
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB 2: CONTACT US & BUREAU PAGE SETTINGS */}
+                {contactSubTab === 'page_settings' && (
+                  <form onSubmit={handleSaveContactPageSettings} className="space-y-6">
+                    <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-6">
+                      <div>
+                        <h2 className="text-lg font-bold font-serif text-white flex items-center space-x-2">
+                          <SettingsIcon className="w-4 h-4 text-emerald-400" />
+                          <span>Contact Us & Bureau Page Configuration</span>
+                        </h2>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Changes saved here will immediately update the public <span className="text-emerald-400">/contact</span> page and contact references across the site.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Page Title */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Contact Page Heading Title
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.contactPage?.pageTitle ?? 'Contact Us & Feedback'}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  pageTitle: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="Contact Us & Feedback"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* Page Subtitle */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Page Introduction / Sub-heading
+                          </label>
+                          <input
+                            type="text"
+                            value={
+                              localSettings.contactPage?.pageSubtitle ??
+                              'We welcome inquiries from readers, media partners, advertisers, and institutional stakeholders across Nigeria and globally.'
+                            }
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  pageSubtitle: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="We welcome inquiries from readers..."
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* Primary Headquarters Address */}
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            National Headquarters & Bureau Address
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={localSettings.contactPage?.officeAddress ?? localSettings.officeAddress}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                officeAddress: e.target.value,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  officeAddress: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="Plot 14, Victoria Island Editorial Tower, Lagos, Nigeria"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* Additional Regional Bureau Locations */}
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Regional Bureaus (Comma Separated)
+                          </label>
+                          <input
+                            type="text"
+                            value={(localSettings.contactPage?.bureauLocations || ['Abuja FCT Bureau', 'Lagos Island Bureau', 'Port Harcourt Bureau', 'Kano Bureau']).join(', ')}
+                            onChange={(e) => {
+                              const list = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  bureauLocations: list
+                                }
+                              })
+                            }}
+                            placeholder="Abuja FCT Bureau, Lagos Island Bureau, Port Harcourt Bureau, Kano Bureau"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                          <span className="text-[11px] text-slate-500 mt-1 block">
+                            Separate regional bureau offices with commas.
+                          </span>
+                        </div>
+
+                        {/* General Contact Email */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            General Editorial Email
+                          </label>
+                          <input
+                            type="email"
+                            value={localSettings.contactPage?.contactEmail ?? localSettings.contactEmail}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactEmail: e.target.value,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  contactEmail: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="contact@naijatrendinfo.com.ng"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500 font-mono"
+                          />
+                        </div>
+
+                        {/* Press Inquiries Email */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Press & Media Inquiries Email
+                          </label>
+                          <input
+                            type="email"
+                            value={localSettings.contactPage?.pressInquiriesEmail ?? 'press@naijatrendinfo.com.ng'}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  pressInquiriesEmail: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="press@naijatrendinfo.com.ng"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500 font-mono"
+                          />
+                        </div>
+
+                        {/* Commercial / Advert Email */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Advertising & Sponsorships Email
+                          </label>
+                          <input
+                            type="email"
+                            value={localSettings.contactPage?.advertEmail ?? 'ads@naijatrendinfo.com.ng'}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  advertEmail: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="ads@naijatrendinfo.com.ng"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500 font-mono"
+                          />
+                        </div>
+
+                        {/* Phone Number */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Editorial Phone Lines
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.contactPage?.contactPhone ?? localSettings.contactPhone}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPhone: e.target.value,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  contactPhone: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="+234 (0) 803 000 0000"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* WhatsApp Hotline */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            WhatsApp Support & Newsdesk Line
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.contactPage?.whatsappSupport ?? '+234 812 345 6789'}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  whatsappSupport: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="+234 812 345 6789"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500 font-mono"
+                          />
+                        </div>
+
+                        {/* Working Hours */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Newsroom Working Hours
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.contactPage?.workingHours ?? 'Mon - Fri: 8:00 AM - 6:00 PM (WAT) | 24/7 Breaking Desk'}
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  workingHours: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="Mon - Fri: 8:00 AM - 6:00 PM (WAT) | 24/7 Breaking Desk"
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* News Tip Banner Prompt */}
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Whistleblower / News Tip Prompt Text
+                          </label>
+                          <input
+                            type="text"
+                            value={
+                              localSettings.contactPage?.newsTipBannerText ??
+                              'Have an investigative tip or whistleblowing evidence? Send it directly to our secure newsdesk.'
+                            }
+                            onChange={(e) =>
+                              setLocalSettings({
+                                ...localSettings,
+                                contactPage: {
+                                  ...localSettings.contactPage,
+                                  newsTipBannerText: e.target.value
+                                }
+                              })
+                            }
+                            placeholder="Have an investigative tip..."
+                            className="w-full bg-slate-950 text-white text-xs rounded-xl p-3 border border-slate-800 focus:outline-none focus:border-emerald-500"
+                          />
                         </div>
                       </div>
-                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800 whitespace-pre-wrap">
-                        {msg.message}
-                      </p>
+
+                      {/* Save Button */}
+                      <div className="flex justify-end pt-4 border-t border-slate-800">
+                        <button
+                          type="submit"
+                          disabled={savingContactSettings}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                        >
+                          {savingContactSettings ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Saving Settings...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>Save Contact Page Settings</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  ))
+                  </form>
                 )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 9: SPORTS HUB & SCOREBOARD SETTINGS */}
           {activeTab === 'sports' && (

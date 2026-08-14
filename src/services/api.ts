@@ -1111,6 +1111,27 @@ export const api = {
     }
   },
 
+  updateContact: async (id: string, update: Partial<ContactMessage>) => {
+    try {
+      return await fetchJson<ContactMessage>(`/api/contacts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(update)
+      });
+    } catch (e) {
+      const list = getLocalData<ContactMessage[]>('naija_contacts', []);
+      let updatedItem: ContactMessage | null = null;
+      const updated = list.map((c) => {
+        if (c.id === id) {
+          updatedItem = { ...c, ...update };
+          return updatedItem;
+        }
+        return c;
+      });
+      setLocalData('naija_contacts', updated);
+      return updatedItem || ({ id, ...update } as ContactMessage);
+    }
+  },
+
   deleteContact: async (id: string) => {
     try {
       return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/contacts/${id}`, {
