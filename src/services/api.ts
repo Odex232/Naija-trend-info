@@ -42,20 +42,17 @@ import {
 
 const DEFAULT_REMOTE_API = 'https://ais-pre-dwirriwzus4adftcq6hige-24821517127.europe-west1.run.app';
 
-function getApiBaseUrl(): string {
-  const envUrl = ((import.meta as any).env?.VITE_API_URL || '').replace(/\/$/, '');
-  if (envUrl) return envUrl;
-
+function getCustomApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host.includes('netlify.app') || host.includes('naijatrendinfo.com.ng')) {
-      return DEFAULT_REMOTE_API;
+    const savedCustom = localStorage.getItem('naija_custom_api_url');
+    if (savedCustom && savedCustom.trim().startsWith('http')) {
+      return savedCustom.trim().replace(/\/$/, '');
     }
   }
+  const envUrl = ((import.meta as any).env?.VITE_API_URL || '').replace(/\/$/, '');
+  if (envUrl) return envUrl;
   return '';
 }
-
-const API_BASE_URL = getApiBaseUrl();
 
 // Local Storage Helper Utilities for Offline/Fallback Sync
 function getLocalData<T>(key: string, fallback: T): T {
@@ -101,48 +98,137 @@ async function syncLocalArticlesToServer(serverArticles: Article[]) {
   }
 }
 
+export async function syncAllLocalStateToServer(): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
+    const rawArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const articles = rawArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
+    const categories = getLocalData('naija_categories', INITIAL_CATEGORIES);
+    const breakingNews = getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS);
+    const settings = getLocalData('naija_settings', INITIAL_SETTINGS);
+    const quickLinks = getLocalData('naija_quick_links', INITIAL_QUICK_LINKS);
+    const pages = getLocalData('naija_pages', INITIAL_PAGES);
+    const editorialDesk = getLocalData('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
+    const socialLinks = getLocalData('naija_social_links', INITIAL_SOCIAL_LINKS);
+    const information = getLocalData('naija_information', INITIAL_INFORMATION);
+    const ads = getLocalData('naija_ads', INITIAL_ADS);
+    const sportsFixtures = getLocalData('naija_sports_fixtures', []);
+
+    const payload = {
+      articles,
+      categories,
+      breakingNews,
+      settings,
+      quickLinks,
+      pages,
+      editorialDesk,
+      socialLinks,
+      information,
+      ads,
+      sportsFixtures
+    };
+
+    const res = await fetchJson<any>('/api/sync-all', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    if (res && res.db) {
+      if (res.db.articles) setLocalData('naija_articles', res.db.articles);
+      if (res.db.categories) setLocalData('naija_categories', res.db.categories);
+      if (res.db.breakingNews) setLocalData('naija_breaking_news', res.db.breakingNews);
+      if (res.db.settings) setLocalData('naija_settings', res.db.settings);
+      if (res.db.quickLinks) setLocalData('naija_quick_links', res.db.quickLinks);
+      if (res.db.pages) setLocalData('naija_pages', res.db.pages);
+      if (res.db.editorialDesk) setLocalData('naija_editorial_desk', res.db.editorialDesk);
+      if (res.db.socialLinks) setLocalData('naija_social_links', res.db.socialLinks);
+      if (res.db.information) setLocalData('naija_information', res.db.information);
+      if (res.db.ads) setLocalData('naija_ads', res.db.ads);
+      if (res.db.sportsFixtures) setLocalData('naija_sports_fixtures', res.db.sportsFixtures);
+    }
+
+    return { success: true, message: 'All content & settings synced to production backend successfully!', data: res };
+  } catch (e: any) {
+    console.warn('Sync all to server failed:', e);
+    return { success: false, message: e.message || 'Failed to sync to server' };
+  }
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('authToken');
-  const headers: Record<string, string> = {
+  const customBase = getCustomApiBaseUrl();
+
+  // Multi-gateway candidate URLs in priority order:
+  // 1. User custom base (if set)
+  // 2. Same-origin relative path (Works flawlessly with Netlify /api/* redirects on Firefox, Phoenix, Opera Mini, Chrome)
+  // 3. Direct Google Cloud Run API endpoint
+  const candidates: string[] = [];
+
+  let endpoint = url;
+  const method = (options?.method || 'GET').toUpperCase();
+  if (method === 'GET') {
+    const sep = endpoint.includes('?') ? '&' : '?';
+    endpoint = `${endpoint}${sep}_t=${Date.now()}`;
+  }
+
+  if (customBase) {
+    candidates.push(`${customBase}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`);
+  }
+
+  // Same-origin candidate
+  candidates.push(endpoint.startsWith('/') ? endpoint : `/${endpoint}`);
+
+  // Direct backend candidate
+  if (!candidates.some((c) => c.startsWith(DEFAULT_REMOTE_API))) {
+    candidates.push(`${DEFAULT_REMOTE_API}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`);
+  }
+
+  const baseHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...((options?.headers as Record<string, string>) || {})
   };
 
-  const fullUrl = url.startsWith('/api/') && API_BASE_URL ? `${API_BASE_URL}${url}` : url;
+  let lastError: any = null;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  for (const candidateUrl of candidates) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for mobile networks
 
-  try {
-    const res = await fetch(fullUrl, {
-      ...options,
-      headers,
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+    try {
+      const res = await fetch(candidateUrl, {
+        ...options,
+        headers: baseHeaders,
+        signal: controller.signal,
+        cache: 'no-store'
+      });
+      clearTimeout(timeoutId);
 
-    const contentType = res.headers.get('content-type') || '';
-    if (!res.ok || contentType.includes('text/html')) {
-      let errMessage = `API Request Failed (${res.status})`;
-      if (contentType.includes('text/html')) {
-        errMessage = 'Server returned HTML instead of JSON';
-      } else {
-        try {
-          const err = await res.json();
-          errMessage = err.message || err.error || errMessage;
-        } catch (e) {}
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        let errMessage = `HTTP ${res.status}`;
+        if (contentType.includes('text/html')) {
+          errMessage = 'Server returned HTML instead of JSON';
+        } else {
+          try {
+            const err = await res.json();
+            errMessage = err.message || err.error || errMessage;
+          } catch (e) {}
+        }
+        throw new Error(errMessage);
       }
-      throw new Error(errMessage);
+      return await res.json();
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      lastError = err;
+      // Proceed to try next candidate endpoint
     }
-    return await res.json();
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      throw new Error('API Request Timeout');
-    }
-    throw err;
   }
+
+  throw lastError || new Error('API Request Failed across all candidate gateways');
 }
 
 export const api = {
@@ -160,6 +246,21 @@ export const api = {
         if (data.settings) setLocalData('naija_settings', data.settings);
         if (data.ads) setLocalData('naija_ads', data.ads);
         if (data.users) setLocalData('naija_users', data.users);
+        if (data.quickLinks) setLocalData('naija_quick_links', data.quickLinks);
+        if (data.pages) setLocalData('naija_pages', data.pages);
+        if (data.editorialDesk) setLocalData('naija_editorial_desk', data.editorialDesk);
+        if (data.socialLinks) setLocalData('naija_social_links', data.socialLinks);
+        if (data.information) setLocalData('naija_information', data.information);
+        if (data.sportsFixtures) setLocalData('naija_sports_fixtures', data.sportsFixtures);
+        if (data.mediaFiles) setLocalData('naija_media_files', data.mediaFiles);
+        if (data.comments) setLocalData('naija_comments', data.comments);
+        if (data.submissions) setLocalData('naija_submissions', data.submissions);
+        if (data.contacts) setLocalData('naija_contacts', data.contacts);
+        if (data.subscribers) setLocalData('naija_subscribers', data.subscribers);
+        if (data.auditLogs) setLocalData('naija_audit_logs', data.auditLogs);
+        if (data.cookieSettings) setLocalData('naija_cookie_settings', data.cookieSettings);
+        if (data.footerSettings) setLocalData('naija_footer_settings', data.footerSettings);
+        if (data.advertisingPackages) setLocalData('naija_advertising_packages', data.advertisingPackages);
         return data;
       }
     } catch (e) {
@@ -201,6 +302,10 @@ export const api = {
       advertisingPackages: INITIAL_ADVERTISING_PACKAGES
     };
   },
+
+  syncAllLocalStateToServer: syncAllLocalStateToServer,
+
+  getHealth: () => fetchJson<{ status: string; time: string }>('/api/health'),
 
   incrementArticleViews: (id: string) =>
     fetchJson<{ success: boolean; views: number }>(`/api/articles/${id}/views`, { method: 'POST' }).catch(() => ({
@@ -768,19 +873,38 @@ export const api = {
       if (metadata?.isPublished !== undefined) formData.append('isPublished', String(metadata.isPublished));
 
       const token = localStorage.getItem('authToken');
-      const uploadUrl = API_BASE_URL ? `${API_BASE_URL}/api/media/upload` : '/api/media/upload';
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: formData
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (!res.ok || contentType.includes('text/html')) {
-        throw new Error('Upload server failed');
+      const customBase = getCustomApiBaseUrl();
+      const uploadCandidates: string[] = [];
+      if (customBase) uploadCandidates.push(`${customBase}/api/media/upload`);
+      uploadCandidates.push('/api/media/upload');
+      uploadCandidates.push(`${DEFAULT_REMOTE_API}/api/media/upload`);
+
+      let data: any = null;
+      let uploadSuccess = false;
+
+      for (const uploadUrl of uploadCandidates) {
+        try {
+          const res = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: formData
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (res.ok && !contentType.includes('text/html')) {
+            data = await res.json();
+            uploadSuccess = true;
+            break;
+          }
+        } catch (err) {
+          // try next candidate
+        }
       }
-      const data = await res.json();
+
+      if (!uploadSuccess || !data) {
+        throw new Error('Upload server failed on all gateways');
+      }
       return Array.isArray(data) ? data[0] : (data as MediaFile);
     } catch (e) {
       console.warn('Backend media upload unavailable, creating local file URL:', e);
@@ -833,17 +957,36 @@ export const api = {
       const formData = new FormData();
       files.forEach((f) => formData.append('files', f));
       const token = localStorage.getItem('authToken');
-      const uploadUrl = API_BASE_URL ? `${API_BASE_URL}/api/media/upload` : '/api/media/upload';
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: formData
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (!res.ok || contentType.includes('text/html')) throw new Error('Upload batch failed');
-      const data = await res.json();
+      const customBase = getCustomApiBaseUrl();
+      const uploadCandidates: string[] = [];
+      if (customBase) uploadCandidates.push(`${customBase}/api/media/upload`);
+      uploadCandidates.push('/api/media/upload');
+      uploadCandidates.push(`${DEFAULT_REMOTE_API}/api/media/upload`);
+
+      let data: any = null;
+      let uploadSuccess = false;
+
+      for (const uploadUrl of uploadCandidates) {
+        try {
+          const res = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: formData
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (res.ok && !contentType.includes('text/html')) {
+            data = await res.json();
+            uploadSuccess = true;
+            break;
+          }
+        } catch (err) {
+          // try next candidate
+        }
+      }
+
+      if (!uploadSuccess || !data) throw new Error('Upload batch failed on all gateways');
       return Array.isArray(data) ? (data as MediaFile[]) : [data as MediaFile];
     } catch (e) {
       const mediaList = getLocalData<MediaFile[]>('naija_media_files', []);

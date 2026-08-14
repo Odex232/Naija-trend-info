@@ -47,7 +47,11 @@ import {
   Phone,
   MapPin,
   Clock,
-  MessageCircle
+  MessageCircle,
+  Cloud,
+  Server,
+  Wifi,
+  FileCode
 } from 'lucide-react';
 import {
   Article,
@@ -73,7 +77,7 @@ import { api } from '../services/api';
 import { WYSIWYGEditor } from '../components/WYSIWYGEditor';
 import { MediaLibrary } from '../components/MediaLibrary';
 import { SocialMediaManager } from '../components/SocialMediaManager';
-import { Share2, FileCode } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
   currentUser: User;
@@ -205,6 +209,71 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Media Drag Upload State
   const [uploading, setUploading] = useState(false);
+
+  // Cloud Sync & Multi-Browser Cross-Device Connectivity State
+  const [syncingCloud, setSyncingCloud] = useState(false);
+  const [customApiUrlInput, setCustomApiUrlInput] = useState(() => {
+    try {
+      return localStorage.getItem('naija_custom_api_url') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [backendStatusInfo, setBackendStatusInfo] = useState<{
+    status: 'online' | 'offline' | 'checking' | 'idle';
+    message?: string;
+    latency?: number;
+  }>({ status: 'idle' });
+
+  const handleManualCloudSync = async () => {
+    setSyncingCloud(true);
+    try {
+      const res = await api.syncAllLocalStateToServer();
+      if (res.success) {
+        triggerSuccessNotification(res.message || 'All content & settings synced to cloud database!');
+        await onRefreshData();
+      } else {
+        triggerErrorNotification(res.message || 'Cloud sync failed.');
+      }
+    } catch (e: any) {
+      triggerErrorNotification(e.message || 'Failed to sync to cloud database.');
+    } finally {
+      setSyncingCloud(false);
+    }
+  };
+
+  const handleTestBackendConnection = async () => {
+    setBackendStatusInfo({ status: 'checking' });
+    const startTime = Date.now();
+    try {
+      await api.getHealth();
+      const latency = Date.now() - startTime;
+      setBackendStatusInfo({
+        status: 'online',
+        message: `Connected successfully (HTTP 200 OK, latency: ${latency}ms)`,
+        latency
+      });
+      triggerSuccessNotification(`Backend server is ONLINE! Latency: ${latency}ms`);
+    } catch (e: any) {
+      setBackendStatusInfo({
+        status: 'offline',
+        message: e.message || 'Unable to connect to backend server'
+      });
+      triggerErrorNotification('Backend test connection failed.');
+    }
+  };
+
+  const handleSaveCustomApiUrl = () => {
+    const clean = customApiUrlInput.trim();
+    if (clean) {
+      localStorage.setItem('naija_custom_api_url', clean);
+      triggerSuccessNotification('Custom API endpoint saved and applied!');
+    } else {
+      localStorage.removeItem('naija_custom_api_url');
+      triggerSuccessNotification('Reset to automatic default API routing.');
+    }
+    onRefreshData();
+  };
 
   // Newsletter Broadcast Form
   const [broadcastSubject, setBroadcastSubject] = useState('');
@@ -3380,7 +3449,118 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           {/* TAB 12: SYSTEM SETTINGS */}
           {activeTab === 'settings' && (
             <div className="space-y-6 max-w-3xl">
-              <h1 className="text-2xl font-bold font-serif text-white">Centralized System Settings</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+                <div>
+                  <h1 className="text-2xl font-bold font-serif text-white">Centralized System Settings</h1>
+                  <p className="text-xs text-slate-400 mt-1">Configure site branding, domain routing, contacts, and real-time cloud data propagation.</p>
+                </div>
+                <button
+                  onClick={handleManualCloudSync}
+                  disabled={syncingCloud}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow-lg cursor-pointer transition-all active:scale-95 disabled:opacity-50 shrink-0"
+                >
+                  {syncingCloud ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                  <span>{syncingCloud ? 'Syncing Cloud DB...' : 'Sync All Data to Cloud'}</span>
+                </button>
+              </div>
+
+              {/* Cross-Device & Multi-Browser Cloud Synchronization Panel */}
+              <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 shadow-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                      <Server className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-white flex items-center gap-2">
+                        <span>Cross-Device & Multi-Browser Cloud Sync</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                          Authoritative Cloud Database
+                        </span>
+                      </h2>
+                      <p className="text-xs text-slate-400">All articles, settings, and updates automatically broadcast across Netlify URL, Custom Domain, and all mobile browsers.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Frontend URL / Domain</div>
+                    <div className="text-xs font-mono text-emerald-400 font-bold truncate mt-1">https://naijatrendinfo.netlify.app</div>
+                  </div>
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mobile Browsers Supported</div>
+                    <div className="text-xs font-semibold text-white mt-1">Firefox, Phoenix, Opera Mini, Chrome, Safari</div>
+                  </div>
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Server Health Status</div>
+                    <div className="text-xs font-bold mt-1 flex items-center gap-1.5">
+                      {backendStatusInfo.status === 'checking' ? (
+                        <span className="text-amber-400 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Checking...
+                        </span>
+                      ) : backendStatusInfo.status === 'online' ? (
+                        <span className="text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Online ({backendStatusInfo.latency}ms)
+                        </span>
+                      ) : backendStatusInfo.status === 'offline' ? (
+                        <span className="text-red-400 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> Offline
+                        </span>
+                      ) : (
+                        <span className="text-slate-300 flex items-center gap-1">
+                          <Wifi className="w-3 h-3 text-emerald-400" /> Active & Ready
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    onClick={handleManualCloudSync}
+                    disabled={syncingCloud}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {syncingCloud ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    <span>{syncingCloud ? 'Syncing Full Database...' : 'Force Sync All to Cloud'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleTestBackendConnection}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer border border-slate-700 transition-colors"
+                  >
+                    <Wifi className="w-4 h-4 text-sky-400" />
+                    <span>Test Multi-Browser API Connection</span>
+                  </button>
+                </div>
+
+                {/* Optional Custom API Endpoint configuration */}
+                <div className="pt-3 border-t border-slate-800">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1.5">
+                    Custom API Endpoint Gateway (Optional - Defaults to Automatic Cloud Run & Same-Origin Proxy)
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Leave empty for auto-detection or enter custom backend URL (e.g. https://ais-pre-...run.app)"
+                      value={customApiUrlInput}
+                      onChange={(e) => setCustomApiUrlInput(e.target.value)}
+                      className="flex-1 bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 text-xs font-mono placeholder:text-slate-600 outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      onClick={handleSaveCustomApiUrl}
+                      className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-colors"
+                    >
+                      Apply Endpoint
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    When accessing from Netlify (<code>https://naijatrendinfo.netlify.app</code>), requests are automatically routed via Netlify's <code>/api/*</code> proxy to avoid mobile browser cross-origin blocks in Opera Mini and Phoenix Browser.
+                  </p>
+                </div>
+              </div>
 
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4 text-xs">
                 <div>

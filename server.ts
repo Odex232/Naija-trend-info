@@ -174,6 +174,15 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+  // Explicit Anti-Caching Middleware on all API responses so mobile browsers (Phoenix, Opera Mini, Firefox, Chrome) never serve stale cached data
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+  });
+
   // Static serving for uploads with browser caching
   app.use(
     '/uploads',
@@ -193,6 +202,87 @@ async function startServer() {
   // Bootstrap initial app state
   app.get('/api/bootstrap', (req, res) => {
     res.json(db);
+  });
+
+  // Comprehensive Multi-Device Master Sync Route
+  app.post('/api/sync-all', (req, res) => {
+    const { articles, categories, breakingNews, settings, quickLinks, pages, editorialDesk, socialLinks, information, ads, sportsFixtures } = req.body;
+
+    if (Array.isArray(articles) && articles.length > 0) {
+      const existingMap = new Map<string, any>((db.articles || []).map((a: any) => [a.id, a]));
+      articles.forEach((art: any) => {
+        if (art && art.id) {
+          const current = existingMap.get(art.id) || {};
+          existingMap.set(art.id, { ...current, ...art });
+        }
+      });
+      db.articles = Array.from(existingMap.values());
+    }
+
+    if (Array.isArray(categories) && categories.length > 0) {
+      const existingMap = new Map<string, any>((db.categories || []).map((c: any) => [c.id, c]));
+      categories.forEach((cat: any) => {
+        if (cat && cat.id) {
+          const current = existingMap.get(cat.id) || {};
+          existingMap.set(cat.id, { ...current, ...cat });
+        }
+      });
+      db.categories = Array.from(existingMap.values());
+    }
+
+    if (Array.isArray(breakingNews) && breakingNews.length > 0) {
+      const existingMap = new Map<string, any>((db.breakingNews || []).map((b: any) => [b.id, b]));
+      breakingNews.forEach((b: any) => {
+        if (b && b.id) {
+          const current = existingMap.get(b.id) || {};
+          existingMap.set(b.id, { ...current, ...b });
+        }
+      });
+      db.breakingNews = Array.from(existingMap.values());
+    }
+
+    if (settings && typeof settings === 'object') {
+      db.settings = { ...(db.settings || {}), ...settings };
+    }
+
+    if (Array.isArray(quickLinks) && quickLinks.length > 0) {
+      db.quickLinks = quickLinks;
+    }
+
+    if (Array.isArray(pages) && pages.length > 0) {
+      const existingMap = new Map<string, any>((db.pages || []).map((p: any) => [p.id, p]));
+      pages.forEach((p: any) => {
+        if (p && p.id) {
+          const current = existingMap.get(p.id) || {};
+          existingMap.set(p.id, { ...current, ...p });
+        }
+      });
+      db.pages = Array.from(existingMap.values());
+    }
+
+    if (Array.isArray(editorialDesk) && editorialDesk.length > 0) {
+      db.editorialDesk = editorialDesk;
+    }
+
+    if (Array.isArray(socialLinks) && socialLinks.length > 0) {
+      db.socialLinks = socialLinks;
+    }
+
+    if (Array.isArray(information) && information.length > 0) {
+      db.information = information;
+    }
+
+    if (Array.isArray(ads) && ads.length > 0) {
+      db.ads = ads;
+    }
+
+    if (Array.isArray(sportsFixtures) && sportsFixtures.length > 0) {
+      db.sportsFixtures = sportsFixtures;
+    }
+
+    saveDatabase();
+    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Multi-Browser Cloud Sync', 'Synchronized database updates across connected devices and browsers.', 'System Sync');
+    res.json({ success: true, message: 'All content and settings synchronized successfully to cloud database.', db });
   });
 
   // Auth Login
