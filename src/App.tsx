@@ -168,6 +168,14 @@ export default function App() {
 
       // Trigger initial route synchronization from URL
       syncRouteFromUrl(data.articles || []);
+
+      // Initial pageview tracking
+      try {
+        api.trackPageView({
+          path: window.location.pathname,
+          title: document.title || 'NaijaTrendiInfo'
+        });
+      } catch (e) {}
     } catch (err) {
       console.error('Failed to bootstrap app state from backend:', err);
     } finally {
@@ -255,12 +263,16 @@ export default function App() {
   const handleNavigate = (view: string, param?: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     let targetUrl = '/';
+    let targetTitle = 'NaijaTrendiInfo';
+    let targetArticleId: string | undefined;
 
     if (view === 'article' && param) {
       const found = articles.find((a) => a.slug === param || a.id === param);
       if (found) {
         setSelectedArticle(found);
         api.incrementArticleViews(found.id);
+        targetTitle = found.title;
+        targetArticleId = found.id;
       }
       setCurrentView('article');
       if (param) setViewParam(param);
@@ -269,30 +281,46 @@ export default function App() {
       setCurrentView('category');
       setViewParam(param);
       targetUrl = `/category/${param}`;
+      targetTitle = `Category: ${param}`;
     } else if (view === 'sports') {
       setCurrentView('sports');
       targetUrl = '/sports';
+      targetTitle = 'Sports Hub';
     } else if (view === 'search') {
       setCurrentView('search');
       if (param) setViewParam(param);
       targetUrl = param ? `/search?q=${encodeURIComponent(param)}` : '/search';
+      targetTitle = `Search: ${param || ''}`;
     } else if (view === 'admin') {
       setCurrentView('admin');
       targetUrl = '/admin';
+      targetTitle = 'Admin Dashboard';
     } else if (view === 'home') {
       setCurrentView('home');
       targetUrl = '/';
+      targetTitle = 'NaijaTrendiInfo - Nigeria News';
     } else {
       setCurrentView('info');
       const pageKey = param || (view.startsWith('/') ? view.replace('/', '') : view);
       setViewParam(pageKey);
       targetUrl = `/${pageKey}`;
+      targetTitle = pageKey;
     }
 
     try {
       if (window.location.pathname + window.location.search !== targetUrl) {
         window.history.pushState({}, '', targetUrl);
       }
+    } catch (e) {}
+
+    // Real-time analytics telemetry
+    try {
+      api.trackPageView({
+        path: targetUrl,
+        title: targetTitle,
+        articleId: targetArticleId,
+        categoryId: view === 'category' ? param : undefined
+      });
     } catch (e) {}
   };
 

@@ -372,3 +372,112 @@ export interface SportsFixture {
   matchDate: string;
   venue?: string;
 }
+
+export interface DailyTrafficPoint {
+  date: string;
+  label: string;
+  pageviews: number;
+  uniqueVisitors: number;
+  avgDurationSeconds: number;
+  bounceRate: number;
+}
+
+export interface HourlyTrafficPoint {
+  hour: string;
+  pageviews: number;
+  uniqueVisitors: number;
+}
+
+export interface GeoTrafficItem {
+  location: string;
+  stateOrCountry: string;
+  region: 'Nigeria' | 'Diaspora / Global';
+  visitors: number;
+  pageviews: number;
+  percentage: number;
+}
+
+export interface DeviceTrafficItem {
+  device: string;
+  visitors: number;
+  pageviews: number;
+  percentage: number;
+  iconName?: string;
+}
+
+export interface BrowserTrafficItem {
+  browser: string;
+  visitors: number;
+  pageviews: number;
+  percentage: number;
+}
+
+export interface TrafficSourceItem {
+  source: string;
+  category: 'Search Engine' | 'Social Media' | 'Direct / Bookmark' | 'Messaging App' | 'News Aggregator';
+  visitors: number;
+  pageviews: number;
+  percentage: number;
+}
+
+export interface LiveSessionEvent {
+  id: string;
+  path: string;
+  title: string;
+  articleId?: string;
+  category?: string;
+  location: string;
+  device: string;
+  browser: string;
+  ip?: string;
+  timestamp: string;
+  timeAgo?: string;
+}
+
+export interface CategoryTrafficItem {
+  categoryId: string;
+  categoryName: string;
+  articlesCount: number;
+  totalViews: number;
+  percentage: number;
+  color?: string;
+}
+
+export interface ArticlePerformanceItem {
+  id: string;
+  title: string;
+  slug: string;
+  categoryName: string;
+  views: number;
+  uniqueReaders: number;
+  avgReadTimeSeconds: number;
+  shareCount: number;
+  publishedAt: string;
+}
+
+export interface WebsiteAnalyticsData {
+  totalPageviews: number;
+  totalUniqueVisitors: number;
+  activeLiveReaders: number;
+  avgReadTimeSeconds: number;
+  avgBounceRate: number;
+  mobileTrafficShare: number;
+  period: 'today' | '7d' | '30d' | '90d' | 'all';
+  growth: {
+    pageviewsGrowth: number;
+    visitorsGrowth: number;
+    readTimeGrowth: number;
+    bounceRateChange: number;
+  };
+  dailyTrend: DailyTrafficPoint[];
+  hourlyTrend: HourlyTrafficPoint[];
+  categoryPerformance: CategoryTrafficItem[];
+  deviceBreakdown: DeviceTrafficItem[];
+  browserBreakdown: BrowserTrafficItem[];
+  trafficSources: TrafficSourceItem[];
+  geoBreakdown: GeoTrafficItem[];
+  topArticles: ArticlePerformanceItem[];
+  liveVisitorFeed: LiveSessionEvent[];
+  lastUpdated: string;
+}
+

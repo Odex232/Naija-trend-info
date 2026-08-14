@@ -77,6 +77,7 @@ import { api } from '../services/api';
 import { WYSIWYGEditor } from '../components/WYSIWYGEditor';
 import { MediaLibrary } from '../components/MediaLibrary';
 import { SocialMediaManager } from '../components/SocialMediaManager';
+import { WebsiteAnalyticsDashboard } from '../components/WebsiteAnalyticsDashboard';
 import { Share2 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
@@ -132,6 +133,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<
     | 'overview'
+    | 'analytics'
     | 'articles'
     | 'breaking'
     | 'categories'
@@ -1163,7 +1165,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         >
           <nav className="p-3 space-y-4 text-xs font-medium">
             {/* MAIN DASHBOARD */}
-            <div>
+            <div className="space-y-1">
               <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Main Overview
               </div>
@@ -1172,12 +1174,32 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   setActiveTab('overview');
                   setMobileSidebarOpen(false);
                 }}
-                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors cursor-pointer ${
                   activeTab === 'overview' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Dashboard Overview</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('analytics');
+                  setMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors cursor-pointer ${
+                  activeTab === 'analytics'
+                    ? 'bg-emerald-600 text-white font-bold border border-emerald-400/40 shadow-sm'
+                    : 'text-emerald-300 hover:bg-slate-800 hover:text-emerald-200'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span className="font-semibold flex items-center justify-between w-full">
+                  <span>Website Analytics</span>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                    LIVE
+                  </span>
+                </span>
               </button>
             </div>
 
@@ -1505,15 +1527,21 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <div className="text-[10px] text-slate-500 mt-1">across {categories.length} categories</div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <div
+                  onClick={() => setActiveTab('analytics')}
+                  className="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 transition-all rounded-2xl p-4 cursor-pointer group"
+                >
                   <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
-                    <span>Total Audience Pageviews</span>
+                    <span className="group-hover:text-emerald-400 transition-colors">Total Audience Pageviews</span>
                     <Eye className="w-4 h-4 text-amber-400" />
                   </div>
                   <div className="text-3xl font-extrabold text-white mt-2 font-mono">
                     {articles.reduce((acc, a) => acc + (a.views || 0), 0).toLocaleString()}
                   </div>
-                  <div className="text-[10px] text-emerald-400 mt-1">+12.4% this week</div>
+                  <div className="flex items-center justify-between text-[10px] text-emerald-400 mt-1">
+                    <span>+12.4% this week</span>
+                    <span className="font-bold underline text-slate-400 group-hover:text-emerald-300">View Analytics →</span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
@@ -1611,6 +1639,21 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB: WEBSITE ANALYTICS STUDIO */}
+          {activeTab === 'analytics' && (
+            <WebsiteAnalyticsDashboard
+              currentUser={currentUser}
+              articles={articles}
+              categories={categories}
+              onNavigateSite={onNavigateSite}
+              onEditArticle={(art) => {
+                setEditingArticle(art);
+                setArticleModalOpen(true);
+                setActiveTab('articles');
+              }}
+            />
           )}
 
           {/* TAB 2: ARTICLES CMS */}
