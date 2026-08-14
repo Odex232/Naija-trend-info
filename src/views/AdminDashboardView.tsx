@@ -1105,6 +1105,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
         <div className="flex items-center space-x-2 sm:space-x-4">
           <button
+            onClick={handleManualCloudSync}
+            disabled={syncingCloud}
+            className="text-xs font-bold bg-emerald-700/80 hover:bg-emerald-600 text-white px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-emerald-500/50 flex items-center space-x-1.5 shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            title="Sync all articles, media, settings and database globally to live cloud"
+          >
+            {syncingCloud ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Cloud className="w-3.5 h-3.5 text-emerald-200" />}
+            <span className="hidden sm:inline">{syncingCloud ? 'Syncing...' : 'Sync Live Cloud'}</span>
+          </button>
+
+          <button
             onClick={() => onNavigateSite('home')}
             className="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-400 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 flex items-center space-x-1"
           >

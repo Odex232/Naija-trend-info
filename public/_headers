@@ -1,0 +1,28 @@
+# Netlify Global Caching, Security & Cross-Device Synchronization Rules
+
+# Force immediate freshness for HTML and Service Worker so all visitors worldwide receive latest code
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+# Prevent mobile browser caching (Opera Mini, Phoenix, UC Browser, Safari Mobile, Chrome Mobile) on API proxy calls
+/api/*
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+
+# Allow fast asset loading for hashed bundles
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
