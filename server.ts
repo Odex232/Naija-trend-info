@@ -229,7 +229,7 @@ async function startServer() {
   });
 
   app.get('/api/database/schema.sql', (req, res) => {
-    const schemaPath = path.join(ROOT_DIR, 'scripts', 'schema.sql');
+    const schemaPath = path.join(__dirname, 'scripts', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       res.sendFile(schemaPath);
