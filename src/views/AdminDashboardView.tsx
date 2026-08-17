@@ -51,7 +51,8 @@ import {
   Cloud,
   Server,
   Wifi,
-  FileCode
+  FileCode,
+  HardDrive
 } from 'lucide-react';
 import {
   Article,
@@ -78,6 +79,7 @@ import { WYSIWYGEditor } from '../components/WYSIWYGEditor';
 import { MediaLibrary } from '../components/MediaLibrary';
 import { SocialMediaManager } from '../components/SocialMediaManager';
 import { WebsiteAnalyticsDashboard } from '../components/WebsiteAnalyticsDashboard';
+import { SupabaseMigrationDashboard } from '../components/SupabaseMigrationDashboard';
 import { Share2 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
@@ -1459,12 +1461,19 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   setActiveTab('backup');
                   setMobileSidebarOpen(false);
                 }}
-                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors ${
-                  activeTab === 'backup' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-colors cursor-pointer ${
+                  activeTab === 'backup'
+                    ? 'bg-emerald-600 text-white font-bold border border-emerald-400/40 shadow-sm'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <Database className="w-4 h-4 text-slate-300" />
-                <span>Backup & Recovery</span>
+                <Database className="w-4 h-4 text-emerald-400" />
+                <span className="font-semibold flex items-center justify-between w-full">
+                  <span>Supabase & DB Migration</span>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                    POSTGRES
+                  </span>
+                </span>
               </button>
 
               <button
@@ -4628,18 +4637,46 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
 
-          {/* TAB 13: BACKUP & RECOVERY */}
+          {/* TAB 13: SUPABASE POSTGRESQL & DATABASE MIGRATION & BACKUP */}
           {activeTab === 'backup' && (
-            <div className="space-y-6 max-w-2xl">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold font-serif text-white">Database Backup & Recovery</h1>
-                <button onClick={handleCreateBackup} className="bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl">
-                  Create Instant Snapshot
-                </button>
-              </div>
+            <div className="space-y-8">
+              <SupabaseMigrationDashboard
+                articlesCount={articles.length}
+                categoriesCount={categories.length}
+                usersCount={users.length}
+                pagesCount={sitePages.length}
+                breakingNewsCount={breakingNews.length}
+                mediaCount={mediaFiles.length}
+                onRefreshData={onRefreshData}
+                triggerSuccessNotification={triggerSuccessNotification}
+                triggerErrorNotification={triggerErrorNotification}
+                askConfirmation={askConfirmation}
+              />
 
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
-                <p className="text-xs text-slate-400">All backup snapshots are stored securely and can be restored with a single click.</p>
+              {/* Local Snapshot Backups */}
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                      <HardDrive className="w-5 h-5 text-emerald-400" />
+                      <span>Instant Database JSON Snapshots & Recovery</span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Create point-in-time snapshots of the database for emergency disaster recovery or offline backup archives.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCreateBackup}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md cursor-pointer transition-colors flex items-center space-x-1.5 shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Create Instant Snapshot</span>
+                  </button>
+                </div>
+                <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-xs text-slate-400 space-y-1">
+                  <div className="font-semibold text-slate-300">Resilient Recovery Pipeline</div>
+                  <p>All snapshot files are timestamped, encrypted in the primary storage layer, and can be restored with a single click if needed.</p>
+                </div>
               </div>
             </div>
           )}

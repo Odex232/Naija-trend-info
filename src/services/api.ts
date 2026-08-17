@@ -2045,5 +2045,52 @@ export const api = {
         ]
       };
     }
+  },
+
+  // Supabase PostgreSQL Production Database Status & Safe Migration
+  getDatabaseStatus: async () => {
+    try {
+      return await fetchJson<{
+        isConfigured: boolean;
+        supabaseUrl: string;
+        hasServiceRoleKey: boolean;
+        hasAnonKey: boolean;
+        articlesCountInLocalDb: number;
+        categoriesCountInLocalDb: number;
+        usersCountInLocalDb: number;
+        settingsConfigured: boolean;
+      }>('/api/database/status');
+    } catch (e) {
+      return {
+        isConfigured: false,
+        supabaseUrl: 'Not Connected',
+        hasServiceRoleKey: false,
+        hasAnonKey: false,
+        articlesCountInLocalDb: getLocalData<Article[]>('naija_articles', []).length,
+        categoriesCountInLocalDb: getLocalData<Category[]>('naija_categories', []).length,
+        usersCountInLocalDb: 1,
+        settingsConfigured: true
+      };
+    }
+  },
+
+  migrateToSupabase: async () => {
+    return await fetchJson<{
+      success: boolean;
+      message: string;
+      report: Record<string, { inserted: number; errors: number }>;
+    }>('/api/database/migrate-to-supabase', {
+      method: 'POST'
+    });
+  },
+
+  verifyDatabaseSync: async () => {
+    return await fetchJson<{
+      success: boolean;
+      status: any;
+      verifiedAt: string;
+    }>('/api/database/verify', {
+      method: 'POST'
+    });
   }
 };

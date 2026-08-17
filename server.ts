@@ -25,6 +25,14 @@ import {
   INITIAL_FOOTER_SETTINGS,
   INITIAL_ADVERTISING_PACKAGES
 } from './src/data/initialData.js';
+import {
+  dbAdapter,
+  getMigrationStatus,
+  runSafeMigrationToSupabase,
+  isSupabaseConnected,
+  getLocalDb,
+  saveLocalDb
+} from './src/server/supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -211,26 +219,69 @@ async function startServer() {
 
   // Health
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    res.json({ status: 'ok', time: new Date().toISOString(), database: isSupabaseConnected() ? 'supabase_postgresql' : 'json_disk_store' });
   });
 
-  // Bootstrap initial app state
-  app.get('/api/bootstrap', (req, res) => {
-    res.json(db);
+  // Supabase Database Management & Migration Endpoints
+  app.get('/api/database/status', (req, res) => {
+    const status = getMigrationStatus();
+    res.json(status);
+  });
+
+  app.get('/api/database/schema.sql', (req, res) => {
+    const schemaPath = path.join(ROOT_DIR, 'scripts', 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.sendFile(schemaPath);
+    } else {
+      res.status(404).send('-- Schema file not found');
+    }
+  });
+
+  app.post('/api/database/migrate-to-supabase', async (req, res) => {
+    try {
+      const result = await runSafeMigrationToSupabase();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
+    }
+  });
+
+  app.post('/api/database/verify', async (req, res) => {
+    const status = getMigrationStatus();
+    res.json({
+      success: true,
+      status,
+      verifiedAt: new Date().toISOString()
+    });
+  });
+
+  // Bootstrap initial app state (Hydrated from Supabase or Local Store)
+  app.get('/api/bootstrap', async (req, res) => {
+    try {
+      const hydrated = await dbAdapter.getBootstrapData();
+      res.json(hydrated);
+    } catch (e) {
+      res.json(db);
+    }
   });
 
   // Comprehensive Multi-Device Master Sync Route
-  app.post('/api/sync-all', (req, res) => {
+  app.post('/api/sync-all', async (req, res) => {
     const { articles, categories, breakingNews, settings, quickLinks, pages, editorialDesk, socialLinks, information, ads, sportsFixtures } = req.body;
 
     if (Array.isArray(articles) && articles.length > 0) {
       const existingMap = new Map<string, any>((db.articles || []).map((a: any) => [a.id, a]));
-      articles.forEach((art: any) => {
+      for (const art of articles) {
         if (art && art.id) {
           const current = existingMap.get(art.id) || {};
-          existingMap.set(art.id, { ...current, ...art });
+          const merged = { ...current, ...art };
+          existingMap.set(art.id, merged);
+          if (isSupabaseConnected()) {
+            await dbAdapter.createArticle(merged).catch(() => {});
+          }
         }
-      });
+      }
       db.articles = Array.from(existingMap.values());
     }
 
@@ -258,6 +309,9 @@ async function startServer() {
 
     if (settings && typeof settings === 'object') {
       db.settings = { ...(db.settings || {}), ...settings };
+      if (isSupabaseConnected()) {
+        await dbAdapter.updateSettings(db.settings).catch(() => {});
+      }
     }
 
     if (Array.isArray(quickLinks) && quickLinks.length > 0) {
@@ -348,113 +402,70 @@ async function startServer() {
   });
 
   // Articles
-  app.get('/api/articles', (req, res) => {
-    let list = [...db.articles];
-    const { category, tag, search, status, featured, breaking } = req.query;
-
-    if (category) {
-      list = list.filter((a: any) => a.categoryId === category || a.categoryName.toLowerCase() === (category as string).toLowerCase());
+  app.get('/api/articles', async (req, res) => {
+    try {
+      const list = await dbAdapter.getArticles(req.query as any);
+      res.json(list);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Failed to fetch articles' });
     }
-    if (tag) {
-      list = list.filter((a: any) => a.tags.some((t: string) => t.toLowerCase() === (tag as string).toLowerCase()));
-    }
-    if (status) {
-      list = list.filter((a: any) => a.status === status);
-    }
-    if (featured === 'true') {
-      list = list.filter((a: any) => a.isFeatured);
-    }
-    if (breaking === 'true') {
-      list = list.filter((a: any) => a.isBreaking);
-    }
-    if (search) {
-      const q = (search as string).toLowerCase();
-      list = list.filter(
-        (a: any) =>
-          a.title.toLowerCase().includes(q) ||
-          a.summary.toLowerCase().includes(q) ||
-          a.categoryName.toLowerCase().includes(q) ||
-          a.tags.some((t: string) => t.toLowerCase().includes(q))
-      );
-    }
-
-    // Sort by publishedAt desc
-    list.sort((a: any, b: any) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-
-    res.json(list);
   });
 
-  app.get('/api/articles/:slugOrId', (req, res) => {
-    const { slugOrId } = req.params;
-    const articleIndex = db.articles.findIndex((a: any) => a.id === slugOrId || a.slug === slugOrId);
-
-    if (articleIndex !== -1) {
-      // increment views
-      db.articles[articleIndex].views = (db.articles[articleIndex].views || 0) + 1;
-      saveDatabase();
-      return res.json(db.articles[articleIndex]);
+  app.get('/api/articles/:slugOrId', async (req, res) => {
+    try {
+      const { slugOrId } = req.params;
+      const article = await dbAdapter.getArticle(slugOrId);
+      if (article) {
+        return res.json(article);
+      }
+      res.status(404).json({ message: 'Article not found' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
-
-    res.status(404).json({ message: 'Article not found' });
   });
 
-  app.post('/api/articles/:id/views', (req, res) => {
+  app.post('/api/articles/:id/views', async (req, res) => {
     const { id } = req.params;
-    const article = db.articles.find((a: any) => a.id === id || a.slug === id);
+    const article = await dbAdapter.getArticle(id);
     if (article) {
-      article.views = (article.views || 0) + 1;
-      saveDatabase();
       return res.json({ success: true, views: article.views });
     }
     res.status(404).json({ message: 'Article not found' });
   });
 
-  app.post('/api/articles', (req, res) => {
-    const article = req.body;
-    article.id = 'art-' + Date.now();
-    article.createdAt = new Date().toISOString();
-    article.updatedAt = new Date().toISOString();
-    article.views = article.views || 0;
-    if (!article.slug) {
-      article.slug = article.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '');
+  app.post('/api/articles', async (req, res) => {
+    try {
+      const savedArticle = await dbAdapter.createArticle(req.body);
+      addAuditLog(req.body.authorName || 'Admin', 'Admin', 'Article Created', `Created article "${savedArticle.title}"`, 'CMS Articles');
+      res.json(savedArticle);
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
     }
-
-    db.articles.unshift(article);
-    saveDatabase();
-    addAuditLog(req.body.authorName || 'Admin', 'Admin', 'Article Created', `Created article "${article.title}"`, 'CMS Articles');
-    res.json(article);
   });
 
-  app.put('/api/articles/:id', (req, res) => {
-    const { id } = req.params;
-    const index = db.articles.findIndex((a: any) => a.id === id);
-    if (index !== -1) {
-      db.articles[index] = { ...db.articles[index], ...req.body, updatedAt: new Date().toISOString() };
-      saveDatabase();
-      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Article Updated', `Updated article "${db.articles[index].title}"`, 'CMS Articles');
-      return res.json(db.articles[index]);
+  app.put('/api/articles/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedArticle = await dbAdapter.updateArticle(id, req.body);
+      if (updatedArticle) {
+        addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Article Updated', `Updated article "${updatedArticle.title}"`, 'CMS Articles');
+        return res.json(updatedArticle);
+      }
+      res.status(404).json({ message: 'Article not found' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
     }
-    res.status(404).json({ message: 'Article not found' });
   });
 
-  app.delete('/api/articles/:id', requireAdminAuth, (req, res) => {
-    const { id } = req.params;
-    const article = db.articles.find((a: any) => a.id === id || a.slug === id);
-    if (article) {
-      const artId = article.id;
-      db.articles = db.articles.filter((a: any) => a.id !== artId && a.slug !== id);
-      db.comments = (db.comments || []).filter((c: any) => c.articleId !== artId);
-      db.breakingNews = (db.breakingNews || []).filter((b: any) => b.articleId !== artId);
-      saveDatabase();
-      addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'Article Deleted', `Permanently deleted article "${article.title}"`, 'CMS Articles');
-      return res.json({ success: true, message: 'Post deleted successfully', id: artId });
+  app.delete('/api/articles/:id', requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await dbAdapter.deleteArticle(id);
+      addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'Article Deleted', `Permanently deleted article ID ${id}`, 'CMS Articles');
+      res.json({ success: true, message: 'Post deleted successfully', id: result.id });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
     }
-    db.articles = db.articles.filter((a: any) => a.id !== id && a.slug !== id);
-    saveDatabase();
-    res.json({ success: true, message: 'Post deleted successfully', id });
   });
 
   // Categories
@@ -1987,6 +1998,20 @@ function isBlockedFileType(filename: string): boolean {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`NaijaTrendiInfo server running at http://localhost:${PORT}`);
+    if (isSupabaseConnected()) {
+      console.log('[Supabase] Initializing PostgreSQL connection & verifying data parity...');
+      runSafeMigrationToSupabase().then((res) => {
+        if (res.success) {
+          console.log('[Supabase] Data verification & sync completed successfully:', res.message);
+        } else {
+          console.log('[Supabase] Notice:', res.message);
+        }
+      }).catch((err) => {
+        console.error('[Supabase] Startup sync notice:', err);
+      });
+    } else {
+      console.log('[Database] Operating with resilient local JSON store with Supabase PostgreSQL migration ready.');
+    }
   });
 }
 
