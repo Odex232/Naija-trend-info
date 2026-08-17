@@ -587,16 +587,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Delete Ad
   const handleDeleteAd = (id: string) => {
+    const target = ads.find((a) => a.id === id);
+    const campaignName = target?.name || 'this ad campaign';
     askConfirmation(
       'Delete Ad Campaign',
-      'Are you sure you want to delete this advertisement campaign?',
+      `Are you sure you want to permanently delete "${campaignName}"? This action will remove the ad immediately from live banners and database storage.`,
       async () => {
         setDeletingId(id);
         try {
           const res = await api.deleteAd(id);
           if (editingAd?.id === id) setEditingAd(null);
           triggerSuccessNotification(res.message || 'Ad campaign deleted successfully');
-          onRefreshData();
+          await onRefreshData();
         } catch (e: any) {
           console.error('Delete ad failed:', e);
           triggerErrorNotification(e.message || 'Failed to delete ad campaign');
@@ -604,7 +606,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           setDeletingId(null);
         }
       },
-      { confirmLabel: 'Delete Ad', isDanger: true }
+      { confirmLabel: 'Delete Campaign', isDanger: true }
     );
   };
 
@@ -1904,57 +1906,112 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
               {/* Ads List */}
               <div className="space-y-3">
-                <h3 className="font-bold text-sm text-white">Active Ad Campaigns</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {ads.map((ad) => (
-                    <div key={ad.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-bold text-sm text-white">{ad.name}</h4>
-                          <span className="text-[10px] font-bold text-amber-400 uppercase">{ad.type}</span>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ad.isActive ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-500'}`}>
-                          {ad.isActive ? 'Active' : 'Paused'}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl text-center text-xs font-mono">
-                        <div>
-                          <div className="text-slate-500 text-[10px]">Impressions</div>
-                          <div className="text-white font-bold">{ad.impressions.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <div className="text-slate-500 text-[10px]">Clicks</div>
-                          <div className="text-emerald-400 font-bold">{ad.clicks.toLocaleString()}</div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingAd(ad);
-                          }}
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs cursor-pointer"
-                          title="Edit Ad"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          disabled={deletingId === ad.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteAd(ad.id);
-                          }}
-                          className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg text-xs cursor-pointer disabled:opacity-50"
-                          title="Delete Ad Campaign"
-                        >
-                          {deletingId === ad.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                    <span>Active Ad Campaigns</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                      {ads.length}
+                    </span>
+                  </h3>
                 </div>
+
+                {ads.length === 0 ? (
+                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
+                    <p className="text-xs text-slate-400">No ad campaigns found. Create custom sponsor banners, Google AdSense, or Adsterra units.</p>
+                    <button
+                      onClick={() => setEditingAd({ name: '', type: 'custom', isActive: true, desktopVisible: true, mobileVisible: true })}
+                      className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create First Ad Campaign</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {ads.map((ad) => (
+                      <div key={ad.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 hover:border-slate-700 transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-sm text-white">{ad.name}</h4>
+                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">{ad.type.replace('_', ' ')}</span>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${ad.isActive ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                            {ad.isActive ? 'Active' : 'Paused'}
+                          </span>
+                        </div>
+
+                        {ad.bannerUrl && (
+                          <div className="rounded-lg overflow-hidden border border-slate-800 bg-black/40 max-h-24 flex items-center justify-center">
+                            <img src={ad.bannerUrl} alt={ad.name} className="w-full h-auto object-cover max-h-24" />
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl text-center text-xs font-mono border border-slate-800/50">
+                          <div>
+                            <div className="text-slate-500 text-[10px]">Impressions</div>
+                            <div className="text-white font-bold">{ad.impressions?.toLocaleString() ?? 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500 text-[10px]">Clicks</div>
+                            <div className="text-emerald-400 font-bold">{ad.clicks?.toLocaleString() ?? 0}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await api.updateAd(ad.id, { isActive: !ad.isActive });
+                                triggerSuccessNotification(`Campaign "${ad.name}" ${ad.isActive ? 'paused' : 'activated'}`);
+                                await onRefreshData();
+                              } catch (err: any) {
+                                triggerErrorNotification('Failed to toggle ad status');
+                              }
+                            }}
+                            className="text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                          >
+                            {ad.isActive ? 'Pause Campaign' : 'Resume Campaign'}
+                          </button>
+
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingAd(ad);
+                              }}
+                              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium flex items-center space-x-1 cursor-pointer transition-colors"
+                              title="Edit Ad Campaign"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              disabled={deletingId === ad.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAd(ad.id);
+                              }}
+                              className="px-2.5 py-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg text-xs font-medium flex items-center space-x-1 cursor-pointer disabled:opacity-50 transition-colors"
+                              title="Delete Ad Campaign"
+                            >
+                              {deletingId === ad.id ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                                  <span>Deleting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -5001,13 +5058,27 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-end space-x-2 pt-2">
-                <button type="button" onClick={() => setEditingAd(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
-                  Save Campaign
-                </button>
+              <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                {editingAd.id ? (
+                  <button
+                    type="button"
+                    disabled={deletingId === editingAd.id}
+                    onClick={() => handleDeleteAd(editingAd.id!)}
+                    className="px-3.5 py-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 font-semibold rounded-xl flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === editingAd.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>Delete Campaign</span>
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center space-x-2">
+                  <button type="button" onClick={() => setEditingAd(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl cursor-pointer">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-white cursor-pointer">
+                    Save Campaign
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -602,11 +602,8 @@ async function startServer() {
 
   app.delete('/api/ads/:id', requireAdminAuth, (req, res) => {
     const { id } = req.params;
-    const exists = (db.ads || []).some((a: any) => a.id === id);
-    if (!exists) {
-      return res.status(404).json({ success: false, message: 'Ad campaign not found' });
-    }
-    db.ads = db.ads.filter((a: any) => a.id !== id);
+    const initialLen = (db.ads || []).length;
+    db.ads = (db.ads || []).filter((a: any) => a.id !== id);
     saveDatabase();
     addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Ad Deleted', `Deleted ad campaign ID ${id}`, 'Ads Manager');
     res.json({ success: true, message: 'Ad campaign deleted successfully', id });

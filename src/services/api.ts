@@ -451,6 +451,7 @@ export const api = {
   // Bootstrap state
   bootstrap: async () => {
     const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
+    const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
 
     // 1. DIRECT SUPABASE CLOUD HYDRATION (High Priority - ensures instant sync across all global devices)
     try {
@@ -484,6 +485,7 @@ export const api = {
 
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
           const cleanArticles = sbArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
+          const cleanAds = Array.isArray(sbAds) ? sbAds.filter((a) => !deletedAdIds.has(a.id)) : [];
           setLocalData('naija_articles', cleanArticles);
           if (Array.isArray(sbCategories) && sbCategories.length > 0) setLocalData('naija_categories', sbCategories);
           if (Array.isArray(sbBreaking) && sbBreaking.length > 0) setLocalData('naija_breaking_news', sbBreaking);
@@ -493,15 +495,19 @@ export const api = {
           if (Array.isArray(sbEditorial) && sbEditorial.length > 0) setLocalData('naija_editorial_desk', sbEditorial);
           if (Array.isArray(sbSocial) && sbSocial.length > 0) setLocalData('naija_social_links', sbSocial);
           if (Array.isArray(sbInfo) && sbInfo.length > 0) setLocalData('naija_information', sbInfo);
-          if (Array.isArray(sbAds) && sbAds.length > 0) setLocalData('naija_ads', sbAds);
+          if (cleanAds.length > 0) setLocalData('naija_ads', cleanAds);
           if (Array.isArray(sbSports) && sbSports.length > 0) setLocalData('naija_sports_fixtures', sbSports);
+
+          const finalAds = cleanAds.length > 0
+            ? cleanAds
+            : getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
 
           return {
             settings: sbSettings || getLocalData('naija_settings', INITIAL_SETTINGS),
             categories: (Array.isArray(sbCategories) && sbCategories.length > 0) ? sbCategories : getLocalData('naija_categories', INITIAL_CATEGORIES),
             articles: cleanArticles,
             breakingNews: (Array.isArray(sbBreaking) && sbBreaking.length > 0) ? sbBreaking : getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS),
-            ads: (Array.isArray(sbAds) && sbAds.length > 0) ? sbAds : getLocalData('naija_ads', INITIAL_ADS),
+            ads: finalAds,
             adPlacements: INITIAL_AD_PLACEMENTS,
             users: getLocalData('naija_users', INITIAL_USERS),
             comments: getLocalData('naija_comments', []),
@@ -529,6 +535,8 @@ export const api = {
             setDocInSupabase('breakingNews', getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS)).catch(() => {});
             setDocInSupabase('settings', getLocalData('naija_settings', INITIAL_SETTINGS)).catch(() => {});
             setDocInSupabase('pages', getLocalData('naija_pages', INITIAL_PAGES)).catch(() => {});
+            const currentAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+            if (currentAds.length > 0) setDocInSupabase('ads', currentAds).catch(() => {});
           }
         }
       }
@@ -541,6 +549,9 @@ export const api = {
       const data = await fetchJson<any>('/api/bootstrap');
       if (data && typeof data === 'object' && Array.isArray(data.articles)) {
         data.articles = data.articles.filter((a: any) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
+        if (Array.isArray(data.ads)) {
+          data.ads = data.ads.filter((a: any) => !deletedAdIds.has(a.id));
+        }
         await syncLocalArticlesToServer(data.articles);
         setLocalData('naija_articles', data.articles);
         if (data.categories) setLocalData('naija_categories', data.categories);
@@ -580,12 +591,14 @@ export const api = {
     storedArticles = storedArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
     storedArticles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
+    const finalStoredAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+
     return {
       settings: getLocalData('naija_settings', INITIAL_SETTINGS),
       categories: getLocalData('naija_categories', INITIAL_CATEGORIES),
       articles: storedArticles,
       breakingNews: getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS),
-      ads: getLocalData('naija_ads', INITIAL_ADS),
+      ads: finalStoredAds,
       adPlacements: INITIAL_AD_PLACEMENTS,
       users: getLocalData('naija_users', INITIAL_USERS),
       comments: getLocalData('naija_comments', []),
@@ -1341,70 +1354,120 @@ export const api = {
 
   // Ads & Placements
   getAds: async () => {
+    const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
     try {
-      return await fetchJson<Ad[]>('/api/ads');
+      const sbAds = await getDocFromSupabase<Ad[]>('ads');
+      if (Array.isArray(sbAds) && sbAds.length > 0) {
+        const clean = sbAds.filter((a) => !deletedAdIds.has(a.id));
+        setLocalData('naija_ads', clean);
+        return clean;
+      }
+    } catch (e) {}
+
+    try {
+      const serverAds = await fetchJson<Ad[]>('/api/ads');
+      if (Array.isArray(serverAds)) {
+        const clean = serverAds.filter((a) => !deletedAdIds.has(a.id));
+        setLocalData('naija_ads', clean);
+        return clean;
+      }
     } catch (e) {
-      return getLocalData('naija_ads', INITIAL_ADS);
+      console.warn('Serving ads from local cache:', e);
     }
+
+    const localAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS);
+    return localAds.filter((a) => !deletedAdIds.has(a.id));
   },
 
   createAd: async (ad: Partial<Ad>) => {
+    const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
+    const ads = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+    const newAd: Ad = {
+      id: ad.id || `ad-${Date.now()}`,
+      name: ad.name || 'New Sponsor Ad',
+      type: ad.type || 'custom',
+      bannerUrl: ad.bannerUrl || '',
+      destinationUrl: ad.destinationUrl || 'https://naijatrendinfo.com.ng',
+      desktopVisible: ad.desktopVisible !== false,
+      mobileVisible: ad.mobileVisible !== false,
+      impressions: 0,
+      clicks: 0,
+      isActive: ad.isActive !== false,
+      adCode: ad.adCode || ''
+    };
+    const updated = [newAd, ...ads.filter((a) => a.id !== newAd.id)];
+    setLocalData('naija_ads', updated);
+    setDocInSupabase('ads', updated).catch(() => {});
+
     try {
-      return await fetchJson<Ad>('/api/ads', {
+      const res = await fetchJson<Ad>('/api/ads', {
         method: 'POST',
-        body: JSON.stringify(ad)
+        body: JSON.stringify(newAd)
       });
+      return res || newAd;
     } catch (e) {
-      const ads = getLocalData('naija_ads', INITIAL_ADS);
-      const newAd: Ad = {
-        id: ad.id || `ad-${Date.now()}`,
-        name: ad.name || 'New Sponsor Ad',
-        type: ad.type || 'custom',
-        bannerUrl: ad.bannerUrl || '',
-        destinationUrl: ad.destinationUrl || 'https://naijatrendinfo.com.ng',
-        desktopVisible: ad.desktopVisible !== false,
-        mobileVisible: ad.mobileVisible !== false,
-        impressions: 0,
-        clicks: 0,
-        isActive: ad.isActive !== false
-      };
-      const updated = [newAd, ...ads];
-      setLocalData('naija_ads', updated);
       return newAd;
     }
   },
 
   updateAd: async (id: string, ad: Partial<Ad>) => {
+    const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
+    const ads = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+    let updatedAd: Ad | null = null;
+    const updated = ads.map((a) => {
+      if (a.id === id) {
+        updatedAd = { ...a, ...ad };
+        return updatedAd;
+      }
+      return a;
+    });
+    setLocalData('naija_ads', updated);
+    setDocInSupabase('ads', updated).catch(() => {});
+
     try {
-      return await fetchJson<Ad>(`/api/ads/${id}`, {
+      const res = await fetchJson<Ad>(`/api/ads/${id}`, {
         method: 'PUT',
         body: JSON.stringify(ad)
       });
+      return res || updatedAd || ({ id, ...ad } as Ad);
     } catch (e) {
-      const ads = getLocalData('naija_ads', INITIAL_ADS);
-      let updatedAd: Ad | null = null;
-      const updated = ads.map((a) => {
-        if (a.id === id) {
-          updatedAd = { ...a, ...ad };
-          return updatedAd;
-        }
-        return a;
-      });
-      setLocalData('naija_ads', updated);
       return updatedAd || ({ id, ...ad } as Ad);
     }
   },
 
   deleteAd: async (id: string) => {
+    // 1. Record in deleted tracking set to prevent resurrection from initial seed data
+    const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
+    deletedAdIds.add(id);
+    setLocalData('naija_deleted_ads', Array.from(deletedAdIds));
+
+    // 2. Remove immediately from local storage
+    const ads = getLocalData<Ad[]>('naija_ads', INITIAL_ADS);
+    const updated = ads.filter((a) => a.id !== id);
+    setLocalData('naija_ads', updated);
+
+    // 3. Delete from Supabase document store & relational tables if applicable
     try {
-      return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/ads/${id}`, {
+      await setDocInSupabase('ads', updated);
+      const sb = getClientSupabase();
+      if (sb) {
+        try {
+          await sb.from('ads').delete().eq('id', id);
+        } catch (e) {}
+      }
+    } catch (sbErr) {
+      console.warn('Supabase delete ad notice:', sbErr);
+    }
+
+    // 4. Send delete request to backend server
+    try {
+      const res = await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/ads/${id}`, {
         method: 'DELETE'
       });
+      return res || { success: true, id, message: 'Ad campaign deleted successfully' };
     } catch (e) {
-      const ads = getLocalData('naija_ads', INITIAL_ADS);
-      const updated = ads.filter((a) => a.id !== id);
-      setLocalData('naija_ads', updated);
-      return { success: true, id, message: 'Ad deleted successfully' };
+      console.warn('Backend API delete notice, ad safely removed locally & in cloud:', e);
+      return { success: true, id, message: 'Ad campaign deleted successfully' };
     }
   },
 
