@@ -2074,14 +2074,24 @@ export const api = {
     }
   },
 
-  migrateToSupabase: async () => {
-    return await fetchJson<{
-      success: boolean;
-      message: string;
-      report: Record<string, { inserted: number; errors: number }>;
-    }>('/api/database/migrate-to-supabase', {
-      method: 'POST'
-    });
+  migrateToSupabase: async (payload?: { supabaseUrl?: string; supabaseKey?: string; clientData?: any }) => {
+    try {
+      return await fetchJson<{
+        success: boolean;
+        message: string;
+        report: Record<string, { inserted?: number; old_count?: number; new_count?: number; errors?: number; status?: string }>;
+      }>('/api/database/migrate-to-supabase', {
+        method: 'POST',
+        body: JSON.stringify(payload || {})
+      });
+    } catch (e: any) {
+      console.warn('Backend migrateToSupabase notice:', e.message);
+      return {
+        success: false,
+        message: e.message || 'Server migration route unavailable',
+        report: {}
+      };
+    }
   },
 
   verifyDatabaseSync: async () => {
