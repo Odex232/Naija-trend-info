@@ -452,6 +452,8 @@ export const api = {
   bootstrap: async () => {
     const deletedIds = new Set(getLocalData<string[]>('naija_deleted_articles', []));
     const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
+    const deletedEdIds = new Set(getLocalData<string[]>('naija_deleted_editorial', []));
+    const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
 
     // 1. DIRECT SUPABASE CLOUD HYDRATION (High Priority - ensures instant sync across all global devices)
     try {
@@ -486,21 +488,32 @@ export const api = {
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
           const cleanArticles = sbArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
           const cleanAds = Array.isArray(sbAds) ? sbAds.filter((a) => !deletedAdIds.has(a.id)) : [];
+          const cleanEditorial = Array.isArray(sbEditorial) ? sbEditorial.filter((e) => !deletedEdIds.has(e.id)) : [];
+          const cleanSports = Array.isArray(sbSports) ? sbSports.filter((f) => !deletedFixtureIds.has(f.id)) : [];
+
           setLocalData('naija_articles', cleanArticles);
           if (Array.isArray(sbCategories) && sbCategories.length > 0) setLocalData('naija_categories', sbCategories);
           if (Array.isArray(sbBreaking) && sbBreaking.length > 0) setLocalData('naija_breaking_news', sbBreaking);
           if (sbSettings) setLocalData('naija_settings', sbSettings);
           if (Array.isArray(sbQuickLinks) && sbQuickLinks.length > 0) setLocalData('naija_quick_links', sbQuickLinks);
           if (Array.isArray(sbPages) && sbPages.length > 0) setLocalData('naija_pages', sbPages);
-          if (Array.isArray(sbEditorial) && sbEditorial.length > 0) setLocalData('naija_editorial_desk', sbEditorial);
+          if (cleanEditorial.length > 0) setLocalData('naija_editorial_desk', cleanEditorial);
           if (Array.isArray(sbSocial) && sbSocial.length > 0) setLocalData('naija_social_links', sbSocial);
           if (Array.isArray(sbInfo) && sbInfo.length > 0) setLocalData('naija_information', sbInfo);
           if (cleanAds.length > 0) setLocalData('naija_ads', cleanAds);
-          if (Array.isArray(sbSports) && sbSports.length > 0) setLocalData('naija_sports_fixtures', sbSports);
+          if (cleanSports.length > 0) setLocalData('naija_sports_fixtures', cleanSports);
 
           const finalAds = cleanAds.length > 0
             ? cleanAds
             : getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+
+          const finalEditorial = cleanEditorial.length > 0
+            ? cleanEditorial
+            : getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK).filter((e) => !deletedEdIds.has(e.id));
+
+          const finalSports = cleanSports.length > 0
+            ? cleanSports
+            : getLocalData<SportsFixture[]>('naija_sports_fixtures', []).filter((f) => !deletedFixtureIds.has(f.id));
 
           return {
             settings: sbSettings || getLocalData('naija_settings', INITIAL_SETTINGS),
@@ -516,11 +529,11 @@ export const api = {
             subscribers: getLocalData('naija_subscribers', []),
             auditLogs: getLocalData('naija_audit_logs', []),
             quickLinks: (Array.isArray(sbQuickLinks) && sbQuickLinks.length > 0) ? sbQuickLinks : getLocalData('naija_quick_links', INITIAL_QUICK_LINKS),
-            editorialDesk: (Array.isArray(sbEditorial) && sbEditorial.length > 0) ? sbEditorial : getLocalData('naija_editorial_desk', INITIAL_EDITORIAL_DESK),
+            editorialDesk: finalEditorial,
             information: (Array.isArray(sbInfo) && sbInfo.length > 0) ? sbInfo : getLocalData('naija_information', INITIAL_INFORMATION),
             socialLinks: (Array.isArray(sbSocial) && sbSocial.length > 0) ? sbSocial : getLocalData('naija_social_links', INITIAL_SOCIAL_LINKS),
             mediaFiles: getLocalData('naija_media_files', []),
-            sportsFixtures: (Array.isArray(sbSports) && sbSports.length > 0) ? sbSports : getLocalData('naija_sports_fixtures', []),
+            sportsFixtures: finalSports,
             pages: (Array.isArray(sbPages) && sbPages.length > 0) ? sbPages : getLocalData('naija_pages', INITIAL_PAGES),
             cookieSettings: INITIAL_COOKIE_SETTINGS,
             footerSettings: INITIAL_FOOTER_SETTINGS,
@@ -537,6 +550,10 @@ export const api = {
             setDocInSupabase('pages', getLocalData('naija_pages', INITIAL_PAGES)).catch(() => {});
             const currentAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
             if (currentAds.length > 0) setDocInSupabase('ads', currentAds).catch(() => {});
+            const currentEd = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK).filter((e) => !deletedEdIds.has(e.id));
+            if (currentEd.length > 0) setDocInSupabase('editorialDesk', currentEd).catch(() => {});
+            const currentSports = getLocalData<SportsFixture[]>('naija_sports_fixtures', []).filter((f) => !deletedFixtureIds.has(f.id));
+            if (currentSports.length > 0) setDocInSupabase('sportsFixtures', currentSports).catch(() => {});
           }
         }
       }
@@ -551,6 +568,12 @@ export const api = {
         data.articles = data.articles.filter((a: any) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
         if (Array.isArray(data.ads)) {
           data.ads = data.ads.filter((a: any) => !deletedAdIds.has(a.id));
+        }
+        if (Array.isArray(data.editorialDesk)) {
+          data.editorialDesk = data.editorialDesk.filter((e: any) => !deletedEdIds.has(e.id));
+        }
+        if (Array.isArray(data.sportsFixtures)) {
+          data.sportsFixtures = data.sportsFixtures.filter((f: any) => !deletedFixtureIds.has(f.id));
         }
         await syncLocalArticlesToServer(data.articles);
         setLocalData('naija_articles', data.articles);
@@ -592,6 +615,8 @@ export const api = {
     storedArticles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
     const finalStoredAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+    const finalStoredEd = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK).filter((e) => !deletedEdIds.has(e.id));
+    const finalStoredSports = getLocalData<SportsFixture[]>('naija_sports_fixtures', []).filter((f) => !deletedFixtureIds.has(f.id));
 
     return {
       settings: getLocalData('naija_settings', INITIAL_SETTINGS),
@@ -607,11 +632,11 @@ export const api = {
       subscribers: getLocalData('naija_subscribers', []),
       auditLogs: getLocalData('naija_audit_logs', []),
       quickLinks: getLocalData('naija_quick_links', INITIAL_QUICK_LINKS),
-      editorialDesk: getLocalData('naija_editorial_desk', INITIAL_EDITORIAL_DESK),
+      editorialDesk: finalStoredEd,
       information: getLocalData('naija_information', INITIAL_INFORMATION),
       socialLinks: getLocalData('naija_social_links', INITIAL_SOCIAL_LINKS),
       mediaFiles: getLocalData('naija_media_files', []),
-      sportsFixtures: getLocalData('naija_sports_fixtures', []),
+      sportsFixtures: finalStoredSports,
       pages: getLocalData('naija_pages', INITIAL_PAGES),
       cookieSettings: INITIAL_COOKIE_SETTINGS,
       footerSettings: INITIAL_FOOTER_SETTINGS,
@@ -1986,15 +2011,24 @@ export const api = {
   },
 
   updateSettings: async (settings: Partial<WebsiteSettings>) => {
+    const current = getLocalData('naija_settings', INITIAL_SETTINGS);
+    const updated = { ...current, ...settings };
+    setLocalData('naija_settings', updated);
+
+    // Save to Supabase Cloud
     try {
-      return await fetchJson<WebsiteSettings>('/api/settings', {
+      await setDocInSupabase('settings', updated);
+    } catch (sbErr) {
+      console.warn('Supabase settings update notice:', sbErr);
+    }
+
+    try {
+      const res = await fetchJson<WebsiteSettings>('/api/settings', {
         method: 'PUT',
         body: JSON.stringify(settings)
       });
+      return res || updated;
     } catch (e) {
-      const current = getLocalData('naija_settings', INITIAL_SETTINGS);
-      const updated = { ...current, ...settings };
-      setLocalData('naija_settings', updated);
       return updated;
     }
   },
@@ -2256,23 +2290,80 @@ export const api = {
     }).catch(() => packages),
 
   getEditorialDesk: async () => {
+    const deletedEdIds = new Set(getLocalData<string[]>('naija_deleted_editorial', []));
     try {
-      return await fetchJson<EditorialDeskEntry[]>('/api/editorial-desk');
+      const sbEd = await getDocFromSupabase<EditorialDeskEntry[]>('editorialDesk');
+      if (Array.isArray(sbEd) && sbEd.length > 0) {
+        const clean = sbEd.filter((e) => !deletedEdIds.has(e.id));
+        setLocalData('naija_editorial_desk', clean);
+        return clean;
+      }
+    } catch (e) {}
+
+    try {
+      const serverEd = await fetchJson<EditorialDeskEntry[]>('/api/editorial-desk');
+      if (Array.isArray(serverEd)) {
+        const clean = serverEd.filter((e) => !deletedEdIds.has(e.id));
+        setLocalData('naija_editorial_desk', clean);
+        return clean;
+      }
     } catch (e) {
-      return getLocalData('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
+      console.warn('Serving editorial desk from local cache:', e);
     }
+
+    const localEd = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
+    return localEd.filter((e) => !deletedEdIds.has(e.id));
   },
 
   updateEditorialDesk: async (entries: EditorialDeskEntry[]) => {
+    // 1. Immediately store in local storage
+    setLocalData('naija_editorial_desk', entries);
+
+    // 2. Persist to Supabase document store
     try {
-      return await fetchJson<EditorialDeskEntry[]>('/api/editorial-desk', {
+      await setDocInSupabase('editorialDesk', entries);
+    } catch (sbErr) {
+      console.warn('Supabase editorialDesk update notice:', sbErr);
+    }
+
+    // 3. Persist to server backend
+    try {
+      const res = await fetchJson<EditorialDeskEntry[]>('/api/editorial-desk', {
         method: 'PUT',
         body: JSON.stringify(entries)
       });
+      return res || entries;
     } catch (e) {
-      setLocalData('naija_editorial_desk', entries);
       return entries;
     }
+  },
+
+  deleteEditorialEntry: async (id: string) => {
+    // 1. Track deleted id
+    const deletedEdIds = new Set(getLocalData<string[]>('naija_deleted_editorial', []));
+    deletedEdIds.add(id);
+    setLocalData('naija_deleted_editorial', Array.from(deletedEdIds));
+
+    // 2. Filter local list
+    const current = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
+    const updated = current.filter((e) => e.id !== id);
+    setLocalData('naija_editorial_desk', updated);
+
+    // 3. Sync to Supabase & server
+    try {
+      await setDocInSupabase('editorialDesk', updated);
+    } catch (sbErr) {
+      console.warn('Supabase delete editorial entry notice:', sbErr);
+    }
+
+    try {
+      await fetchJson<EditorialDeskEntry[]>('/api/editorial-desk', {
+        method: 'PUT',
+        body: JSON.stringify(updated)
+      });
+    } catch (e) {}
+
+    return { success: true, id, message: 'Editorial profile deleted successfully' };
   },
 
   getInformation: async () => {
@@ -2391,67 +2482,111 @@ export const api = {
 
   // Sports
   getSportsFixtures: async () => {
+    const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
     try {
-      return await fetchJson<SportsFixture[]>('/api/sports/fixtures');
+      const sbSports = await getDocFromSupabase<SportsFixture[]>('sportsFixtures');
+      if (Array.isArray(sbSports) && sbSports.length > 0) {
+        const clean = sbSports.filter((f) => !deletedFixtureIds.has(f.id));
+        setLocalData('naija_sports_fixtures', clean);
+        return clean;
+      }
+    } catch (e) {}
+
+    try {
+      const serverSports = await fetchJson<SportsFixture[]>('/api/sports/fixtures');
+      if (Array.isArray(serverSports)) {
+        const clean = serverSports.filter((f) => !deletedFixtureIds.has(f.id));
+        setLocalData('naija_sports_fixtures', clean);
+        return clean;
+      }
     } catch (e) {
-      return getLocalData('naija_sports_fixtures', []);
+      console.warn('Serving sports fixtures from local cache:', e);
     }
+
+    const localSports = getLocalData<SportsFixture[]>('naija_sports_fixtures', []);
+    return localSports.filter((f) => !deletedFixtureIds.has(f.id));
   },
 
   createSportsFixture: async (fix: Partial<SportsFixture>) => {
+    const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
+    const list = getLocalData<SportsFixture[]>('naija_sports_fixtures', []).filter((f) => !deletedFixtureIds.has(f.id));
+    const newFix: SportsFixture = {
+      id: fix.id || `fix-${Date.now()}`,
+      homeTeam: fix.homeTeam || 'Super Eagles',
+      awayTeam: fix.awayTeam || 'Opponent',
+      homeScore: fix.homeScore ?? 0,
+      awayScore: fix.awayScore ?? 0,
+      status: fix.status === 'LIVE' || fix.status === 'FINISHED' ? fix.status : 'UPCOMING',
+      league: fix.league || 'NPFL',
+      venue: fix.venue || 'National Stadium',
+      minute: fix.minute || '',
+      matchDate: fix.matchDate || new Date().toISOString()
+    };
+    const updated = [newFix, ...list];
+    setLocalData('naija_sports_fixtures', updated);
+    setDocInSupabase('sportsFixtures', updated).catch(() => {});
+
     try {
-      return await fetchJson<SportsFixture>('/api/sports/fixtures', {
+      const serverRes = await fetchJson<SportsFixture>('/api/sports/fixtures', {
         method: 'POST',
         body: JSON.stringify(fix)
       });
+      return serverRes || newFix;
     } catch (e) {
-      const list = getLocalData('naija_sports_fixtures', []);
-      const newFix: SportsFixture = {
-        id: fix.id || `fix-${Date.now()}`,
-        homeTeam: fix.homeTeam || 'Super Eagles',
-        awayTeam: fix.awayTeam || 'Opponent',
-        homeScore: fix.homeScore ?? 0,
-        awayScore: fix.awayScore ?? 0,
-        status: fix.status === 'LIVE' || fix.status === 'FINISHED' ? fix.status : 'UPCOMING',
-        league: fix.league || 'NPFL',
-        matchDate: fix.matchDate || new Date().toISOString()
-      };
-      setLocalData('naija_sports_fixtures', [newFix, ...list]);
       return newFix;
     }
   },
 
   updateSportsFixture: async (id: string, fix: Partial<SportsFixture>) => {
+    const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
+    const list = getLocalData<SportsFixture[]>('naija_sports_fixtures', []).filter((f) => !deletedFixtureIds.has(f.id));
+    let updatedFix: SportsFixture | null = null;
+    const updated = list.map((f) => {
+      if (f.id === id) {
+        updatedFix = { ...f, ...fix };
+        return updatedFix;
+      }
+      return f;
+    });
+    setLocalData('naija_sports_fixtures', updated);
+    setDocInSupabase('sportsFixtures', updated).catch(() => {});
+
     try {
-      return await fetchJson<SportsFixture>(`/api/sports/fixtures/${id}`, {
+      const res = await fetchJson<SportsFixture>(`/api/sports/fixtures/${id}`, {
         method: 'PUT',
         body: JSON.stringify(fix)
       });
+      return res || updatedFix || ({ id, homeTeam: 'Home', awayTeam: 'Away', status: 'UPCOMING', league: 'NPFL', matchDate: new Date().toISOString(), ...fix } as SportsFixture);
     } catch (e) {
-      const list = getLocalData('naija_sports_fixtures', []);
-      let updatedFix: SportsFixture | null = null;
-      const updated = list.map((f) => {
-        if (f.id === id) {
-          updatedFix = { ...f, ...fix };
-          return updatedFix;
-        }
-        return f;
-      });
-      setLocalData('naija_sports_fixtures', updated);
       return updatedFix || ({ id, homeTeam: 'Home', awayTeam: 'Away', status: 'UPCOMING', league: 'NPFL', matchDate: new Date().toISOString(), ...fix } as SportsFixture);
     }
   },
 
   deleteSportsFixture: async (id: string) => {
+    // 1. Mark in deleted tracking set
+    const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
+    deletedFixtureIds.add(id);
+    setLocalData('naija_deleted_sports_fixtures', Array.from(deletedFixtureIds));
+
+    // 2. Remove from local storage
+    const list = getLocalData<SportsFixture[]>('naija_sports_fixtures', []);
+    const updated = list.filter((f) => f.id !== id);
+    setLocalData('naija_sports_fixtures', updated);
+
+    // 3. Sync to Supabase
+    try {
+      await setDocInSupabase('sportsFixtures', updated);
+    } catch (sbErr) {
+      console.warn('Supabase delete sports fixture notice:', sbErr);
+    }
+
+    // 4. Delete on server
     try {
       return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/sports/fixtures/${id}`, {
         method: 'DELETE'
       });
     } catch (e) {
-      const list = getLocalData('naija_sports_fixtures', []);
-      const updated = list.filter((f) => f.id !== id);
-      setLocalData('naija_sports_fixtures', updated);
-      return { success: true, id, message: 'Sports fixture deleted' };
+      return { success: true, id, message: 'Sports fixture deleted permanently' };
     }
   },
 

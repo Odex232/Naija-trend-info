@@ -161,6 +161,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Editorial Desk Entry Modal State
   const [editingEditorialEntry, setEditingEditorialEntry] = useState<Partial<EditorialDeskEntry> | null>(null);
+  const [savingEditorialEntry, setSavingEditorialEntry] = useState(false);
 
   // Site Page / Legal Policy Modal State
   const [editingPage, setEditingPage] = useState<Partial<SitePage> | null>(null);
@@ -180,6 +181,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Sports Fixture Modal State
   const [editingFixture, setEditingFixture] = useState<Partial<SportsFixture> | null>(null);
+  const [savingFixture, setSavingFixture] = useState(false);
 
   // User Modal State
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
@@ -202,6 +204,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Settings State
   const [localSettings, setLocalSettings] = useState<WebsiteSettings>(settings);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Contact Us & Feedback State
   const [contactSubTab, setContactSubTab] = useState<'inbox' | 'page_settings'>('inbox');
@@ -338,47 +341,55 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Save Settings
   const handleSaveSettings = async () => {
+    setSavingSettings(true);
     try {
       await api.updateSettings(localSettings);
-      triggerSuccessNotification('System Settings updated successfully!');
-      onRefreshData();
+      triggerSuccessNotification('System Settings updated & published successfully!');
+      await onRefreshData();
     } catch (e: any) {
+      console.error('Failed to update settings:', e);
       triggerErrorNotification(e.message || 'Error updating settings');
+    } finally {
+      setSavingSettings(false);
     }
   };
 
   // Save Editorial Desk Entry
   const handleSaveEditorialEntry = async () => {
-    if (!editingEditorialEntry?.name || !editingEditorialEntry?.department) {
+    if (!editingEditorialEntry?.name?.trim() || !editingEditorialEntry?.department?.trim()) {
       triggerErrorNotification('Name and Department/Title are required.');
       return;
     }
+    setSavingEditorialEntry(true);
     try {
       let updatedList: EditorialDeskEntry[] = [];
       if (editingEditorialEntry.id) {
         updatedList = editorialDesk.map((e) =>
-          e.id === editingEditorialEntry.id ? ({ ...e, ...editingEditorialEntry } as EditorialDeskEntry) : e
+          e.id === editingEditorialEntry.id ? ({ ...e, ...editingEditorialEntry, name: editingEditorialEntry.name!.trim(), department: editingEditorialEntry.department!.trim() } as EditorialDeskEntry) : e
         );
       } else {
         const newEntry: EditorialDeskEntry = {
           id: `ed-${Date.now()}`,
-          department: editingEditorialEntry.department || 'Editorial Desk',
-          name: editingEditorialEntry.name || '',
-          role: editingEditorialEntry.role || 'Editor',
-          email: editingEditorialEntry.email || 'editor@naijatrendinfo.com.ng',
-          phone: editingEditorialEntry.phone || '',
-          bio: editingEditorialEntry.bio || '',
-          photoUrl: editingEditorialEntry.photoUrl || '',
+          department: editingEditorialEntry.department.trim(),
+          name: editingEditorialEntry.name.trim(),
+          role: editingEditorialEntry.role?.trim() || 'Editor',
+          email: editingEditorialEntry.email?.trim() || 'editor@naijatrendinfo.com.ng',
+          phone: editingEditorialEntry.phone?.trim() || '',
+          bio: editingEditorialEntry.bio?.trim() || '',
+          photoUrl: editingEditorialEntry.photoUrl?.trim() || '',
           isActive: editingEditorialEntry.isActive !== false
         };
         updatedList = [...editorialDesk, newEntry];
       }
       await api.updateEditorialDesk(updatedList);
-      triggerSuccessNotification('Editorial Desk profile saved successfully!');
+      triggerSuccessNotification('Editorial Desk profile saved & published successfully!');
       setEditingEditorialEntry(null);
-      onRefreshData();
+      await onRefreshData();
     } catch (e: any) {
+      console.error('Failed to save editorial desk entry:', e);
       triggerErrorNotification(e.message || 'Failed to save Editorial Desk entry.');
+    } finally {
+      setSavingEditorialEntry(false);
     }
   };
 
@@ -386,18 +397,25 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const handleDeleteEditorialEntry = (id: string, name?: string) => {
     const entryName = name ? ` "${name}"` : '';
     askConfirmation(
-      'Delete Editorial Member',
-      `Are you sure you want to remove${entryName} from the public Editorial Desk Leadership?`,
+      'Delete Editorial Member Profile',
+      `Are you sure you want to permanently delete${entryName} from the public Editorial Desk & Leadership directory? This action cannot be undone.`,
       async () => {
+        setDeletingId(id);
         try {
-          const updated = editorialDesk.filter((e) => e.id !== id);
-          await api.updateEditorialDesk(updated);
-          triggerSuccessNotification('Editorial member profile removed.');
-          onRefreshData();
+          await api.deleteEditorialEntry(id);
+          if (editingEditorialEntry?.id === id) {
+            setEditingEditorialEntry(null);
+          }
+          triggerSuccessNotification('Editorial member profile permanently deleted.');
+          await onRefreshData();
         } catch (e: any) {
-          triggerErrorNotification(e.message || 'Failed to remove entry.');
+          console.error('Failed to delete editorial entry:', e);
+          triggerErrorNotification(e.message || 'Failed to delete editorial entry.');
+        } finally {
+          setDeletingId(null);
         }
-      }
+      },
+      { confirmLabel: 'Delete Permanently', isDanger: true }
     );
   };
 
@@ -825,19 +843,34 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   // Save Sports Fixture
   const handleSaveFixture = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingFixture?.homeTeam || !editingFixture?.awayTeam) return;
+    if (!editingFixture?.homeTeam?.trim() || !editingFixture?.awayTeam?.trim()) {
+      triggerErrorNotification('Home Team and Away Team names are required.');
+      return;
+    }
+    setSavingFixture(true);
     try {
       if (editingFixture.id) {
-        await api.updateSportsFixture(editingFixture.id, editingFixture);
-        triggerSuccessNotification('Sports fixture updated!');
+        await api.updateSportsFixture(editingFixture.id, {
+          ...editingFixture,
+          homeTeam: editingFixture.homeTeam.trim(),
+          awayTeam: editingFixture.awayTeam.trim()
+        });
+        triggerSuccessNotification('Sports fixture updated successfully!');
       } else {
-        await api.createSportsFixture(editingFixture);
-        triggerSuccessNotification('New sports fixture created!');
+        await api.createSportsFixture({
+          ...editingFixture,
+          homeTeam: editingFixture.homeTeam.trim(),
+          awayTeam: editingFixture.awayTeam.trim()
+        });
+        triggerSuccessNotification('New sports fixture created & published!');
       }
       setEditingFixture(null);
-      onRefreshData();
+      await onRefreshData();
     } catch (e: any) {
-      triggerErrorNotification(e.message || 'Failed to save fixture');
+      console.error('Failed to save sports fixture:', e);
+      triggerErrorNotification(e.message || 'Failed to save sports fixture');
+    } finally {
+      setSavingFixture(false);
     }
   };
 
@@ -2988,11 +3021,21 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
                 <div className="flex justify-end pt-2">
                   <button
+                    disabled={savingSettings}
                     onClick={handleSaveSettings}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-all"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center space-x-2 cursor-pointer shadow-md transition-all disabled:opacity-50"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Save Sports Hub Configuration</span>
+                    {savingSettings ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Saving Configuration...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>Save Sports Hub Configuration</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -4321,11 +4364,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteEditorialEntry(ed.id, ed.name)}
-                          className="p-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-xl transition-colors cursor-pointer"
+                          disabled={deletingId === ed.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEditorialEntry(ed.id, ed.name);
+                          }}
+                          className="p-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
                           title="Delete Editorial Profile"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deletingId === ed.id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -4433,19 +4480,53 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
-                      <button
-                        onClick={() => setEditingEditorialEntry(null)}
-                        className="px-4 py-2 rounded-xl text-slate-300 bg-slate-800 hover:bg-slate-700 font-semibold cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveEditorialEntry}
-                        className="px-5 py-2 rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 font-bold cursor-pointer shadow-md"
-                      >
-                        Save Editorial Profile
-                      </button>
+                    <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                      {editingEditorialEntry.id ? (
+                        <button
+                          type="button"
+                          disabled={deletingId === editingEditorialEntry.id || savingEditorialEntry}
+                          onClick={() => handleDeleteEditorialEntry(editingEditorialEntry.id!, editingEditorialEntry.name)}
+                          className="px-3.5 py-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 font-semibold rounded-xl flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {deletingId === editingEditorialEntry.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>Delete Profile</span>
+                        </button>
+                      ) : (
+                        <div />
+                      )}
+
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          disabled={savingEditorialEntry}
+                          onClick={() => setEditingEditorialEntry(null)}
+                          className="px-4 py-2 rounded-xl text-slate-300 bg-slate-800 hover:bg-slate-700 font-semibold cursor-pointer disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingEditorialEntry}
+                          onClick={handleSaveEditorialEntry}
+                          className="px-5 py-2 rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 font-bold cursor-pointer shadow-md flex items-center space-x-2 disabled:opacity-50"
+                        >
+                          {savingEditorialEntry ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-white" />
+                              <span>Saving Profile...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                              <span>Save Editorial Profile</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -5158,13 +5239,56 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <option value="FINISHED">Finished</option>
                 </select>
               </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button type="button" onClick={() => setEditingFixture(null)} className="px-4 py-2 bg-slate-800 rounded-xl">
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
-                  Save Fixture
-                </button>
+              <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                {editingFixture.id ? (
+                  <button
+                    type="button"
+                    disabled={deletingId === editingFixture.id || savingFixture}
+                    onClick={() => {
+                      const id = editingFixture.id!;
+                      setEditingFixture(null);
+                      handleDeleteSportsFixture(id);
+                    }}
+                    className="px-3.5 py-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 font-semibold rounded-xl flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === editingFixture.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Delete Fixture</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    disabled={savingFixture}
+                    onClick={() => setEditingFixture(null)}
+                    className="px-4 py-2 bg-slate-800 rounded-xl text-slate-300 hover:bg-slate-700 disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingFixture}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-white disabled:opacity-50 cursor-pointer shadow-md flex items-center space-x-2"
+                  >
+                    {savingFixture ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Saving Fixture...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>Save Fixture</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
