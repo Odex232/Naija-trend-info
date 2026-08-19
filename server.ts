@@ -95,6 +95,7 @@ function loadDatabase() {
   // Ensure newly added DB fields are present if loaded from existing db.json
   if (!loadedDb.pages) loadedDb.pages = INITIAL_PAGES;
   if (!loadedDb.deletedQuickLinks) loadedDb.deletedQuickLinks = [];
+  if (!loadedDb.deletedArticles) loadedDb.deletedArticles = [];
   if (!loadedDb.cookieSettings) loadedDb.cookieSettings = INITIAL_COOKIE_SETTINGS;
   if (!loadedDb.footerSettings) loadedDb.footerSettings = INITIAL_FOOTER_SETTINGS;
   if (!loadedDb.advertisingPackages) loadedDb.advertisingPackages = INITIAL_ADVERTISING_PACKAGES;
@@ -271,11 +272,12 @@ async function startServer() {
   // Comprehensive Multi-Device Master Sync Route
   app.post('/api/sync-all', async (req, res) => {
     const { articles, categories, breakingNews, settings, quickLinks, pages, editorialDesk, socialLinks, information, ads, sportsFixtures } = req.body;
+    const deletedSet = new Set<string>(db.deletedArticles || []);
 
     if (Array.isArray(articles) && articles.length > 0) {
-      const existingMap = new Map<string, any>((db.articles || []).map((a: any) => [a.id, a]));
+      const existingMap = new Map<string, any>((db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug)).map((a: any) => [a.id, a]));
       for (const art of articles) {
-        if (art && art.id) {
+        if (art && art.id && !deletedSet.has(art.id) && !deletedSet.has(art.slug)) {
           const current = existingMap.get(art.id) || {};
           const merged = { ...current, ...art };
           existingMap.set(art.id, merged);

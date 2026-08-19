@@ -635,9 +635,18 @@ export async function runSafeMigrationToSupabase(options?: {
 export const dbAdapter = {
   // Articles
   getArticles: async (params?: { category?: string; tag?: string; search?: string; status?: string; featured?: string; breaking?: string }) => {
+    const db = getLocalDb();
+    const deletedSet = new Set<string>(db.deletedArticles || []);
+
     const client = getSupabaseClient();
     if (client) {
       try {
+        // Fetch remote deleted articles list to ensure perfect sync
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle();
+        if (delDoc && Array.isArray(delDoc.data)) {
+          delDoc.data.forEach((id: string) => deletedSet.add(id));
+        }
+
         let query = client.from('articles').select('*').order('published_at', { ascending: false });
 
         if (params?.category) {
@@ -659,33 +668,35 @@ export const dbAdapter = {
 
         const { data, error } = await query;
         if (!error && Array.isArray(data) && data.length > 0) {
-          return data.map((row) => ({
-            id: row.id,
-            title: row.title,
-            slug: row.slug,
-            summary: row.summary,
-            content: row.content,
-            categoryId: row.category_id,
-            categoryName: row.category_name,
-            tags: row.tags || [],
-            featuredImage: row.featured_image,
-            imageCaption: row.image_caption,
-            imageCredit: row.image_credit,
-            galleryImages: row.gallery_images || [],
-            authorId: row.author_id,
-            authorName: row.author_name,
-            authorAvatar: row.author_avatar,
-            status: row.status,
-            isFeatured: row.is_featured,
-            isPinned: row.is_pinned,
-            isBreaking: row.is_breaking,
-            isEditorPick: row.is_editor_pick,
-            views: row.views || 0,
-            readTimeMinutes: row.read_time_minutes || 3,
-            publishedAt: row.published_at,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-          }));
+          return data
+            .filter((row) => !deletedSet.has(row.id) && !deletedSet.has(row.slug))
+            .map((row) => ({
+              id: row.id,
+              title: row.title,
+              slug: row.slug,
+              summary: row.summary,
+              content: row.content,
+              categoryId: row.category_id,
+              categoryName: row.category_name,
+              tags: row.tags || [],
+              featuredImage: row.featured_image,
+              imageCaption: row.image_caption,
+              imageCredit: row.image_credit,
+              galleryImages: row.gallery_images || [],
+              authorId: row.author_id,
+              authorName: row.author_name,
+              authorAvatar: row.author_avatar,
+              status: row.status,
+              isFeatured: row.is_featured,
+              isPinned: row.is_pinned,
+              isBreaking: row.is_breaking,
+              isEditorPick: row.is_editor_pick,
+              views: row.views || 0,
+              readTimeMinutes: row.read_time_minutes || 3,
+              publishedAt: row.published_at,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at
+            }));
         }
       } catch (e) {
         console.warn('Supabase getArticles query notice, serving local synced dataset:', e);
@@ -693,8 +704,7 @@ export const dbAdapter = {
     }
 
     // Local DB fallback
-    const db = getLocalDb();
-    let list = [...(db.articles || [])];
+    let list = (db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug));
     if (params?.category) {
       list = list.filter((a: any) => a.categoryId === params.category || a.categoryName?.toLowerCase() === params.category?.toLowerCase());
     }
@@ -725,9 +735,21 @@ export const dbAdapter = {
   },
 
   getArticle: async (slugOrId: string) => {
+    const db = getLocalDb();
+    const deletedSet = new Set<string>(db.deletedArticles || []);
+    if (deletedSet.has(slugOrId)) {
+      return null;
+    }
+
     const client = getSupabaseClient();
     if (client) {
       try {
+        // Also check if remote deletedArticles includes this slugOrId
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle();
+        if (delDoc && Array.isArray(delDoc.data) && delDoc.data.includes(slugOrId)) {
+          return null;
+        }
+
         const { data, error } = await client
           .from('articles')
           .select('*')
@@ -735,6 +757,10 @@ export const dbAdapter = {
           .single();
 
         if (!error && data) {
+          if (deletedSet.has(data.id) || deletedSet.has(data.slug)) {
+            return null;
+          }
+
           // Increment views
           await client
             .from('articles')
@@ -774,8 +800,7 @@ export const dbAdapter = {
       }
     }
 
-    const db = getLocalDb();
-    const article = (db.articles || []).find((a: any) => a.id === slugOrId || a.slug === slugOrId);
+    const article = (db.articles || []).find((a: any) => (a.id === slugOrId || a.slug === slugOrId) && !deletedSet.has(a.id) && !deletedSet.has(a.slug));
     if (article) {
       article.views = (article.views || 0) + 1;
       saveLocalDb(db);
@@ -851,6 +876,16 @@ export const dbAdapter = {
         if (error) {
           console.error('Supabase article insert error:', error.message);
         }
+
+        // Also update document store
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'articles').maybeSingle();
+        const existingDocs = Array.isArray(docData?.data) ? docData.data : [];
+        const updatedDocs = [newArticle, ...existingDocs.filter((a: any) => a.id !== newArticle.id)];
+        await client.from('supabase_document_store').upsert({
+          key: 'articles',
+          data: updatedDocs,
+          updated_at: now
+        }, { onConflict: 'key' });
       } catch (e: any) {
         console.error('Error inserting article to Supabase:', e.message);
       }
@@ -892,6 +927,17 @@ export const dbAdapter = {
         if (updates.publishedAt !== undefined) dbPayload.published_at = updates.publishedAt;
 
         await client.from('articles').update(dbPayload).eq('id', id);
+
+        // Update document store
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'articles').maybeSingle();
+        if (docData && Array.isArray(docData.data)) {
+          const updatedDocs = docData.data.map((a: any) => (a.id === id ? { ...a, ...updates, updatedAt: now } : a));
+          await client.from('supabase_document_store').upsert({
+            key: 'articles',
+            data: updatedDocs,
+            updated_at: now
+          }, { onConflict: 'key' });
+        }
       } catch (e: any) {
         console.error('Error updating article in Supabase:', e.message);
       }
@@ -908,23 +954,53 @@ export const dbAdapter = {
   },
 
   deleteArticle: async (id: string) => {
+    const db = getLocalDb();
+    const article = (db.articles || []).find((a: any) => a.id === id || a.slug === id);
+    const targetId = article ? article.id : id;
+    const targetSlug = article ? article.slug : id;
+
     const client = getSupabaseClient();
     if (client) {
       try {
-        await client.from('articles').delete().or(`id.eq.${id},slug.eq.${id}`);
-        await client.from('comments').delete().eq('article_id', id);
+        await Promise.allSettled([
+          client.from('articles').delete().or(`id.eq.${targetId},slug.eq.${targetSlug},id.eq.${id},slug.eq.${id}`),
+          client.from('comments').delete().or(`article_id.eq.${targetId},article_id.eq.${id}`),
+          client.from('breaking_news').delete().or(`article_id.eq.${targetId},article_id.eq.${id}`)
+        ]);
+
+        // Clean from document store 'articles'
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'articles').maybeSingle();
+        if (docData && Array.isArray(docData.data)) {
+          const cleaned = docData.data.filter((a: any) => a.id !== targetId && a.slug !== targetSlug && a.id !== id && a.slug !== id);
+          await client.from('supabase_document_store').upsert({
+            key: 'articles',
+            data: cleaned,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'key' });
+        }
+
+        // Add to document store 'deletedArticles'
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle();
+        const existingDeleted = Array.isArray(delDoc?.data) ? delDoc.data : [];
+        const newDeleted = Array.from(new Set([...existingDeleted, targetId, targetSlug, id]));
+        await client.from('supabase_document_store').upsert({
+          key: 'deletedArticles',
+          data: newDeleted,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
       } catch (e: any) {
         console.error('Error deleting article in Supabase:', e.message);
       }
     }
 
-    const db = getLocalDb();
-    const article = (db.articles || []).find((a: any) => a.id === id || a.slug === id);
-    const targetId = article ? article.id : id;
+    if (!db.deletedArticles) db.deletedArticles = [];
+    if (!db.deletedArticles.includes(targetId)) db.deletedArticles.push(targetId);
+    if (!db.deletedArticles.includes(targetSlug)) db.deletedArticles.push(targetSlug);
+    if (!db.deletedArticles.includes(id)) db.deletedArticles.push(id);
 
-    db.articles = (db.articles || []).filter((a: any) => a.id !== targetId && a.slug !== id);
-    db.comments = (db.comments || []).filter((c: any) => c.articleId !== targetId);
-    db.breakingNews = (db.breakingNews || []).filter((b: any) => b.articleId !== targetId);
+    db.articles = (db.articles || []).filter((a: any) => a.id !== targetId && a.slug !== targetSlug && a.id !== id && a.slug !== id);
+    db.comments = (db.comments || []).filter((c: any) => c.articleId !== targetId && c.articleId !== id);
+    db.breakingNews = (db.breakingNews || []).filter((b: any) => b.articleId !== targetId && b.articleId !== id);
     saveLocalDb(db);
 
     return { success: true, id: targetId };
@@ -1143,10 +1219,21 @@ export const dbAdapter = {
   // Bootstrap (Returns hydrated unified dataset)
   getBootstrapData: async () => {
     const db = getLocalDb();
+    const deletedSet = new Set<string>(db.deletedArticles || []);
     const client = getSupabaseClient();
 
     if (client) {
       try {
+        // Fetch remote deleted articles list to ensure perfect sync
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle();
+        if (delDoc && Array.isArray(delDoc.data)) {
+          delDoc.data.forEach((id: string) => {
+            deletedSet.add(id);
+            if (!db.deletedArticles) db.deletedArticles = [];
+            if (!db.deletedArticles.includes(id)) db.deletedArticles.push(id);
+          });
+        }
+
         // Hydrate from Supabase tables
         const [articlesRes, categoriesRes, breakingRes, settingsRes] = await Promise.allSettled([
           client.from('articles').select('*').order('published_at', { ascending: false }),
@@ -1156,33 +1243,35 @@ export const dbAdapter = {
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
-          db.articles = articlesRes.value.data.map((row: any) => ({
-            id: row.id,
-            title: row.title,
-            slug: row.slug,
-            summary: row.summary,
-            content: row.content,
-            categoryId: row.category_id,
-            categoryName: row.category_name,
-            tags: row.tags || [],
-            featuredImage: row.featured_image,
-            imageCaption: row.image_caption,
-            imageCredit: row.image_credit,
-            galleryImages: row.gallery_images || [],
-            authorId: row.author_id,
-            authorName: row.author_name,
-            authorAvatar: row.author_avatar,
-            status: row.status,
-            isFeatured: row.is_featured,
-            isPinned: row.is_pinned,
-            isBreaking: row.is_breaking,
-            isEditorPick: row.is_editor_pick,
-            views: row.views || 0,
-            readTimeMinutes: row.read_time_minutes || 3,
-            publishedAt: row.published_at,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-          }));
+          db.articles = articlesRes.value.data
+            .filter((row: any) => !deletedSet.has(row.id) && !deletedSet.has(row.slug))
+            .map((row: any) => ({
+              id: row.id,
+              title: row.title,
+              slug: row.slug,
+              summary: row.summary,
+              content: row.content,
+              categoryId: row.category_id,
+              categoryName: row.category_name,
+              tags: row.tags || [],
+              featuredImage: row.featured_image,
+              imageCaption: row.image_caption,
+              imageCredit: row.image_credit,
+              galleryImages: row.gallery_images || [],
+              authorId: row.author_id,
+              authorName: row.author_name,
+              authorAvatar: row.author_avatar,
+              status: row.status,
+              isFeatured: row.is_featured,
+              isPinned: row.is_pinned,
+              isBreaking: row.is_breaking,
+              isEditorPick: row.is_editor_pick,
+              views: row.views || 0,
+              readTimeMinutes: row.read_time_minutes || 3,
+              publishedAt: row.published_at,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at
+            }));
         }
 
         if (categoriesRes.status === 'fulfilled' && categoriesRes.value.data && categoriesRes.value.data.length > 0) {
@@ -1199,15 +1288,17 @@ export const dbAdapter = {
         }
 
         if (breakingRes.status === 'fulfilled' && breakingRes.value.data && breakingRes.value.data.length > 0) {
-          db.breakingNews = breakingRes.value.data.map((b: any) => ({
-            id: b.id,
-            title: b.title,
-            url: b.url,
-            articleId: b.article_id,
-            category: b.category,
-            isActive: b.is_active,
-            createdAt: b.created_at
-          }));
+          db.breakingNews = breakingRes.value.data
+            .filter((b: any) => !b.article_id || !deletedSet.has(b.article_id))
+            .map((b: any) => ({
+              id: b.id,
+              title: b.title,
+              url: b.url,
+              articleId: b.article_id,
+              category: b.category,
+              isActive: b.is_active,
+              createdAt: b.created_at
+            }));
         }
 
         if (settingsRes.status === 'fulfilled' && settingsRes.value.data && settingsRes.value.data.data) {
@@ -1220,6 +1311,7 @@ export const dbAdapter = {
       }
     }
 
+    db.articles = (db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug));
     return db;
   }
 };

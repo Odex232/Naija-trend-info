@@ -116,10 +116,19 @@ export async function fetchArticlesFromSupabase(): Promise<Article[] | null> {
   const sb = getClientSupabase();
   if (!sb) return null;
   try {
+    // 0. Fetch global deleted articles set from Supabase document store
+    const delDoc = await getDocFromSupabase<string[]>('deletedArticles');
+    const globalDeleted = new Set<string>(Array.isArray(delDoc) ? delDoc : []);
+    const localDeleted = getLocalData<string[]>('naija_deleted_articles', []);
+    localDeleted.forEach((id) => globalDeleted.add(id));
+    if (globalDeleted.size > localDeleted.length) {
+      setLocalData('naija_deleted_articles', Array.from(globalDeleted));
+    }
+
     // 1. Try document store for rich nested fields
     const docArticles = await getDocFromSupabase<Article[]>('articles');
     if (Array.isArray(docArticles) && docArticles.length > 0) {
-      return docArticles;
+      return docArticles.filter((a) => !globalDeleted.has(a.id) && !globalDeleted.has(a.slug));
     }
 
     // 2. Try relational table
@@ -129,32 +138,34 @@ export async function fetchArticlesFromSupabase(): Promise<Article[] | null> {
       .order('published_at', { ascending: false });
 
     if (!error && Array.isArray(data) && data.length > 0) {
-      return data.map((row: any) => ({
-        id: row.id,
-        title: row.title || 'Untitled Article',
-        slug: row.slug || row.id,
-        summary: row.summary || '',
-        content: row.content || '',
-        categoryId: row.category_id || 'cat-politics',
-        categoryName: row.category_name || 'General',
-        tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : []),
-        featuredImage: row.featured_image || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
-        imageCaption: row.image_caption || '',
-        imageCredit: row.image_credit || '',
-        galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : [],
-        authorId: row.author_id || 'usr-1',
-        authorName: row.author_name || 'Ajayi Odunayo',
-        authorAvatar: row.author_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-        status: row.status || 'published',
-        isFeatured: !!row.is_featured,
-        isPinned: !!row.is_pinned,
-        isBreaking: !!row.is_breaking,
-        isEditorPick: !!row.is_editor_pick,
-        views: Number(row.views) || 0,
-        readTimeMinutes: Number(row.read_time_minutes) || 3,
-        publishedAt: row.published_at || row.created_at || new Date().toISOString(),
-        updatedAt: row.updated_at || new Date().toISOString()
-      }));
+      return data
+        .filter((row: any) => !globalDeleted.has(row.id) && !globalDeleted.has(row.slug))
+        .map((row: any) => ({
+          id: row.id,
+          title: row.title || 'Untitled Article',
+          slug: row.slug || row.id,
+          summary: row.summary || '',
+          content: row.content || '',
+          categoryId: row.category_id || 'cat-politics',
+          categoryName: row.category_name || 'General',
+          tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : []),
+          featuredImage: row.featured_image || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
+          imageCaption: row.image_caption || '',
+          imageCredit: row.image_credit || '',
+          galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : [],
+          authorId: row.author_id || 'usr-1',
+          authorName: row.author_name || 'Ajayi Odunayo',
+          authorAvatar: row.author_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+          status: row.status || 'published',
+          isFeatured: !!row.is_featured,
+          isPinned: !!row.is_pinned,
+          isBreaking: !!row.is_breaking,
+          isEditorPick: !!row.is_editor_pick,
+          views: Number(row.views) || 0,
+          readTimeMinutes: Number(row.read_time_minutes) || 3,
+          publishedAt: row.published_at || row.created_at || new Date().toISOString(),
+          updatedAt: row.updated_at || new Date().toISOString()
+        }));
     }
   } catch (e) {
     console.warn('Notice querying Supabase articles:', e);
@@ -211,15 +222,34 @@ export async function removeArticleFromSupabase(id: string): Promise<void> {
   const sb = getClientSupabase();
   if (!sb) return;
   try {
-    try {
-      await sb.from('articles').delete().eq('id', id);
-    } catch (e) {}
-    try {
-      await sb.from('articles').delete().eq('slug', id);
-    } catch (e) {}
-    const currentArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
-    const updated = currentArticles.filter((a) => a.id !== id && a.slug !== id);
+    const localArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const targetArt = localArticles.find((a) => a.id === id || a.slug === id);
+    const targetId = targetArt ? targetArt.id : id;
+    const targetSlug = targetArt ? targetArt.slug : id;
+
+    // 1. Delete from PostgreSQL relational tables
+    await Promise.allSettled([
+      sb.from('articles').delete().eq('id', targetId),
+      sb.from('articles').delete().eq('slug', targetSlug),
+      sb.from('articles').delete().eq('id', id),
+      sb.from('articles').delete().eq('slug', id),
+      sb.from('comments').delete().eq('article_id', targetId),
+      sb.from('comments').delete().eq('article_id', id),
+      sb.from('breaking_news').delete().eq('article_id', targetId),
+      sb.from('breaking_news').delete().eq('article_id', id)
+    ]);
+
+    // 2. Update document store 'articles'
+    const currentDoc = await getDocFromSupabase<Article[]>('articles');
+    const baseList = Array.isArray(currentDoc) ? currentDoc : localArticles;
+    const updated = baseList.filter((a) => a.id !== targetId && a.slug !== targetSlug && a.id !== id && a.slug !== id);
     await setDocInSupabase('articles', updated);
+
+    // 3. Update global deleted articles list in Supabase document store
+    const existingDeleted = await getDocFromSupabase<string[]>('deletedArticles') || [];
+    const localDeleted = getLocalData<string[]>('naija_deleted_articles', []);
+    const updatedDeleted = Array.from(new Set([...existingDeleted, ...localDeleted, targetId, targetSlug, id]));
+    await setDocInSupabase('deletedArticles', updatedDeleted);
   } catch (e) {
     console.warn('Supabase article remove error:', e);
   }
