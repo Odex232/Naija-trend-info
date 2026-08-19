@@ -21,10 +21,7 @@ import {
   INITIAL_ADVERTISING_PACKAGES
 } from '../data/initialData.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const ROOT_DIR = path.resolve(__dirname, '..', '..');
+const ROOT_DIR = process.cwd();
 const DB_FILE = path.join(ROOT_DIR, 'data', 'db.json');
 const BACKUP_FILE = path.join(ROOT_DIR, 'data', 'db.backup.json');
 

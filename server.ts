@@ -34,12 +34,11 @@ import {
   saveLocalDb
 } from './src/server/supabase.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const serverDir = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = 3000;
-const DB_FILE = path.join(__dirname, 'data', 'db.json');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const DB_FILE = path.join(serverDir, 'data', 'db.json');
+const UPLOADS_DIR = path.join(serverDir, 'uploads');
 
 // Ensure directories exist
 if (!fs.existsSync(path.dirname(DB_FILE))) {
@@ -229,7 +228,7 @@ async function startServer() {
   });
 
   app.get('/api/database/schema.sql', (req, res) => {
-    const schemaPath = path.join(__dirname, 'scripts', 'schema.sql');
+    const schemaPath = path.join(serverDir, 'scripts', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       res.sendFile(schemaPath);
