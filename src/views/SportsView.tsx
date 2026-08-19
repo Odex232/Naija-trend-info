@@ -83,52 +83,54 @@ export const SportsView: React.FC<SportsViewProps> = ({
       </div>
 
       {/* Fixtures & Scoreboard Section */}
-      <div>
-        <h2 className="text-xl font-bold font-serif text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
-          <Activity className="w-5 h-5 text-emerald-400" />
-          <span>Match Scoreboard ({filteredFixtures.length})</span>
-        </h2>
+      {filteredFixtures.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold font-serif text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
+            <Activity className="w-5 h-5 text-emerald-400" />
+            <span>Match Scoreboard ({filteredFixtures.length})</span>
+          </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFixtures.map((fix) => (
-            <div
-              key={fix.id}
-              className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 shadow-xl space-y-3"
-            >
-              <div className="flex justify-between items-center text-xs font-bold">
-                <span className="text-emerald-400">{fix.league}</span>
-                {fix.status === 'LIVE' ? (
-                  <span className="bg-rose-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold animate-pulse">
-                    LIVE {fix.minute}
-                  </span>
-                ) : fix.status === 'FINISHED' ? (
-                  <span className="text-slate-400 text-[10px] uppercase font-mono">Full Time</span>
-                ) : (
-                  <span className="text-amber-400 text-[10px] uppercase">Upcoming</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredFixtures.map((fix) => (
+              <div
+                key={fix.id}
+                className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 shadow-xl space-y-3"
+              >
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-emerald-400">{fix.league}</span>
+                  {fix.status === 'LIVE' ? (
+                    <span className="bg-rose-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold animate-pulse">
+                      LIVE {fix.minute}
+                    </span>
+                  ) : fix.status === 'FINISHED' ? (
+                    <span className="text-slate-400 text-[10px] uppercase font-mono">Full Time</span>
+                  ) : (
+                    <span className="text-amber-400 text-[10px] uppercase">Upcoming</span>
+                  )}
+                </div>
+
+                <div className="space-y-2 py-2 border-y border-white/10">
+                  <div className="flex justify-between items-center text-sm font-extrabold text-white">
+                    <span>{fix.homeTeam}</span>
+                    <span className="text-amber-400 font-mono text-base">{fix.homeScore ?? '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm font-extrabold text-white">
+                    <span>{fix.awayTeam}</span>
+                    <span className="text-amber-400 font-mono text-base">{fix.awayScore ?? '-'}</span>
+                  </div>
+                </div>
+
+                {fix.venue && (
+                  <div className="text-[11px] text-slate-400 flex items-center space-x-1">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{fix.venue}</span>
+                  </div>
                 )}
               </div>
-
-              <div className="space-y-2 py-2 border-y border-white/10">
-                <div className="flex justify-between items-center text-sm font-extrabold text-white">
-                  <span>{fix.homeTeam}</span>
-                  <span className="text-amber-400 font-mono text-base">{fix.homeScore ?? '-'}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm font-extrabold text-white">
-                  <span>{fix.awayTeam}</span>
-                  <span className="text-amber-400 font-mono text-base">{fix.awayScore ?? '-'}</span>
-                </div>
-              </div>
-
-              {fix.venue && (
-                <div className="text-[11px] text-slate-400 flex items-center space-x-1">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{fix.venue}</span>
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Sports Articles */}
       <div>

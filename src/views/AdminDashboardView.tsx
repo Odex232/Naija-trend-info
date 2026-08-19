@@ -822,13 +822,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const handleDeleteSportsFixture = (id: string) => {
     askConfirmation(
       'Delete Match Fixture',
-      'Are you sure you want to permanently delete this match fixture?',
+      'Are you sure you want to permanently delete this match fixture from the production database? It will no longer appear on any device.',
       async () => {
         setDeletingId(id);
         try {
           const res = await api.deleteSportsFixture(id);
           if (editingFixture?.id === id) setEditingFixture(null);
-          triggerSuccessNotification(res.message || 'Match fixture deleted successfully');
+          triggerSuccessNotification(res.message || 'Match fixture permanently deleted');
           onRefreshData();
         } catch (e: any) {
           console.error('Delete sports fixture failed:', e);
@@ -837,7 +837,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           setDeletingId(null);
         }
       },
-      { confirmLabel: 'Delete Fixture', isDanger: true }
+      { confirmLabel: 'Delete Fixture Permanently', isDanger: true }
+    );
+  };
+
+  // Delete All Sports Fixtures
+  const handleDeleteAllSportsFixtures = () => {
+    askConfirmation(
+      'Permanently Delete All Match Fixtures',
+      'Are you sure you want to permanently delete ALL match fixtures and live scoreboard entries? This action cannot be undone and will delete them from the central production database across all devices.',
+      async () => {
+        setDeletingId('fixtures-all');
+        try {
+          const res = await api.deleteAllSportsFixtures();
+          setEditingFixture(null);
+          triggerSuccessNotification(res.message || 'All match fixtures permanently deleted from database');
+          onRefreshData();
+        } catch (e: any) {
+          console.error('Delete all sports fixtures failed:', e);
+          triggerErrorNotification(e.message || 'Failed to delete all match fixtures');
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      { confirmLabel: 'Delete All Fixtures Permanently', isDanger: true }
     );
   };
 
@@ -3053,13 +3076,26 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     </h2>
                     <p className="text-xs text-slate-400 mt-1">Update live match scores, match status (LIVE, UPCOMING, FINISHED), and team goals.</p>
                   </div>
-                  <button
-                    onClick={() => setEditingFixture({ homeTeam: '', awayTeam: '', league: 'NPFL', status: 'UPCOMING', matchDate: new Date().toISOString() })}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center space-x-2 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Fixture</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {sportsFixtures.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteAllSportsFixtures}
+                        className="bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800/80 font-bold text-xs px-3 py-2 rounded-xl flex items-center space-x-1.5 cursor-pointer transition-colors"
+                        title="Permanently delete all match fixtures from production database"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete All Matches</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setEditingFixture({ homeTeam: '', awayTeam: '', league: 'NPFL', status: 'UPCOMING', matchDate: new Date().toISOString() })}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center space-x-2 cursor-pointer shadow-lg shadow-emerald-900/20"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Fixture</span>
+                    </button>
+                  </div>
                 </div>
 
                 {sportsFixtures.length === 0 ? (

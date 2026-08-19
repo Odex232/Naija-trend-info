@@ -489,6 +489,26 @@ export const api = {
     try {
       const sb = getClientSupabase();
       if (sb) {
+        // Fetch remote deletion registries to guarantee cross-device consistency
+        const [delArticlesDoc, delSportsDoc] = await Promise.allSettled([
+          getDocFromSupabase<string[]>('deletedArticles'),
+          getDocFromSupabase<string[]>('deletedSportsFixtures')
+        ]);
+
+        if (delArticlesDoc.status === 'fulfilled' && Array.isArray(delArticlesDoc.value)) {
+          delArticlesDoc.value.forEach((id: string) => {
+            deletedIds.add(id);
+          });
+          setLocalData('naija_deleted_articles', Array.from(deletedIds));
+        }
+
+        if (delSportsDoc.status === 'fulfilled' && Array.isArray(delSportsDoc.value)) {
+          delSportsDoc.value.forEach((id: string) => {
+            deletedFixtureIds.add(id);
+          });
+          setLocalData('naija_deleted_sports_fixtures', Array.from(deletedFixtureIds));
+        }
+
         const [
           sbArticles,
           sbCategories,
@@ -2603,20 +2623,67 @@ export const api = {
     const updated = list.filter((f) => f.id !== id);
     setLocalData('naija_sports_fixtures', updated);
 
-    // 3. Sync to Supabase
+    // 3. Sync to Supabase Document Store & Table
     try {
       await setDocInSupabase('sportsFixtures', updated);
+      const existingDel = await getDocFromSupabase<string[]>('deletedSportsFixtures');
+      const mergedDel = Array.from(new Set([...(Array.isArray(existingDel) ? existingDel : []), id]));
+      await setDocInSupabase('deletedSportsFixtures', mergedDel);
+
+      const sb = getClientSupabase();
+      if (sb) {
+        try {
+          await sb.from('sports_fixtures').delete().eq('id', id);
+        } catch {
+          // ignore table error
+        }
+      }
     } catch (sbErr) {
       console.warn('Supabase delete sports fixture notice:', sbErr);
     }
 
-    // 4. Delete on server
+    // 4. Delete on server API
     try {
       return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/sports/fixtures/${id}`, {
         method: 'DELETE'
       });
     } catch (e) {
       return { success: true, id, message: 'Sports fixture deleted permanently' };
+    }
+  },
+
+  deleteAllSportsFixtures: async () => {
+    const list = getLocalData<SportsFixture[]>('naija_sports_fixtures', []);
+    const allIds = list.map((f) => f.id);
+    const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
+    allIds.forEach((id) => deletedFixtureIds.add(id));
+    setLocalData('naija_deleted_sports_fixtures', Array.from(deletedFixtureIds));
+    setLocalData('naija_sports_fixtures', []);
+
+    try {
+      await setDocInSupabase('sportsFixtures', []);
+      const existingDel = await getDocFromSupabase<string[]>('deletedSportsFixtures');
+      const mergedDel = Array.from(new Set([...(Array.isArray(existingDel) ? existingDel : []), ...allIds]));
+      await setDocInSupabase('deletedSportsFixtures', mergedDel);
+
+      const sb = getClientSupabase();
+      if (sb) {
+        try {
+          await sb.from('sports_fixtures').delete().neq('id', '___none___');
+        } catch {
+          // ignore table error
+        }
+      }
+    } catch (sbErr) {
+      console.warn('Supabase deleteAllSportsFixtures notice:', sbErr);
+    }
+
+    try {
+      return await fetchJson<{ success: boolean; message?: string }>('/api/sports/fixtures', {
+        method: 'DELETE'
+      });
+    } catch (e) {
+      return { success: true, message: 'All match scoreboard fixtures permanently deleted' };
     }
   },
 

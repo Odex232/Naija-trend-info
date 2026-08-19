@@ -1216,30 +1216,308 @@ export const dbAdapter = {
     return { success: true, id };
   },
 
-  // Bootstrap (Returns hydrated unified dataset)
-  getBootstrapData: async () => {
+  // Sports Fixtures & Matchday Scoreboard
+  getSportsFixtures: async () => {
     const db = getLocalDb();
-    const deletedSet = new Set<string>(db.deletedArticles || []);
+    const deletedFixtureIds = new Set<string>(db.deletedSportsFixtures || []);
     const client = getSupabaseClient();
 
     if (client) {
       try {
-        // Fetch remote deleted articles list to ensure perfect sync
-        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle();
+        // Fetch remote deleted sports fixtures list
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle();
         if (delDoc && Array.isArray(delDoc.data)) {
           delDoc.data.forEach((id: string) => {
+            deletedFixtureIds.add(id);
+            if (!db.deletedSportsFixtures) db.deletedSportsFixtures = [];
+            if (!db.deletedSportsFixtures.includes(id)) db.deletedSportsFixtures.push(id);
+          });
+        }
+
+        // Try getting from supabase_document_store 'sportsFixtures'
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle();
+        if (docData && Array.isArray(docData.data)) {
+          const clean = docData.data.filter((f: any) => !deletedFixtureIds.has(f.id));
+          db.sportsFixtures = clean;
+          saveLocalDb(db);
+          return clean;
+        }
+
+        // Try getting from sports_fixtures table if exists
+        const { data: tableData, error } = await client.from('sports_fixtures').select('*').order('match_date', { ascending: false });
+        if (!error && Array.isArray(tableData) && tableData.length > 0) {
+          const formatted = tableData
+            .filter((f: any) => !deletedFixtureIds.has(f.id))
+            .map((f: any) => ({
+              id: f.id,
+              homeTeam: f.home_team,
+              awayTeam: f.away_team,
+              homeScore: f.home_score,
+              awayScore: f.away_score,
+              status: f.status,
+              league: f.league,
+              venue: f.venue,
+              minute: f.minute,
+              matchDate: f.match_date
+            }));
+          db.sportsFixtures = formatted;
+          saveLocalDb(db);
+          return formatted;
+        }
+      } catch (e) {
+        console.warn('Supabase getSportsFixtures notice:', e);
+      }
+    }
+
+    const localList = (db.sportsFixtures || []).filter((f: any) => !deletedFixtureIds.has(f.id));
+    return localList;
+  },
+
+  createSportsFixture: async (fix: any) => {
+    const id = fix.id || `fix-${Date.now()}`;
+    const newFix = {
+      id,
+      homeTeam: fix.homeTeam || 'Super Eagles',
+      awayTeam: fix.awayTeam || 'Opponent',
+      homeScore: fix.homeScore ?? 0,
+      awayScore: fix.awayScore ?? 0,
+      status: fix.status || 'UPCOMING',
+      league: fix.league || 'NPFL',
+      venue: fix.venue || 'National Stadium',
+      minute: fix.minute || '',
+      matchDate: fix.matchDate || new Date().toISOString()
+    };
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        // Upsert to document store
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle();
+        const existingDocs = Array.isArray(docData?.data) ? docData.data : [];
+        const updatedDocs = [newFix, ...existingDocs.filter((f: any) => f.id !== id)];
+        await client.from('supabase_document_store').upsert({
+          key: 'sportsFixtures',
+          data: updatedDocs,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        // Remove from deletedSportsFixtures document if it was previously deleted
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle();
+        if (delDoc && Array.isArray(delDoc.data) && delDoc.data.includes(id)) {
+          await client.from('supabase_document_store').upsert({
+            key: 'deletedSportsFixtures',
+            data: delDoc.data.filter((dId: string) => dId !== id),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'key' });
+        }
+
+        // Try table upsert
+        try {
+          await client.from('sports_fixtures').upsert({
+            id: newFix.id,
+            home_team: newFix.homeTeam,
+            away_team: newFix.awayTeam,
+            home_score: newFix.homeScore,
+            away_score: newFix.awayScore,
+            status: newFix.status,
+            league: newFix.league,
+            venue: newFix.venue,
+            minute: newFix.minute,
+            match_date: newFix.matchDate
+          }, { onConflict: 'id' });
+        } catch {
+          // ignore table error if not provisioned
+        }
+      } catch (e: any) {
+        console.error('Error saving sports fixture to Supabase:', e.message);
+      }
+    }
+
+    const db = getLocalDb();
+    if (db.deletedSportsFixtures) {
+      db.deletedSportsFixtures = db.deletedSportsFixtures.filter((dId: string) => dId !== id);
+    }
+    db.sportsFixtures = [newFix, ...(db.sportsFixtures || []).filter((f: any) => f.id !== id)];
+    saveLocalDb(db);
+    return newFix;
+  },
+
+  updateSportsFixture: async (id: string, updates: any) => {
+    const db = getLocalDb();
+    const list = db.sportsFixtures || [];
+    let updatedFix: any = null;
+    const updatedList = list.map((f: any) => {
+      if (f.id === id) {
+        updatedFix = { ...f, ...updates };
+        return updatedFix;
+      }
+      return f;
+    });
+
+    db.sportsFixtures = updatedList;
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client && updatedFix) {
+      try {
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle();
+        if (docData && Array.isArray(docData.data)) {
+          const updatedDocs = docData.data.map((f: any) => (f.id === id ? updatedFix : f));
+          await client.from('supabase_document_store').upsert({
+            key: 'sportsFixtures',
+            data: updatedDocs,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'key' });
+        }
+
+        try {
+          await client.from('sports_fixtures').update({
+            home_team: updatedFix.homeTeam,
+            away_team: updatedFix.awayTeam,
+            home_score: updatedFix.homeScore,
+            away_score: updatedFix.awayScore,
+            status: updatedFix.status,
+            league: updatedFix.league,
+            venue: updatedFix.venue,
+            minute: updatedFix.minute,
+            match_date: updatedFix.matchDate
+          }).eq('id', id);
+        } catch {
+          // ignore table error if not provisioned
+        }
+      } catch (e: any) {
+        console.error('Error updating sports fixture in Supabase:', e.message);
+      }
+    }
+
+    return updatedFix || { id, ...updates };
+  },
+
+  deleteSportsFixture: async (id: string) => {
+    const db = getLocalDb();
+    if (!db.deletedSportsFixtures) db.deletedSportsFixtures = [];
+    if (!db.deletedSportsFixtures.includes(id)) {
+      db.deletedSportsFixtures.push(id);
+    }
+    db.sportsFixtures = (db.sportsFixtures || []).filter((f: any) => f.id !== id);
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        // 1. Delete from sports_fixtures table
+        try {
+          await client.from('sports_fixtures').delete().eq('id', id);
+        } catch {
+          // ignore if table not present
+        }
+
+        // 2. Remove from sportsFixtures in document store
+        const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle();
+        if (docData && Array.isArray(docData.data)) {
+          const cleaned = docData.data.filter((f: any) => f.id !== id);
+          await client.from('supabase_document_store').upsert({
+            key: 'sportsFixtures',
+            data: cleaned,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'key' });
+        }
+
+        // 3. Add to deletedSportsFixtures in document store for cross-device sync
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle();
+        const existingDeleted = Array.isArray(delDoc?.data) ? delDoc.data : [];
+        const newDeleted = Array.from(new Set([...existingDeleted, id]));
+        await client.from('supabase_document_store').upsert({
+          key: 'deletedSportsFixtures',
+          data: newDeleted,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e: any) {
+        console.error('Error deleting sports fixture from Supabase:', e.message);
+      }
+    }
+
+    return { success: true, id, message: 'Match fixture permanently deleted from production database.' };
+  },
+
+  deleteAllSportsFixtures: async () => {
+    const db = getLocalDb();
+    const allIds = (db.sportsFixtures || []).map((f: any) => f.id);
+    if (!db.deletedSportsFixtures) db.deletedSportsFixtures = [];
+    allIds.forEach((id: string) => {
+      if (!db.deletedSportsFixtures.includes(id)) db.deletedSportsFixtures.push(id);
+    });
+    db.sportsFixtures = [];
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        try {
+          await client.from('sports_fixtures').delete().neq('id', '___non_existent___');
+        } catch {
+          // ignore if table not present
+        }
+        await client.from('supabase_document_store').upsert({
+          key: 'sportsFixtures',
+          data: [],
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        const { data: delDoc } = await client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle();
+        const existingDeleted = Array.isArray(delDoc?.data) ? delDoc.data : [];
+        const newDeleted = Array.from(new Set([...existingDeleted, ...allIds]));
+        await client.from('supabase_document_store').upsert({
+          key: 'deletedSportsFixtures',
+          data: newDeleted,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e: any) {
+        console.error('Error clearing all sports fixtures from Supabase:', e.message);
+      }
+    }
+
+    return { success: true, message: 'All match fixtures permanently deleted from production database.' };
+  },
+
+  // Bootstrap (Returns hydrated unified dataset)
+  getBootstrapData: async () => {
+    const db = getLocalDb();
+    const deletedSet = new Set<string>(db.deletedArticles || []);
+    const deletedFixtureSet = new Set<string>(db.deletedSportsFixtures || []);
+    const client = getSupabaseClient();
+
+    if (client) {
+      try {
+        // Fetch remote deleted lists to ensure perfect cross-device sync
+        const [delArticlesDoc, delFixturesDoc] = await Promise.allSettled([
+          client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle()
+        ]);
+
+        if (delArticlesDoc.status === 'fulfilled' && delArticlesDoc.value.data && Array.isArray(delArticlesDoc.value.data.data)) {
+          delArticlesDoc.value.data.data.forEach((id: string) => {
             deletedSet.add(id);
             if (!db.deletedArticles) db.deletedArticles = [];
             if (!db.deletedArticles.includes(id)) db.deletedArticles.push(id);
           });
         }
 
-        // Hydrate from Supabase tables
-        const [articlesRes, categoriesRes, breakingRes, settingsRes] = await Promise.allSettled([
+        if (delFixturesDoc.status === 'fulfilled' && delFixturesDoc.value.data && Array.isArray(delFixturesDoc.value.data.data)) {
+          delFixturesDoc.value.data.data.forEach((id: string) => {
+            deletedFixtureSet.add(id);
+            if (!db.deletedSportsFixtures) db.deletedSportsFixtures = [];
+            if (!db.deletedSportsFixtures.includes(id)) db.deletedSportsFixtures.push(id);
+          });
+        }
+
+        // Hydrate from Supabase tables & document store
+        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes] = await Promise.allSettled([
           client.from('articles').select('*').order('published_at', { ascending: false }),
           client.from('categories').select('*').order('display_order', { ascending: true }),
           client.from('breaking_news').select('*').order('created_at', { ascending: false }),
-          client.from('site_settings').select('data').eq('id', 'default').single()
+          client.from('site_settings').select('data').eq('id', 'default').single(),
+          client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle()
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
@@ -1305,6 +1583,10 @@ export const dbAdapter = {
           db.settings = settingsRes.value.data.data;
         }
 
+        if (sportsRes.status === 'fulfilled' && sportsRes.value.data && Array.isArray(sportsRes.value.data.data)) {
+          db.sportsFixtures = sportsRes.value.data.data.filter((f: any) => !deletedFixtureSet.has(f.id));
+        }
+
         saveLocalDb(db);
       } catch (e) {
         console.warn('Bootstrap hydration notice from Supabase:', e);
@@ -1312,6 +1594,7 @@ export const dbAdapter = {
     }
 
     db.articles = (db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug));
+    db.sportsFixtures = (db.sportsFixtures || []).filter((f: any) => !deletedFixtureSet.has(f.id));
     return db;
   }
 };

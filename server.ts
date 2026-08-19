@@ -96,6 +96,7 @@ function loadDatabase() {
   if (!loadedDb.pages) loadedDb.pages = INITIAL_PAGES;
   if (!loadedDb.deletedQuickLinks) loadedDb.deletedQuickLinks = [];
   if (!loadedDb.deletedArticles) loadedDb.deletedArticles = [];
+  if (!loadedDb.deletedSportsFixtures) loadedDb.deletedSportsFixtures = [];
   if (!loadedDb.cookieSettings) loadedDb.cookieSettings = INITIAL_COOKIE_SETTINGS;
   if (!loadedDb.footerSettings) loadedDb.footerSettings = INITIAL_FOOTER_SETTINGS;
   if (!loadedDb.advertisingPackages) loadedDb.advertisingPackages = INITIAL_ADVERTISING_PACKAGES;
@@ -349,8 +350,9 @@ async function startServer() {
       db.ads = ads;
     }
 
-    if (Array.isArray(sportsFixtures) && sportsFixtures.length > 0) {
-      db.sportsFixtures = sportsFixtures;
+    if (Array.isArray(sportsFixtures)) {
+      const deletedFixSet = new Set<string>(db.deletedSportsFixtures || []);
+      db.sportsFixtures = sportsFixtures.filter((f: any) => !deletedFixSet.has(f.id));
     }
 
     saveDatabase();
@@ -1464,38 +1466,56 @@ function isBlockedFileType(filename: string): boolean {
   });
 
   // Sports
-  app.get('/api/sports/fixtures', (req, res) => {
-    res.json(db.sportsFixtures || []);
-  });
-
-  app.post('/api/sports/fixtures', (req, res) => {
-    const fix = req.body;
-    fix.id = 'fix-' + Date.now();
-    db.sportsFixtures.unshift(fix);
-    saveDatabase();
-    res.json(fix);
-  });
-
-  app.put('/api/sports/fixtures/:id', (req, res) => {
-    const { id } = req.params;
-    const idx = db.sportsFixtures.findIndex((f: any) => f.id === id);
-    if (idx !== -1) {
-      db.sportsFixtures[idx] = { ...db.sportsFixtures[idx], ...req.body };
-      saveDatabase();
-      return res.json(db.sportsFixtures[idx]);
+  app.get('/api/sports/fixtures', async (req, res) => {
+    try {
+      const fixtures = await dbAdapter.getSportsFixtures();
+      res.json(fixtures);
+    } catch (e) {
+      const deletedFixSet = new Set<string>(db.deletedSportsFixtures || []);
+      res.json((db.sportsFixtures || []).filter((f: any) => !deletedFixSet.has(f.id)));
     }
-    res.status(404).json({ message: 'Fixture not found' });
   });
 
-  app.delete('/api/sports/fixtures/:id', requireAdminAuth, (req, res) => {
-    const { id } = req.params;
-    const exists = (db.sportsFixtures || []).some((f: any) => f.id === id);
-    if (!exists) {
-      return res.status(404).json({ success: false, message: 'Sports fixture not found' });
+  app.post('/api/sports/fixtures', requireAdminAuth, async (req, res) => {
+    try {
+      const created = await dbAdapter.createSportsFixture(req.body);
+      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Sports Fixture Created', `Created fixture: ${created.homeTeam} vs ${created.awayTeam}`, 'Sports Hub');
+      res.json(created);
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
     }
-    db.sportsFixtures = db.sportsFixtures.filter((f: any) => f.id !== id);
-    saveDatabase();
-    res.json({ success: true, message: 'Sports fixture deleted successfully', id });
+  });
+
+  app.put('/api/sports/fixtures/:id', requireAdminAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const updated = await dbAdapter.updateSportsFixture(id, req.body);
+      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Sports Fixture Updated', `Updated score/details for fixture ${id}`, 'Sports Hub');
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
+    }
+  });
+
+  app.delete('/api/sports/fixtures/:id', requireAdminAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await dbAdapter.deleteSportsFixture(id);
+      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Sports Fixture Deleted', `Permanently deleted match fixture ${id}`, 'Sports Hub');
+      res.json({ success: true, message: 'Sports fixture permanently deleted from production database.', id });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
+    }
+  });
+
+  app.delete('/api/sports/fixtures', requireAdminAuth, async (req, res) => {
+    try {
+      const result = await dbAdapter.deleteAllSportsFixtures();
+      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'All Sports Fixtures Cleared', 'Permanently cleared all match scoreboard fixtures from database.', 'Sports Hub');
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
+    }
   });
 
   // Audit Logs

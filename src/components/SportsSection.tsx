@@ -45,53 +45,55 @@ export const SportsSection: React.FC<SportsSectionProps> = ({
       </div>
 
       {/* Live Scores Ticker Row */}
-      <div className="py-6 border-b border-white/10">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center space-x-2">
-          <Activity className="w-4 h-4 text-emerald-400" />
-          <span>Matchday Scoreboard & Upcoming Fixtures</span>
-        </h3>
+      {fixtures && fixtures.length > 0 && (
+        <div className="py-6 border-b border-white/10">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center space-x-2">
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span>Matchday Scoreboard & Upcoming Fixtures</span>
+          </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {fixtures.slice(0, 4).map((fix) => (
-            <div
-              key={fix.id}
-              className="bg-white/5 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 flex flex-col justify-between hover:border-amber-400/50 transition-colors"
-            >
-              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mb-2">
-                <span className="text-amber-400 truncate max-w-[120px]">{fix.league}</span>
-                {fix.status === 'LIVE' ? (
-                  <span className="bg-rose-600 text-white px-2 py-0.5 rounded-full animate-pulse flex items-center space-x-1">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                    <span>{fix.minute}</span>
-                  </span>
-                ) : fix.status === 'FINISHED' ? (
-                  <span className="text-slate-400">FT</span>
-                ) : (
-                  <span className="text-emerald-400">UPCOMING</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {fixtures.slice(0, 4).map((fix) => (
+              <div
+                key={fix.id}
+                className="bg-white/5 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 flex flex-col justify-between hover:border-amber-400/50 transition-colors"
+              >
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mb-2">
+                  <span className="text-amber-400 truncate max-w-[120px]">{fix.league}</span>
+                  {fix.status === 'LIVE' ? (
+                    <span className="bg-rose-600 text-white px-2 py-0.5 rounded-full animate-pulse flex items-center space-x-1">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                      <span>{fix.minute}</span>
+                    </span>
+                  ) : fix.status === 'FINISHED' ? (
+                    <span className="text-slate-400">FT</span>
+                  ) : (
+                    <span className="text-emerald-400">UPCOMING</span>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 my-1">
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="text-white">{fix.homeTeam}</span>
+                    <span className="text-amber-400 font-mono text-sm">{fix.homeScore ?? '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="text-white">{fix.awayTeam}</span>
+                    <span className="text-amber-400 font-mono text-sm">{fix.awayScore ?? '-'}</span>
+                  </div>
+                </div>
+
+                {fix.venue && (
+                  <div className="text-[10px] text-slate-400 mt-2 flex items-center space-x-1 truncate">
+                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">{fix.venue}</span>
+                  </div>
                 )}
               </div>
-
-              <div className="space-y-1.5 my-1">
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-white">{fix.homeTeam}</span>
-                  <span className="text-amber-400 font-mono text-sm">{fix.homeScore ?? '-'}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-white">{fix.awayTeam}</span>
-                  <span className="text-amber-400 font-mono text-sm">{fix.awayScore ?? '-'}</span>
-                </div>
-              </div>
-
-              {fix.venue && (
-                <div className="text-[10px] text-slate-400 mt-2 flex items-center space-x-1 truncate">
-                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                  <span className="truncate">{fix.venue}</span>
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Featured Sports News Grid */}
       <div className="pt-6">
