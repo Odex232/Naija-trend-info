@@ -52,7 +52,8 @@ import {
   Server,
   Wifi,
   FileCode,
-  HardDrive
+  HardDrive,
+  UserCheck
 } from 'lucide-react';
 import {
   Article,
@@ -1331,7 +1332,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 }`}
               >
                 <Newspaper className="w-4 h-4 text-emerald-400" />
-                <span>Editorial Desk & Leadership</span>
+                <span>Editorial Desk & Correspondents</span>
               </button>
 
               <button
@@ -3796,17 +3797,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <div>
                   <h3 className="font-bold text-white text-sm flex items-center gap-2">
                     <Newspaper className="w-4 h-4 text-emerald-400" />
-                    <span>Editorial Desk & Leadership Profiles</span>
+                    <span>Editorial Desk, Leadership & Correspondents</span>
                   </h3>
                   <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                    Edit Editor-in-Chief, Managing Editor, Bureau Chiefs, and Department Leads displayed on the live site's Editorial Desk page.
+                    Edit Editor-in-Chief, Editorial Correspondents, Managing Editors, Bureau Chiefs, and Department Leads displayed on the live site's Editorial Desk page.
                   </p>
                 </div>
                 <button
                   onClick={() => setActiveTab('editorial')}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-md"
                 >
-                  Manage Editorial Profiles
+                  Manage Editorial Profiles & Correspondents
                 </button>
               </div>
 
@@ -4308,30 +4309,51 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <div>
                   <h1 className="text-2xl font-bold font-serif text-white flex items-center gap-2">
                     <Newspaper className="w-6 h-6 text-emerald-400" />
-                    <span>Editorial Desk & Newsroom Leadership</span>
+                    <span>Editorial Desk, Leadership & Correspondents</span>
                   </h1>
                   <p className="text-xs text-slate-400 mt-1">
-                    Manage Executive Editors, Managing Editors, Bureau Chiefs, and Desk Editors displayed on the public site's Editorial Desk page.
+                    Manage Executive Editors, Managing Editors, Editorial Correspondents, Bureau Chiefs, and Desk Editors displayed on the public site's Editorial Desk page.
                   </p>
                 </div>
-                <button
-                  onClick={() =>
-                    setEditingEditorialEntry({
-                      department: 'Editorial Desk',
-                      name: '',
-                      role: 'Editor',
-                      email: 'editor@naijatrendinfo.com.ng',
-                      phone: '',
-                      bio: '',
-                      photoUrl: '',
-                      isActive: true
-                    })
-                  }
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shrink-0 cursor-pointer shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Editorial Leader</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setEditingEditorialEntry({
+                        department: 'News Bureau & Correspondents',
+                        name: 'Ajayi Odunayo',
+                        role: 'NaijaTrendiInfo Editorial Correspondent',
+                        email: 'editor@naijatrendinfo.com.ng',
+                        phone: '+234 803 111 2233',
+                        bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.',
+                        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+                        isActive: true
+                      })
+                    }
+                    className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-800/60 font-semibold text-xs px-3.5 py-2.5 rounded-xl flex items-center space-x-1.5 shrink-0 cursor-pointer transition-colors shadow-sm"
+                    title="Quickly add or customize NaijaTrendiInfo Editorial Correspondent profile"
+                  >
+                    <UserCheck className="w-4 h-4 text-emerald-400" />
+                    <span>+ Add Editorial Correspondent</span>
+                  </button>
+                  <button
+                    onClick={() =>
+                      setEditingEditorialEntry({
+                        department: 'Editorial Desk',
+                        name: '',
+                        role: 'Editor',
+                        email: 'editor@naijatrendinfo.com.ng',
+                        phone: '',
+                        bio: '',
+                        photoUrl: '',
+                        isActive: true
+                      })
+                    }
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shrink-0 cursor-pointer shadow-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Editorial Member</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4423,14 +4445,40 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-slate-300 font-semibold mb-1">Official Role Designation</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-slate-300 font-semibold">Official Role Designation</label>
+                          <span className="text-[10px] text-slate-400">Presets available below</span>
+                        </div>
                         <input
                           type="text"
-                          placeholder="e.g. Executive Managing Editor & Publisher"
+                          placeholder="e.g. NaijaTrendiInfo Editorial Correspondent or Executive Managing Editor"
                           value={editingEditorialEntry.role || ''}
                           onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, role: e.target.value })}
                           className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
                         />
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {[
+                            'NaijaTrendiInfo Editorial Correspondent',
+                            'Executive Managing Editor & Publisher',
+                            'Abuja Bureau Chief',
+                            'Senior Financial Desk Lead',
+                            'Chief Sports Correspondent',
+                            'Investigative Newsroom Lead'
+                          ].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setEditingEditorialEntry({ ...editingEditorialEntry, role: preset })}
+                              className={`text-[10px] px-2 py-0.5 rounded-lg border transition-colors cursor-pointer ${
+                                editingEditorialEntry.role === preset
+                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-700 font-bold'
+                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
