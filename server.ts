@@ -115,10 +115,11 @@ function loadDatabase() {
     }
   }
   if (loadedDb.editorialDesk) {
-    const edLead = loadedDb.editorialDesk.find((e: any) => e.id === 'ed-1' || e.name === 'Chidubem Okechukwu');
-    if (edLead) {
-      edLead.name = 'Ajayi Odunayo';
-    }
+    loadedDb.editorialDesk.forEach((e: any) => {
+      if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+        e.name = 'Habbey Tech Solutions';
+      }
+    });
   }
 
   return loadedDb;
@@ -1383,10 +1384,19 @@ function isBlockedFileType(filename: string): boolean {
   });
 
   app.get('/api/editorial-desk', (req, res) => {
-    res.json(db.editorialDesk || []);
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    const sanitized = (db.editorialDesk || []).map((e: any) => {
+      if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+        return { ...e, name: 'Habbey Tech Solutions' };
+      }
+      return e;
+    });
+    res.json(sanitized);
   });
 
-  app.put('/api/editorial-desk', (req, res) => {
+  app.put('/api/editorial-desk', requireAdminAuth, (req, res) => {
     db.editorialDesk = req.body;
     saveDatabase();
     res.json(db.editorialDesk);

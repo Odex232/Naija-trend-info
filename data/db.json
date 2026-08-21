@@ -224,39 +224,39 @@
   "users": [
     {
       "id": "usr-1",
-      "name": "Ajayi Odunayo",
-      "email": "Ajayiodunayo28@gmail.com",
-      "password": "Habiodun1990",
-      "role": "Super Admin",
-      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "bio": "Editor-in-Chief & Publisher of NaijaTrendiInfo. Veteran investigative journalist with over 15 years experience in West African media.",
+      "name": "Ajayi Odunayo",
+      "role": "Super Admin",
+      "email": "Ajayiodunayo28@gmail.com",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+      "password": "Habiodun1990",
       "createdAt": "2025-01-01T08:00:00Z"
     },
     {
       "id": "usr-2",
-      "name": "Amina Bello",
-      "email": "amina.bello@naijatrendinfo.com.ng",
-      "role": "Editor",
-      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250",
       "bio": "Senior Political Editor covering the National Assembly and diplomatic desk in Abuja.",
+      "name": "Amina Bello",
+      "role": "Editor",
+      "email": "amina.bello@naijatrendinfo.com.ng",
+      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250",
       "createdAt": "2025-01-15T09:30:00Z"
     },
     {
       "id": "usr-3",
-      "name": "Tunde Adebayo",
-      "email": "tunde.adebayo@naijatrendinfo.com.ng",
-      "role": "Author",
-      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
       "bio": "Tech, Economy & Business Analyst based in Lagos hub.",
+      "name": "Tunde Adebayo",
+      "role": "Author",
+      "email": "tunde.adebayo@naijatrendinfo.com.ng",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
       "createdAt": "2025-02-01T10:00:00Z"
     },
     {
       "id": "usr-4",
-      "name": "Oluchi Nnamdi",
-      "email": "oluchi.sports@naijatrendinfo.com.ng",
-      "role": "Reporter",
-      "avatar": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=250",
       "bio": "Lead Sports Correspondent covering Super Eagles, NPFL, and global football leagues.",
+      "name": "Oluchi Nnamdi",
+      "role": "Reporter",
+      "email": "oluchi.sports@naijatrendinfo.com.ng",
+      "avatar": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=250",
       "createdAt": "2025-02-10T11:15:00Z"
     }
   ],
@@ -264,45 +264,42 @@
     {
       "id": "bn-1",
       "title": "BREAKING: Central Bank of Nigeria Adjusts Key Policy Interest Rate to Support Economic Growth",
-      "linkUrl": "/article/cbn-monetary-policy-rate-update",
-      "isActive": true,
-      "createdAt": "2026-08-08T06:30:00+00:00",
       "url": "",
+      "articleId": null,
       "category": "National",
-      "articleId": null
+      "isActive": true,
+      "createdAt": "2026-08-08T06:30:00+00:00"
     },
     {
       "id": "bn-2",
       "title": "Federal Government Unveils ₦1.5 Trillion Infrastructure Initiative for Railway Expansion across Southwest & North Central",
-      "linkUrl": "/article/fg-unveils-railway-infrastructure-boost",
-      "isActive": true,
-      "createdAt": "2026-08-08T05:15:00+00:00",
       "url": "",
+      "articleId": null,
       "category": "National",
-      "articleId": null
+      "isActive": true,
+      "createdAt": "2026-08-08T05:15:00+00:00"
     },
     {
       "id": "bn-3",
       "title": "Super Eagles Set to Play Friendlies Ahead of World Cup Qualifiers in Lagos & Abuja",
-      "linkUrl": "/article/super-eagles-friendly-match-announcement",
-      "isActive": true,
-      "createdAt": "2026-08-08T04:00:00+00:00",
       "url": "",
+      "articleId": null,
       "category": "National",
-      "articleId": null
+      "isActive": true,
+      "createdAt": "2026-08-08T04:00:00+00:00"
     }
   ],
   "articles": [
     {
-      "id": "art-1787039631278",
-      "title": "OsunDecides2026",
-      "slug": "osundecides2026",
-      "summary": "Accord Party wins Ife Central with landslide margin",
-      "content": "The Accord Party has won Ife Central Local Government Area in Saturday’s Osun governorship election, defeating the All Progressives Congress by 5,258 votes, according to the result announced at the LGA collation centre.\nThe Accord Party has won Ife Central Local Government Area in the Osun governorship election, securing a 5,258-vote margin over the All Progressives Congress (APC).\nThe result was announced at the Ife Central LGA collation centre at about 10:43 p.m. on Saturday. The result will be reviewed at INEC’s Central collation center in Osogbo before the result is finally ratified, According to the LG result, the Accord Party polled 21,171 votes, while the APC secured 15,913 votes.\nA total of 39,330 votes were cast from the 39,990 accredited voters in the local government area. Of the votes cast, 38,380 were declared valid, while 950 were rejected.\nThe local government has 122,454 registered voters, with 39,990 accredited for the election.\nThe result gives the Accord Party candidate, incumbent Governor Ademola Adeleke, a significant advantage in the LGA over the APC candidate, Bola Oyebamiji.\n\nThe results from the 30 local government areas of Osun State are being announced at the respective LGA collation centres.\nPREMIUM TIMES earlier reported that voting commenced at about 8:30 a.m. across polling units in the 30 local government areas of the state.\n\n",
-      "categoryId": "cat-2",
-      "categoryName": "Politics",
+      "id": "art-1787155003191",
+      "title": "The FG has reopened free CAC business name registration ",
+      "slug": "the-fg-has-reopened-free-cac-business-name-registration",
+      "summary": "List of 8 Requirements as FG Reopens Portal for Free Business Registration .",
+      "content": "The federal government has reopened its free Corporate Affairs Commission (CAC) business name registration programme, giving 250,000 eligible nano, micro, and small enterprises across Nigeria the chance to formalise their operations without paying the standard registration fee. The programme is run jointly by the Small and Medium Enterprises Development Agency of Nigeria (SMEDAN) and the CAC.\neconomy/industry/1725529-list-documents-needed-cac-reopens-portal-free-business-registration/\nIt targets business owners who do not yet have a CAC.\n\nDocuments needed for free CAC registration Before applying, entrepreneurs should gather the following: Valid means of identification: a National Identification Number (NIN), national identity card, driver's licence, or international passport A recent passport-sized photograph A preferred business name for search and reservation A valid business address An active phone number and email address Details of any other business owners or partners, where applicable Any additional documents that may be required based on the nature of the specific business Applicants will be required to upload their valid ID, passport photograph and any other supporting materials during the registration process. Read more: https://www.legit.ng/business-economy/industry/1725529-list-documents-needed-cac-reopens-portal-free-business-registration/",
+      "categoryId": "cat-1",
+      "categoryName": "Nigeria",
       "tags": [],
-      "featuredImage": "https://i0.wp.com/media.premiumtimesng.com/wp-content/files/2026/07/WhatsApp-Image-2026-07-30-at-23.57.30.jpeg?w=731&ssl=1",
+      "featuredImage": "https://cdn.legit.ng/images/720/014487c2e222e23f.webp?v=1",
       "imageCaption": "",
       "imageCredit": "",
       "galleryImages": [],
@@ -311,14 +308,14 @@
       "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": true,
-      "isPinned": true,
+      "isPinned": false,
       "isBreaking": true,
       "isEditorPick": false,
       "views": 0,
-      "readTimeMinutes": 2,
-      "publishedAt": "2026-08-18T07:53:51.266+00:00",
-      "createdAt": "2026-08-21T06:46:43.594Z",
-      "updatedAt": "2026-08-21T06:46:43.594Z"
+      "readTimeMinutes": 1,
+      "publishedAt": "2026-08-19T15:56:43.179+00:00",
+      "createdAt": "2026-08-21T09:45:32.882+00:00",
+      "updatedAt": "2026-08-21T09:45:32.882+00:00"
     },
     {
       "id": "art-1787123465216",
@@ -344,19 +341,19 @@
       "views": 0,
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-19T07:11:05.205+00:00",
-      "createdAt": "2026-08-21T06:46:43.837Z",
-      "updatedAt": "2026-08-21T06:46:43.837Z"
+      "createdAt": "2026-08-21T09:45:32.713+00:00",
+      "updatedAt": "2026-08-21T09:45:32.713+00:00"
     },
     {
-      "id": "art-1787155003191",
-      "title": "The FG has reopened free CAC business name registration ",
-      "slug": "the-fg-has-reopened-free-cac-business-name-registration",
-      "summary": "List of 8 Requirements as FG Reopens Portal for Free Business Registration .",
-      "content": "The federal government has reopened its free Corporate Affairs Commission (CAC) business name registration programme, giving 250,000 eligible nano, micro, and small enterprises across Nigeria the chance to formalise their operations without paying the standard registration fee. The programme is run jointly by the Small and Medium Enterprises Development Agency of Nigeria (SMEDAN) and the CAC.\neconomy/industry/1725529-list-documents-needed-cac-reopens-portal-free-business-registration/\nIt targets business owners who do not yet have a CAC.\n\nDocuments needed for free CAC registration Before applying, entrepreneurs should gather the following: Valid means of identification: a National Identification Number (NIN), national identity card, driver's licence, or international passport A recent passport-sized photograph A preferred business name for search and reservation A valid business address An active phone number and email address Details of any other business owners or partners, where applicable Any additional documents that may be required based on the nature of the specific business Applicants will be required to upload their valid ID, passport photograph and any other supporting materials during the registration process. Read more: https://www.legit.ng/business-economy/industry/1725529-list-documents-needed-cac-reopens-portal-free-business-registration/",
-      "categoryId": "cat-1",
-      "categoryName": "Nigeria",
+      "id": "art-1787039631278",
+      "title": "OsunDecides2026",
+      "slug": "osundecides2026",
+      "summary": "Accord Party wins Ife Central with landslide margin",
+      "content": "The Accord Party has won Ife Central Local Government Area in Saturday’s Osun governorship election, defeating the All Progressives Congress by 5,258 votes, according to the result announced at the LGA collation centre.\nThe Accord Party has won Ife Central Local Government Area in the Osun governorship election, securing a 5,258-vote margin over the All Progressives Congress (APC).\nThe result was announced at the Ife Central LGA collation centre at about 10:43 p.m. on Saturday. The result will be reviewed at INEC’s Central collation center in Osogbo before the result is finally ratified, According to the LG result, the Accord Party polled 21,171 votes, while the APC secured 15,913 votes.\nA total of 39,330 votes were cast from the 39,990 accredited voters in the local government area. Of the votes cast, 38,380 were declared valid, while 950 were rejected.\nThe local government has 122,454 registered voters, with 39,990 accredited for the election.\nThe result gives the Accord Party candidate, incumbent Governor Ademola Adeleke, a significant advantage in the LGA over the APC candidate, Bola Oyebamiji.\n\nThe results from the 30 local government areas of Osun State are being announced at the respective LGA collation centres.\nPREMIUM TIMES earlier reported that voting commenced at about 8:30 a.m. across polling units in the 30 local government areas of the state.\n\n",
+      "categoryId": "cat-2",
+      "categoryName": "Politics",
       "tags": [],
-      "featuredImage": "https://cdn.legit.ng/images/720/014487c2e222e23f.webp?v=1",
+      "featuredImage": "https://i0.wp.com/media.premiumtimesng.com/wp-content/files/2026/07/WhatsApp-Image-2026-07-30-at-23.57.30.jpeg?w=731&ssl=1",
       "imageCaption": "",
       "imageCredit": "",
       "galleryImages": [],
@@ -365,14 +362,14 @@
       "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": true,
-      "isPinned": false,
+      "isPinned": true,
       "isBreaking": true,
       "isEditorPick": false,
       "views": 0,
-      "readTimeMinutes": 1,
-      "publishedAt": "2026-08-19T15:56:43.179+00:00",
-      "createdAt": "2026-08-21T06:46:43.965Z",
-      "updatedAt": "2026-08-21T06:46:43.965Z"
+      "readTimeMinutes": 2,
+      "publishedAt": "2026-08-18T07:53:51.266+00:00",
+      "createdAt": "2026-08-21T09:45:32.524+00:00",
+      "updatedAt": "2026-08-21T09:45:32.524+00:00"
     },
     {
       "id": "art-1",
@@ -665,20 +662,22 @@
     }
   ],
   "settings": {
-    "siteName": "NaijaTrendiInfo",
-    "siteDescription": "Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, entertainment, and investigative reporting.",
-    "siteUrl": "https://naijatrendinfo.com.ng",
     "logoUrl": "",
+    "siteUrl": "https://naijatrendinfo.com.ng",
+    "language": "English (NG)",
+    "siteName": "NaijaTrendiInfo",
+    "timeZone": "Africa/Lagos (GMT+1)",
+    "sportsHub": {
+      "widgetTitle": "NaijaTrendiInfo Live Sports",
+      "featuredLeague": "NPFL",
+      "enableTransferTicker": true,
+      "showLiveScoreboardWidget": false
+    },
     "faviconUrl": "",
-    "copyrightText": "© 2026 NaijaTrendiInfo Media Group. All rights reserved.",
+    "analyticsId": "G-NAIJA2026TREND",
     "contactEmail": "contact@naijatrendinfo.com.ng",
     "contactPhone": "+234 8137731088",
-    "officeAddress": "14 Broad Street, Marina, Lagos State / Plot 502 Central Business District, Abuja, Nigeria",
-    "timeZone": "Africa/Lagos (GMT+1)",
-    "language": "English (NG)",
-    "googleAdsensePubId": "ca-pub-1234567890123456",
-    "adsterraSmartlinkUrl": "https://adsterra.example.com/smartlink-naijatrendiinfo",
-    "analyticsId": "G-NAIJA2026TREND",
+    "copyrightText": "© 2026 NaijaTrendiInfo Media Group. All rights reserved.",
     "economicIndex": {
       "ngxIndex": "+0.42%",
       "usdNgnRate": "₦1,485.50",
@@ -691,12 +690,10 @@
       "showTopTicker": false,
       "showEconomicWidget": false
     },
-    "sportsHub": {
-      "widgetTitle": "NaijaTrendiInfo Live Sports",
-      "featuredLeague": "NPFL",
-      "enableTransferTicker": true,
-      "showLiveScoreboardWidget": false
-    }
+    "officeAddress": "14 Broad Street, Marina, Lagos State / Plot 502 Central Business District, Abuja, Nigeria",
+    "siteDescription": "Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, entertainment, and investigative reporting.",
+    "googleAdsensePubId": "ca-pub-1234567890123456",
+    "adsterraSmartlinkUrl": "https://adsterra.example.com/smartlink-naijatrendiinfo"
   },
   "socialLinks": [
     {
@@ -1097,6 +1094,17 @@
       "phone": "+234 803 999 0011",
       "isActive": true,
       "department": "Sports Desk"
+    },
+    {
+      "id": "ed-1787305947608",
+      "bio": "Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.",
+      "name": "Habbey Tech Solutions",
+      "role": "NaijaTrendiInfo Editorial Correspondent",
+      "email": "editor@naijatrendinfo.com.ng",
+      "phone": "+2348137731088",
+      "isActive": true,
+      "photoUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
+      "department": "News Bureau & Correspondents"
     }
   ],
   "information": [
@@ -1125,6 +1133,42 @@
   "submissions": [],
   "contacts": [],
   "auditLogs": [
+    {
+      "id": "log-1787306037429-25dq",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Multi-Browser Cloud Sync",
+      "details": "Synchronized database updates across connected devices and browsers.",
+      "resource": "System Sync",
+      "createdAt": "2026-08-21T09:53:57.429Z"
+    },
+    {
+      "id": "log-1787305533087-cx14",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Multi-Browser Cloud Sync",
+      "details": "Synchronized database updates across connected devices and browsers.",
+      "resource": "System Sync",
+      "createdAt": "2026-08-21T09:45:33.087Z"
+    },
+    {
+      "id": "log-1787305525359-1fec",
+      "userEmail": "Ajayiodunayo28@gmail.com",
+      "userName": "Ajayi Odunayo",
+      "action": "User Updated",
+      "details": "Updated settings/password for user Habbey Tech Solutions ",
+      "resource": "Users",
+      "createdAt": "2026-08-21T09:45:25.359Z"
+    },
+    {
+      "id": "log-1787305504427-smhu",
+      "userEmail": "Ajayiodunayo28@gmail.com",
+      "userName": "Ajayi Odunayo",
+      "action": "User Updated",
+      "details": "Updated settings/password for user Habbey Tech Solutions ",
+      "resource": "Users",
+      "createdAt": "2026-08-21T09:45:04.427Z"
+    },
     {
       "id": "log-1787295287266-3sfm",
       "userEmail": "admin@naijatrendinfo.com.ng",
@@ -1255,6 +1299,105 @@
   "backups": [],
   "analytics": {
     "liveVisitorFeed": [
+      {
+        "id": "evt-1787306001918-935",
+        "path": "/article/the-fg-has-reopened-free-cac-business-name-registration",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:53:21.918Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305953840-744",
+        "path": "/article/the-fg-has-reopened-free-cac-business-name-registration",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Abeokuta (Ogun)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:52:33.840Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305876363-217",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Houston TX, United States (Diaspora)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:51:16.363Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305876298-725",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:51:16.298Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305534074-233",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:45:34.074Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305526693-670",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Enugu (Independence Layout)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:45:26.693Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305506646-420",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Port Harcourt (Rivers)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:45:06.646Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305062342-877",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Abuja FCT (Maitama / Central)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:37:42.342Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787305062115-368",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "London, United Kingdom (Diaspora)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:37:42.115Z",
+        "timeAgo": "Just now"
+      },
       {
         "id": "evt-1787295268903-766",
         "path": "/",
@@ -1623,5 +1766,6 @@
   },
   "deletedSportsFixtures": [
     "fix-1787296264892"
-  ]
+  ],
+  "deletedArticles": []
 }

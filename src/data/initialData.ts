@@ -565,7 +565,7 @@ export const INITIAL_ADVERTISING_PACKAGES = [
 ];
 
 export const INITIAL_EDITORIAL_DESK: EditorialDeskEntry[] = [
-  { id: 'ed-1', department: 'Editor-in-Chief', name: 'Ajayi Odunayo', role: 'Executive Managing Editor & Publisher', email: 'editor@naijatrendinfo.com.ng', phone: '+234 803 111 2233', bio: 'Veteran investigative journalist with 15+ years experience in Nigerian media.', isActive: true },
+  { id: 'ed-1', department: 'Editor-in-Chief', name: 'Habbey Tech Solutions', role: 'Executive Managing Editor & Publisher', email: 'editor@naijatrendinfo.com.ng', phone: '+234 813 773 1088', bio: 'Veteran investigative journalist with 15+ years experience in Nigerian media.', isActive: true },
   { id: 'ed-2', department: 'Politics & State House', name: 'Amina Bello', role: 'Abuja Bureau Chief', email: 'politics@naijatrendinfo.com.ng', phone: '+234 803 444 5566', bio: 'Senior political correspondent leading National Assembly & Villa reporting.', isActive: true },
   { id: 'ed-3', department: 'Business & Economy', name: 'Tunde Adebayo', role: 'Senior Financial Desk Lead', email: 'business@naijatrendinfo.com.ng', phone: '+234 803 777 8899', bio: 'Lagos-based financial analyst covering CBN, NGX, and corporate Nigeria.', isActive: true },
   { id: 'ed-4', department: 'Sports Desk', name: 'Oluchi Nnamdi', role: 'Chief Sports Correspondent', email: 'sports@naijatrendinfo.com.ng', phone: '+234 803 999 0011', bio: 'Leading coverage on NPFL, Super Eagles, and global football.', isActive: true }

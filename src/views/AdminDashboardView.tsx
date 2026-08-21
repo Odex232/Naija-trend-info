@@ -4362,10 +4362,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     onClick={() =>
                       setEditingEditorialEntry({
                         department: 'News Bureau & Correspondents',
-                        name: 'Ajayi Odunayo',
+                        name: 'Habbey Tech Solutions',
                         role: 'NaijaTrendiInfo Editorial Correspondent',
                         email: 'editor@naijatrendinfo.com.ng',
-                        phone: '+234 803 111 2233',
+                        phone: '+234 813 773 1088',
                         bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.',
                         photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
                         isActive: true
@@ -4468,7 +4468,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
                         <input
                           type="text"
-                          placeholder="e.g. Ajayi Odunayo"
+                          placeholder="e.g. Habbey Tech Solutions"
                           value={editingEditorialEntry.name || ''}
                           onChange={(e) => setEditingEditorialEntry({ ...editingEditorialEntry, name: e.target.value })}
                           className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"

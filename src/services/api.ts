@@ -540,7 +540,16 @@ export const api = {
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
           const cleanArticles = sbArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
           const cleanAds = Array.isArray(sbAds) ? sbAds.filter((a) => !deletedAdIds.has(a.id)) : [];
-          const cleanEditorial = Array.isArray(sbEditorial) ? sbEditorial.filter((e) => !deletedEdIds.has(e.id)) : [];
+          const cleanEditorial = Array.isArray(sbEditorial)
+            ? sbEditorial
+                .filter((e) => !deletedEdIds.has(e.id))
+                .map((e) => {
+                  if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+                    return { ...e, name: 'Habbey Tech Solutions' };
+                  }
+                  return e;
+                })
+            : [];
           const cleanSports = Array.isArray(sbSports)
             ? sbSports.filter((f) => !deletedFixtureIds.has(f.id)).map((f) => ({ ...f, isPublished: f.isPublished !== false }))
             : [];
@@ -2444,16 +2453,30 @@ export const api = {
     try {
       const sbEd = await getDocFromSupabase<EditorialDeskEntry[]>('editorialDesk');
       if (Array.isArray(sbEd) && sbEd.length > 0) {
-        const clean = sbEd.filter((e) => !deletedEdIds.has(e.id));
+        const clean = sbEd
+          .filter((e) => !deletedEdIds.has(e.id))
+          .map((e) => {
+            if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+              return { ...e, name: 'Habbey Tech Solutions' };
+            }
+            return e;
+          });
         setLocalData('naija_editorial_desk', clean);
         return clean;
       }
     } catch (e) {}
 
     try {
-      const serverEd = await fetchJson<EditorialDeskEntry[]>('/api/editorial-desk');
+      const serverEd = await fetchJson<EditorialDeskEntry[]>(`/api/editorial-desk?_t=${Date.now()}`);
       if (Array.isArray(serverEd)) {
-        const clean = serverEd.filter((e) => !deletedEdIds.has(e.id));
+        const clean = serverEd
+          .filter((e) => !deletedEdIds.has(e.id))
+          .map((e) => {
+            if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+              return { ...e, name: 'Habbey Tech Solutions' };
+            }
+            return e;
+          });
         setLocalData('naija_editorial_desk', clean);
         return clean;
       }
@@ -2462,7 +2485,14 @@ export const api = {
     }
 
     const localEd = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
-    return localEd.filter((e) => !deletedEdIds.has(e.id));
+    return localEd
+      .filter((e) => !deletedEdIds.has(e.id))
+      .map((e) => {
+        if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+          return { ...e, name: 'Habbey Tech Solutions' };
+        }
+        return e;
+      });
   },
 
   updateEditorialDesk: async (entries: EditorialDeskEntry[]) => {

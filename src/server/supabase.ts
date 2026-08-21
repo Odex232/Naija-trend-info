@@ -1750,13 +1750,14 @@ export const dbAdapter = {
         }
 
         // Hydrate from Supabase tables & document store
-        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes] = await Promise.allSettled([
+        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes] = await Promise.allSettled([
           client.from('articles').select('*').order('published_at', { ascending: false }),
           client.from('categories').select('*').order('display_order', { ascending: true }),
           client.from('breaking_news').select('*').order('created_at', { ascending: false }),
           client.from('site_settings').select('data').eq('id', 'default').single(),
           client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle(),
-          client.from('supabase_document_store').select('data').eq('key', 'users').maybeSingle()
+          client.from('supabase_document_store').select('data').eq('key', 'users').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'editorialDesk').maybeSingle()
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
@@ -1828,6 +1829,15 @@ export const dbAdapter = {
 
         if (usersDocRes.status === 'fulfilled' && usersDocRes.value.data && Array.isArray(usersDocRes.value.data.data) && usersDocRes.value.data.data.length > 0) {
           db.users = usersDocRes.value.data.data;
+        }
+
+        if (editorialDocRes.status === 'fulfilled' && editorialDocRes.value.data && Array.isArray(editorialDocRes.value.data.data) && editorialDocRes.value.data.data.length > 0) {
+          db.editorialDesk = editorialDocRes.value.data.data.map((e: any) => {
+            if (e.id === 'ed-1' || e.name === 'Ajayi Odunayo' || e.name === 'Ajayi odunayo' || e.name === 'Chidubem Okechukwu') {
+              return { ...e, name: 'Habbey Tech Solutions' };
+            }
+            return e;
+          });
         }
 
         saveLocalDb(db);
