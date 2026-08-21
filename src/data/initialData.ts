@@ -368,6 +368,15 @@ export const INITIAL_SETTINGS: WebsiteSettings = {
     parallelRate: '₦1,510.00',
     petrolPrice: '₦895 / L',
     inflationRate: '22.8%'
+  },
+  editorialCorrespondent: {
+    correspondentName: 'Habbey Tech Solutions',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+    role: 'NaijaTrendiInfo Editorial Correspondent',
+    department: 'News Bureau & Correspondents',
+    email: 'editor@naijatrendinfo.com.ng',
+    phone: '+234 813 773 1088',
+    bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.'
   }
 };
 
@@ -405,7 +414,7 @@ export const INITIAL_PAGES = [
     seoTitle: 'About Us | NaijaTrendiInfo - Nigeria News Platform',
     seoDescription: 'NaijaTrendiInfo is Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, and investigative journalism.',
     seoKeywords: 'NaijaTrendiInfo, About Us, Nigerian News, Lagos Bureau, Abuja Bureau, Investigative Journalism',
-    authorName: 'Ajayi Odunayo',
+    authorName: 'Habbey Tech Solutions',
     status: 'published',
     visibility: 'public',
     navigationPlacement: 'footer',
@@ -437,7 +446,7 @@ export const INITIAL_PAGES = [
     seoTitle: 'Editorial Desk & Leadership | NaijaTrendiInfo',
     seoDescription: 'Discover the editors and correspondents powering truth and investigative reporting at NaijaTrendiInfo.',
     seoKeywords: 'Editorial Desk, Nigerian Journalists, Managing Editor, Lagos Newsroom, Abuja Bureau',
-    authorName: 'Ajayi Odunayo',
+    authorName: 'Habbey Tech Solutions',
     status: 'published',
     visibility: 'public',
     navigationPlacement: 'footer',

@@ -21,7 +21,8 @@ import {
   FooterSettings,
   AdvertisingPackage,
   SitePage,
-  WebsiteAnalyticsData
+  WebsiteAnalyticsData,
+  EditorialCorrespondentSettings
 } from '../types';
 import {
   INITIAL_CATEGORIES,
@@ -1471,7 +1472,7 @@ export const api = {
     const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
     try {
       const sbAds = await getDocFromSupabase<Ad[]>('ads');
-      if (Array.isArray(sbAds) && sbAds.length > 0) {
+      if (Array.isArray(sbAds)) {
         const clean = sbAds.filter((a) => !deletedAdIds.has(a.id));
         setLocalData('naija_ads', clean);
         return clean;
@@ -1479,7 +1480,7 @@ export const api = {
     } catch (e) {}
 
     try {
-      const serverAds = await fetchJson<Ad[]>('/api/ads');
+      const serverAds = await fetchJson<Ad[]>(`/api/ads?_t=${Date.now()}`);
       if (Array.isArray(serverAds)) {
         const clean = serverAds.filter((a) => !deletedAdIds.has(a.id));
         setLocalData('naija_ads', clean);
@@ -1489,15 +1490,20 @@ export const api = {
       console.warn('Serving ads from local cache:', e);
     }
 
-    const localAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS);
+    const localAds = getLocalData<Ad[]>('naija_ads', []);
     return localAds.filter((a) => !deletedAdIds.has(a.id));
   },
 
   createAd: async (ad: Partial<Ad>) => {
     const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
-    const ads = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+    const newId = ad.id || `ad-${Date.now()}`;
+    if (deletedAdIds.has(newId)) {
+      deletedAdIds.delete(newId);
+      setLocalData('naija_deleted_ads', Array.from(deletedAdIds));
+    }
+    const ads = getLocalData<Ad[]>('naija_ads', []).filter((a) => !deletedAdIds.has(a.id));
     const newAd: Ad = {
-      id: ad.id || `ad-${Date.now()}`,
+      id: newId,
       name: ad.name || 'New Sponsor Ad',
       type: ad.type || 'custom',
       bannerUrl: ad.bannerUrl || '',
@@ -1526,7 +1532,7 @@ export const api = {
 
   updateAd: async (id: string, ad: Partial<Ad>) => {
     const deletedAdIds = new Set(getLocalData<string[]>('naija_deleted_ads', []));
-    const ads = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+    const ads = getLocalData<Ad[]>('naija_ads', []).filter((a) => !deletedAdIds.has(a.id));
     let updatedAd: Ad | null = null;
     const updated = ads.map((a) => {
       if (a.id === id) {
@@ -1556,13 +1562,14 @@ export const api = {
     setLocalData('naija_deleted_ads', Array.from(deletedAdIds));
 
     // 2. Remove immediately from local storage
-    const ads = getLocalData<Ad[]>('naija_ads', INITIAL_ADS);
+    const ads = getLocalData<Ad[]>('naija_ads', []);
     const updated = ads.filter((a) => a.id !== id);
     setLocalData('naija_ads', updated);
 
     // 3. Delete from Supabase document store & relational tables if applicable
     try {
       await setDocInSupabase('ads', updated);
+      await setDocInSupabase('deletedAds', Array.from(deletedAdIds));
       const sb = getClientSupabase();
       if (sb) {
         try {
@@ -2544,6 +2551,95 @@ export const api = {
     } catch (e) {}
 
     return { success: true, id, message: 'Editorial profile deleted successfully' };
+  },
+
+  getEditorialCorrespondent: async () => {
+    try {
+      const serverCorr = await fetchJson<EditorialCorrespondentSettings>(`/api/editorial-correspondent?_t=${Date.now()}`);
+      if (serverCorr && serverCorr.correspondentName) {
+        setLocalData('naija_editorial_correspondent', serverCorr);
+        return serverCorr;
+      }
+    } catch (e) {
+      console.warn('Serving editorial correspondent from local cache:', e);
+    }
+
+    const cached = getLocalData<EditorialCorrespondentSettings | null>('naija_editorial_correspondent', null);
+    if (cached) return cached;
+
+    const settings = getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS);
+    return settings.editorialCorrespondent || {
+      correspondentName: 'Habbey Tech Solutions',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+      role: 'NaijaTrendiInfo Editorial Correspondent',
+      department: 'News Bureau & Correspondents',
+      email: 'editor@naijatrendinfo.com.ng',
+      phone: '+234 813 773 1088',
+      bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.'
+    };
+  },
+
+  updateEditorialCorrespondent: async (payload: Partial<EditorialCorrespondentSettings>) => {
+    const current = await api.getEditorialCorrespondent();
+    const updated: EditorialCorrespondentSettings = {
+      ...current,
+      ...payload,
+      correspondentName: (payload.correspondentName || current.correspondentName || 'Habbey Tech Solutions').trim(),
+      avatarUrl: payload.avatarUrl !== undefined ? payload.avatarUrl : current.avatarUrl,
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Store in local storage
+    setLocalData('naija_editorial_correspondent', updated);
+
+    // 2. Also update settings locally & in Supabase
+    const settings = getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS);
+    settings.editorialCorrespondent = updated;
+    setLocalData('naija_settings', settings);
+    setDocInSupabase('settings', settings).catch(() => {});
+
+    // 3. Also update editorialDesk entry locally & in Supabase
+    const edList = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK);
+    const edIndex = edList.findIndex((e) => e.id === 'ed-1' || (e.role && e.role.includes('Correspondent')));
+    if (edIndex !== -1) {
+      edList[edIndex] = {
+        ...edList[edIndex],
+        name: updated.correspondentName,
+        photoUrl: updated.avatarUrl,
+        role: updated.role,
+        department: updated.department,
+        email: updated.email,
+        phone: updated.phone,
+        bio: updated.bio
+      };
+    } else {
+      edList.unshift({
+        id: 'ed-1',
+        name: updated.correspondentName,
+        photoUrl: updated.avatarUrl,
+        role: updated.role,
+        department: updated.department,
+        email: updated.email,
+        phone: updated.phone,
+        bio: updated.bio,
+        isActive: true,
+        order: 1
+      });
+    }
+    setLocalData('naija_editorial_desk', edList);
+    setDocInSupabase('editorialDesk', edList).catch(() => {});
+
+    // 4. Update on server
+    try {
+      const res = await fetchJson<{ success: boolean; data: EditorialCorrespondentSettings; message?: string }>('/api/editorial-correspondent', {
+        method: 'PUT',
+        body: JSON.stringify(updated)
+      });
+      return res.data || updated;
+    } catch (e) {
+      console.warn('Backend correspondent update notice:', e);
+      return updated;
+    }
   },
 
   getInformation: async () => {

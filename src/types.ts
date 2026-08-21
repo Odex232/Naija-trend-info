@@ -330,6 +330,17 @@ export interface ContactPageSettings {
   newsTipBannerText?: string;
 }
 
+export interface EditorialCorrespondentSettings {
+  correspondentName: string;
+  avatarUrl: string;
+  role: string;
+  department: string;
+  email: string;
+  phone?: string;
+  bio?: string;
+  updatedAt?: string;
+}
+
 export interface WebsiteSettings {
   siteName: string;
   siteDescription: string;
@@ -348,6 +359,7 @@ export interface WebsiteSettings {
   economicIndex?: EconomicIndexSettings;
   sportsHub?: SportsHubSettings;
   contactPage?: ContactPageSettings;
+  editorialCorrespondent?: EditorialCorrespondentSettings;
 }
 
 export interface AuditLog {

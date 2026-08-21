@@ -1718,19 +1718,152 @@ export const dbAdapter = {
     return { success: true, message: 'Password updated successfully! Synchronized across all browsers and devices.', user };
   },
 
+  // Editorial Correspondent & Avatar Management
+  getEditorialCorrespondent: async () => {
+    const db = getLocalDb();
+    let corr = db.settings?.editorialCorrespondent;
+    if (!corr) {
+      const lead = (db.editorialDesk || []).find((e: any) => e.id === 'ed-1' || (e.role && e.role.includes('Correspondent')));
+      corr = {
+        correspondentName: lead?.name || 'Habbey Tech Solutions',
+        avatarUrl: lead?.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        role: lead?.role || 'NaijaTrendiInfo Editorial Correspondent',
+        department: lead?.department || 'News Bureau & Correspondents',
+        email: lead?.email || 'editor@naijatrendinfo.com.ng',
+        phone: lead?.phone || '+234 813 773 1088',
+        bio: lead?.bio || 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.'
+      };
+    }
+    return corr;
+  },
+
+  updateEditorialCorrespondent: async (payload: any) => {
+    const db = getLocalDb();
+    const updatedCorr = {
+      correspondentName: (payload.correspondentName || payload.name || 'Habbey Tech Solutions').trim(),
+      avatarUrl: payload.avatarUrl || payload.photoUrl || '',
+      role: (payload.role || 'NaijaTrendiInfo Editorial Correspondent').trim(),
+      department: (payload.department || 'News Bureau & Correspondents').trim(),
+      email: (payload.email || 'editor@naijatrendinfo.com.ng').trim(),
+      phone: (payload.phone || '+234 813 773 1088').trim(),
+      bio: (payload.bio || '').trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!db.settings) db.settings = {};
+    db.settings.editorialCorrespondent = updatedCorr;
+
+    if (Array.isArray(db.editorialDesk)) {
+      const leadIndex = db.editorialDesk.findIndex((e: any) => e.id === 'ed-1' || (e.role && e.role.includes('Correspondent')));
+      if (leadIndex !== -1) {
+        db.editorialDesk[leadIndex] = {
+          ...db.editorialDesk[leadIndex],
+          name: updatedCorr.correspondentName,
+          photoUrl: updatedCorr.avatarUrl,
+          role: updatedCorr.role,
+          department: updatedCorr.department,
+          email: updatedCorr.email,
+          phone: updatedCorr.phone,
+          bio: updatedCorr.bio
+        };
+      } else {
+        db.editorialDesk.unshift({
+          id: 'ed-1',
+          name: updatedCorr.correspondentName,
+          photoUrl: updatedCorr.avatarUrl,
+          role: updatedCorr.role,
+          department: updatedCorr.department,
+          email: updatedCorr.email,
+          phone: updatedCorr.phone,
+          bio: updatedCorr.bio,
+          isActive: true,
+          order: 1
+        });
+      }
+    }
+
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'settings',
+          data: db.settings,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        await client.from('supabase_document_store').upsert({
+          key: 'editorialDesk',
+          data: db.editorialDesk,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e: any) {
+        console.warn('Supabase updateEditorialCorrespondent notice:', e.message);
+      }
+    }
+
+    return updatedCorr;
+  },
+
+  // Ads Management with Permanent Deletion
+  getAds: async () => {
+    const db = getLocalDb();
+    const deletedAdSet = new Set<string>(db.deletedAds || []);
+    return (db.ads || []).filter((a: any) => !deletedAdSet.has(a.id));
+  },
+
+  deleteAd: async (id: string) => {
+    const db = getLocalDb();
+    if (!db.deletedAds) db.deletedAds = [];
+    if (!db.deletedAds.includes(id)) db.deletedAds.push(id);
+    db.ads = (db.ads || []).filter((a: any) => a.id !== id);
+    if (Array.isArray(db.adPlacements)) {
+      db.adPlacements.forEach((p: any) => {
+        if (p.adId === id) delete p.adId;
+      });
+    }
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'ads',
+          data: db.ads,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+        await client.from('supabase_document_store').upsert({
+          key: 'deletedAds',
+          data: db.deletedAds,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+        try {
+          await client.from('ads').delete().eq('id', id);
+        } catch {}
+      } catch (e: any) {
+        console.warn('Supabase deleteAd notice:', e.message);
+      }
+    }
+
+    return { success: true, id, message: 'Ad campaign permanently deleted successfully' };
+  },
+
   // Bootstrap (Returns hydrated unified dataset)
   getBootstrapData: async () => {
     const db = getLocalDb();
     const deletedSet = new Set<string>(db.deletedArticles || []);
     const deletedFixtureSet = new Set<string>(db.deletedSportsFixtures || []);
+    const deletedAdSet = new Set<string>(db.deletedAds || []);
     const client = getSupabaseClient();
 
     if (client) {
       try {
         // Fetch remote deleted lists to ensure perfect cross-device sync
-        const [delArticlesDoc, delFixturesDoc] = await Promise.allSettled([
+        const [delArticlesDoc, delFixturesDoc, delAdsDoc] = await Promise.allSettled([
           client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle(),
-          client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle()
+          client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'deletedAds').maybeSingle()
         ]);
 
         if (delArticlesDoc.status === 'fulfilled' && delArticlesDoc.value.data && Array.isArray(delArticlesDoc.value.data.data)) {
@@ -1749,15 +1882,25 @@ export const dbAdapter = {
           });
         }
 
+        if (delAdsDoc.status === 'fulfilled' && delAdsDoc.value.data && Array.isArray(delAdsDoc.value.data.data)) {
+          delAdsDoc.value.data.data.forEach((id: string) => {
+            deletedAdSet.add(id);
+            if (!db.deletedAds) db.deletedAds = [];
+            if (!db.deletedAds.includes(id)) db.deletedAds.push(id);
+          });
+        }
+
         // Hydrate from Supabase tables & document store
-        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes] = await Promise.allSettled([
+        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes, adsDocRes, placementsDocRes] = await Promise.allSettled([
           client.from('articles').select('*').order('published_at', { ascending: false }),
           client.from('categories').select('*').order('display_order', { ascending: true }),
           client.from('breaking_news').select('*').order('created_at', { ascending: false }),
           client.from('site_settings').select('data').eq('id', 'default').single(),
           client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle(),
           client.from('supabase_document_store').select('data').eq('key', 'users').maybeSingle(),
-          client.from('supabase_document_store').select('data').eq('key', 'editorialDesk').maybeSingle()
+          client.from('supabase_document_store').select('data').eq('key', 'editorialDesk').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'ads').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'adPlacements').maybeSingle()
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
@@ -1777,7 +1920,7 @@ export const dbAdapter = {
               imageCredit: row.image_credit,
               galleryImages: row.gallery_images || [],
               authorId: row.author_id,
-              authorName: row.author_name,
+              authorName: row.author_name || 'Habbey Tech Solutions',
               authorAvatar: row.author_avatar,
               status: row.status,
               isFeatured: row.is_featured,
@@ -1840,6 +1983,14 @@ export const dbAdapter = {
           });
         }
 
+        if (adsDocRes.status === 'fulfilled' && adsDocRes.value.data && Array.isArray(adsDocRes.value.data.data)) {
+          db.ads = adsDocRes.value.data.data.filter((a: any) => !deletedAdSet.has(a.id));
+        }
+
+        if (placementsDocRes.status === 'fulfilled' && placementsDocRes.value.data && Array.isArray(placementsDocRes.value.data.data)) {
+          db.adPlacements = placementsDocRes.value.data.data;
+        }
+
         saveLocalDb(db);
       } catch (e) {
         console.warn('Bootstrap hydration notice from Supabase:', e);
@@ -1848,6 +1999,7 @@ export const dbAdapter = {
 
     db.articles = (db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug));
     db.sportsFixtures = (db.sportsFixtures || []).filter((f: any) => !deletedFixtureSet.has(f.id));
+    db.ads = (db.ads || []).filter((a: any) => !deletedAdSet.has(a.id));
     return db;
   }
 };

@@ -219,6 +219,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Media Drag Upload State
   const [uploading, setUploading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingCorrespondent, setSavingCorrespondent] = useState(false);
+  const [correspondentDraft, setCorrespondentDraft] = useState(() => ({
+    name: settings.editorialCorrespondent?.correspondentName || 'Habbey Tech Solutions',
+    avatarUrl: settings.editorialCorrespondent?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+    role: settings.editorialCorrespondent?.role || 'NaijaTrendiInfo Editorial Correspondent',
+    department: settings.editorialCorrespondent?.department || 'News Bureau & Correspondents',
+    email: settings.editorialCorrespondent?.email || 'editor@naijatrendinfo.com.ng',
+    phone: settings.editorialCorrespondent?.phone || '+234 813 773 1088',
+    bio: settings.editorialCorrespondent?.bio || 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.'
+  }));
 
   // Cloud Sync & Multi-Browser Cross-Device Connectivity State
   const [syncingCloud, setSyncingCloud] = useState(false);
@@ -357,6 +368,55 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     }
   };
 
+  // Save Editorial Correspondent Dedicated Profile
+  const handleSaveEditorialCorrespondentDirect = async () => {
+    if (!correspondentDraft.name?.trim()) {
+      triggerErrorNotification('Correspondent Name is required.');
+      return;
+    }
+    setSavingCorrespondent(true);
+    try {
+      await api.updateEditorialCorrespondent({
+        correspondentName: correspondentDraft.name.trim(),
+        avatarUrl: correspondentDraft.avatarUrl?.trim() || '',
+        role: correspondentDraft.role?.trim() || 'NaijaTrendiInfo Editorial Correspondent',
+        department: correspondentDraft.department?.trim() || 'News Bureau & Correspondents',
+        email: correspondentDraft.email?.trim() || 'editor@naijatrendinfo.com.ng',
+        phone: correspondentDraft.phone?.trim() || '+234 813 773 1088',
+        bio: correspondentDraft.bio?.trim() || ''
+      });
+      triggerSuccessNotification('Editorial Correspondent name, avatar & profile permanently saved and synchronized across all devices!');
+      await onRefreshData();
+    } catch (e: any) {
+      console.error('Failed to update correspondent profile:', e);
+      triggerErrorNotification(e.message || 'Failed to save Editorial Correspondent settings');
+    } finally {
+      setSavingCorrespondent(false);
+    }
+  };
+
+  // Avatar Upload Handler for Editorial Correspondent / Member
+  const handleEditorialAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>, isModal: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const uploaded = await api.uploadMedia(file);
+      if (uploaded?.url) {
+        if (isModal && editingEditorialEntry) {
+          setEditingEditorialEntry({ ...editingEditorialEntry, photoUrl: uploaded.url });
+        } else {
+          setCorrespondentDraft((prev) => ({ ...prev, avatarUrl: uploaded.url }));
+        }
+        triggerSuccessNotification('Avatar photo uploaded successfully! Click Save to confirm changes.');
+      }
+    } catch (err: any) {
+      triggerErrorNotification(err.message || 'Avatar image upload failed');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   // Save Editorial Desk Entry
   const handleSaveEditorialEntry = async () => {
     if (!editingEditorialEntry?.name?.trim() || !editingEditorialEntry?.department?.trim()) {
@@ -385,6 +445,31 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         updatedList = [...editorialDesk, newEntry];
       }
       await api.updateEditorialDesk(updatedList);
+
+      const isCorrespondent = editingEditorialEntry.id === 'ed-1' ||
+        (editingEditorialEntry.role && editingEditorialEntry.role.toLowerCase().includes('correspondent')) ||
+        (editingEditorialEntry.name && editingEditorialEntry.name.toLowerCase().includes('habbey'));
+
+      if (isCorrespondent) {
+        try {
+          await api.updateEditorialCorrespondent({
+            correspondentName: editingEditorialEntry.name.trim(),
+            avatarUrl: editingEditorialEntry.photoUrl?.trim() || '',
+            role: editingEditorialEntry.role?.trim() || 'NaijaTrendiInfo Editorial Correspondent',
+            department: editingEditorialEntry.department.trim(),
+            email: editingEditorialEntry.email?.trim() || 'editor@naijatrendinfo.com.ng',
+            phone: editingEditorialEntry.phone?.trim() || '',
+            bio: editingEditorialEntry.bio?.trim() || ''
+          });
+          setCorrespondentDraft((prev) => ({
+            ...prev,
+            name: editingEditorialEntry.name!.trim(),
+            avatarUrl: editingEditorialEntry.photoUrl?.trim() || prev.avatarUrl,
+            role: editingEditorialEntry.role?.trim() || prev.role
+          }));
+        } catch (err) {}
+      }
+
       triggerSuccessNotification('Editorial Desk profile saved & published successfully!');
       setEditingEditorialEntry(null);
       await onRefreshData();
@@ -4346,114 +4431,358 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
           {/* TAB 12.8: EDITORIAL DESK & LEADERSHIP MANAGEMENT */}
           {activeTab === 'editorial' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold font-serif text-white flex items-center gap-2">
-                    <Newspaper className="w-6 h-6 text-emerald-400" />
-                    <span>Editorial Desk, Leadership & Correspondents</span>
-                  </h1>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Manage Executive Editors, Managing Editors, Editorial Correspondents, Bureau Chiefs, and Desk Editors displayed on the public site's Editorial Desk page.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() =>
-                      setEditingEditorialEntry({
-                        department: 'News Bureau & Correspondents',
-                        name: 'Habbey Tech Solutions',
-                        role: 'NaijaTrendiInfo Editorial Correspondent',
-                        email: 'editor@naijatrendinfo.com.ng',
-                        phone: '+234 813 773 1088',
-                        bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.',
-                        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
-                        isActive: true
-                      })
-                    }
-                    className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-800/60 font-semibold text-xs px-3.5 py-2.5 rounded-xl flex items-center space-x-1.5 shrink-0 cursor-pointer transition-colors shadow-sm"
-                    title="Quickly add or customize NaijaTrendiInfo Editorial Correspondent profile"
-                  >
-                    <UserCheck className="w-4 h-4 text-emerald-400" />
-                    <span>+ Add Editorial Correspondent</span>
-                  </button>
-                  <button
-                    onClick={() =>
-                      setEditingEditorialEntry({
-                        department: 'Editorial Desk',
-                        name: '',
-                        role: 'Editor',
-                        email: 'editor@naijatrendinfo.com.ng',
-                        phone: '',
-                        bio: '',
-                        photoUrl: '',
-                        isActive: true
-                      })
-                    }
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shrink-0 cursor-pointer shadow-md"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Editorial Member</span>
-                  </button>
+            <div className="space-y-8">
+              {/* Top Banner: NaijaTrendiInfo Editorial Correspondent Byline & Avatar Master Profile */}
+              <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-800/60 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="relative z-10 space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-emerald-900/50">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                          Primary Byline Identity
+                        </span>
+                        <span className="flex items-center space-x-1 text-emerald-400 text-xs font-semibold">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Cross-Device Cloud Synced</span>
+                        </span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold font-serif text-white mt-1.5 flex items-center gap-2">
+                        <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                        <span>NaijaTrendiInfo Editorial Correspondent Settings</span>
+                      </h2>
+                      <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+                        Configure the default editorial correspondent byline, name, and author avatar displayed across all articles, editorial bureau pages, and public metadata.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={savingCorrespondent}
+                        onClick={handleSaveEditorialCorrespondentDirect}
+                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center space-x-2 cursor-pointer shadow-lg shadow-emerald-900/30 transition-all disabled:opacity-50"
+                      >
+                        {savingCorrespondent ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            <span>Publishing & Syncing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                            <span>Save & Publish Correspondent</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Avatar Upload & Preview Section */}
+                    <div className="lg:col-span-4 bg-slate-950/70 border border-slate-800/80 rounded-2xl p-5 flex flex-col items-center text-center space-y-4">
+                      <div className="relative group">
+                        <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-emerald-500/30 overflow-hidden bg-slate-800 flex items-center justify-center text-emerald-400 text-3xl font-bold shadow-xl">
+                          {correspondentDraft.avatarUrl ? (
+                            <img
+                              src={correspondentDraft.avatarUrl}
+                              alt={correspondentDraft.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            correspondentDraft.name?.charAt(0) || 'H'
+                          )}
+                        </div>
+                        
+                        {uploadingAvatar && (
+                          <div className="absolute inset-0 rounded-full bg-slate-950/70 flex flex-col items-center justify-center text-emerald-400">
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <span className="text-[10px] mt-1 font-bold">Uploading...</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="w-full space-y-2">
+                        <label className="block text-xs font-bold text-white">Correspondent Photo / Avatar</label>
+                        <p className="text-[11px] text-slate-400">Upload a high-resolution portrait or corporate logo (PNG, JPG, WebP)</p>
+                        
+                        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                          <label className="w-full sm:w-auto px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 cursor-pointer transition-colors">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Upload Avatar</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploadingAvatar}
+                              onChange={(e) => handleEditorialAvatarUpload(e, false)}
+                            />
+                          </label>
+
+                          {correspondentDraft.avatarUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setCorrespondentDraft((prev) => ({ ...prev, avatarUrl: '' }))}
+                              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quick Avatar Presets */}
+                      <div className="w-full pt-3 border-t border-slate-800 text-left">
+                        <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-2">Preset Avatars</label>
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                          {[
+                            { name: 'Avatar 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250' },
+                            { name: 'Avatar 2', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250' },
+                            { name: 'Avatar 3', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250' },
+                            { name: 'Avatar 4', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250' }
+                          ].map((p, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setCorrespondentDraft((prev) => ({ ...prev, avatarUrl: p.url }))}
+                              className="w-8 h-8 rounded-full border border-slate-700 hover:border-emerald-400 overflow-hidden cursor-pointer shrink-0 transition-transform hover:scale-105"
+                              title={p.name}
+                            >
+                              <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Correspondent Details Form */}
+                    <div className="lg:col-span-8 bg-slate-950/70 border border-slate-800/80 rounded-2xl p-5 space-y-4 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 font-bold mb-1">
+                            Default Editorial Correspondent Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={correspondentDraft.name}
+                            onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, name: e.target.value })}
+                            placeholder="e.g. Habbey Tech Solutions"
+                            className="w-full bg-slate-900 text-white font-bold px-3.5 py-2.5 rounded-xl border border-emerald-700/60 focus:border-emerald-500 outline-none text-sm"
+                          />
+                          <p className="text-[10px] text-emerald-400 mt-1">Default: Habbey Tech Solutions (Synchronized across all browsers)</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-bold mb-1">
+                            Official Role / Title
+                          </label>
+                          <input
+                            type="text"
+                            value={correspondentDraft.role}
+                            onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, role: e.target.value })}
+                            placeholder="e.g. NaijaTrendiInfo Editorial Correspondent"
+                            className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-800 focus:border-emerald-500 outline-none text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 font-bold mb-1">Bureau / Department</label>
+                          <input
+                            type="text"
+                            value={correspondentDraft.department}
+                            onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, department: e.target.value })}
+                            placeholder="News Bureau & Correspondents"
+                            className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-800 focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-bold mb-1">Direct Editorial Email</label>
+                          <input
+                            type="email"
+                            value={correspondentDraft.email}
+                            onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, email: e.target.value })}
+                            placeholder="editor@naijatrendinfo.com.ng"
+                            className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-800 focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 font-bold mb-1">Direct Phone / Hotline</label>
+                          <input
+                            type="text"
+                            value={correspondentDraft.phone}
+                            onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, phone: e.target.value })}
+                            placeholder="+234 813 773 1088"
+                            className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-800 focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-bold mb-1">Avatar Image URL (Direct Link)</label>
+                          <input
+                            type="text"
+                            value={correspondentDraft.avatarUrl}
+                            onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, avatarUrl: e.target.value })}
+                            placeholder="https://..."
+                            className="w-full bg-slate-900 text-white font-mono px-3.5 py-2.5 rounded-xl border border-slate-800 focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-bold mb-1">Correspondent Biography / Editorial Statement</label>
+                        <textarea
+                          rows={2}
+                          value={correspondentDraft.bio}
+                          onChange={(e) => setCorrespondentDraft({ ...correspondentDraft, bio: e.target.value })}
+                          placeholder="Veteran newsroom correspondent and investigative journalist covering national breaking news..."
+                          className="w-full bg-slate-900 text-white px-3.5 py-2.5 rounded-xl border border-slate-800 focus:border-emerald-500 outline-none leading-relaxed"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCorrespondentDraft({
+                              name: 'Habbey Tech Solutions',
+                              avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+                              role: 'NaijaTrendiInfo Editorial Correspondent',
+                              department: 'News Bureau & Correspondents',
+                              email: 'editor@naijatrendinfo.com.ng',
+                              phone: '+234 813 773 1088',
+                              bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.'
+                            })
+                          }
+                          className="text-xs text-slate-400 hover:text-emerald-400 underline cursor-pointer"
+                        >
+                          Restore Habbey Tech Solutions Default Profile
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={savingCorrespondent}
+                          onClick={handleSaveEditorialCorrespondentDirect}
+                          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center space-x-2 cursor-pointer shadow-md disabled:opacity-50"
+                        >
+                          {savingCorrespondent ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-200" />
+                              <span>Save & Publish Profile</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {editorialDesk.map((ed) => (
-                  <div key={ed.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative group shadow-lg">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold overflow-hidden shrink-0">
-                          {ed.photoUrl ? (
-                            <img src={ed.photoUrl} alt={ed.name} className="w-full h-full object-cover" />
-                          ) : (
-                            ed.name.charAt(0)
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
-                            {ed.department}
-                          </span>
-                          <h3 className="font-bold text-white text-base mt-1">{ed.name}</h3>
-                          <p className="text-xs text-slate-300 font-medium">{ed.role}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setEditingEditorialEntry(ed)}
-                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors cursor-pointer"
-                          title="Edit Editorial Profile"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          disabled={deletingId === ed.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteEditorialEntry(ed.id, ed.name);
-                          }}
-                          className="p-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
-                          title="Delete Editorial Profile"
-                        >
-                          {deletingId === ed.id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-slate-400 space-y-1 pt-2 border-t border-slate-800">
-                      <div><strong className="text-slate-300">Email:</strong> {ed.email}</div>
-                      {ed.phone && <div><strong className="text-slate-300">Phone:</strong> {ed.phone}</div>}
-                      {ed.bio && <p className="text-slate-300 italic pt-1 leading-relaxed">"{ed.bio}"</p>}
-                    </div>
+              {/* Lower Section: Full Editorial Desk, Leadership & Bureau Directory */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold font-serif text-white flex items-center gap-2">
+                      <Newspaper className="w-5 h-5 text-emerald-400" />
+                      <span>Editorial Board, Leadership & Bureau Members</span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      All active editors and correspondents listed in the public Editorial Desk directory.
+                    </p>
                   </div>
-                ))}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setEditingEditorialEntry({
+                          department: 'Editorial Desk',
+                          name: '',
+                          role: 'Editor',
+                          email: 'editor@naijatrendinfo.com.ng',
+                          phone: '',
+                          bio: '',
+                          photoUrl: '',
+                          isActive: true
+                        })
+                      }
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shrink-0 cursor-pointer shadow-md"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Editorial Member</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {editorialDesk.map((ed) => (
+                    <div key={ed.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative group shadow-lg hover:border-slate-700 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold overflow-hidden shrink-0">
+                            {ed.photoUrl ? (
+                              <img src={ed.photoUrl} alt={ed.name} className="w-full h-full object-cover" />
+                            ) : (
+                              ed.name.charAt(0)
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                              {ed.department}
+                            </span>
+                            <h3 className="font-bold text-white text-base mt-1">{ed.name}</h3>
+                            <p className="text-xs text-slate-300 font-medium">{ed.role}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setEditingEditorialEntry(ed)}
+                            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors cursor-pointer"
+                            title="Edit Editorial Profile"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            disabled={deletingId === ed.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEditorialEntry(ed.id, ed.name);
+                            }}
+                            className="p-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                            title="Delete Editorial Profile"
+                          >
+                            {deletingId === ed.id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-400 space-y-1 pt-2 border-t border-slate-800">
+                        <div><strong className="text-slate-300">Email:</strong> {ed.email}</div>
+                        {ed.phone && <div><strong className="text-slate-300">Phone:</strong> {ed.phone}</div>}
+                        {ed.bio && <p className="text-slate-300 italic pt-1 leading-relaxed">"{ed.bio}"</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Modal Dialog for Editing or Creating Editorial Desk Entry */}
               {editingEditorialEntry && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-                  <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 text-xs">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+                  <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 text-xs my-8">
                     <div className="flex justify-between items-center pb-3 border-b border-slate-800">
                       <h3 className="text-base font-bold text-white font-serif">
                         {editingEditorialEntry.id ? 'Edit Editorial Desk Member' : 'Add New Editorial Leader'}
@@ -4463,7 +4792,43 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </button>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Avatar Image Uploader in Modal */}
+                      <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center space-x-4">
+                        <div className="w-14 h-14 rounded-full ring-2 ring-emerald-500/40 bg-slate-800 flex items-center justify-center text-emerald-400 font-bold overflow-hidden shrink-0">
+                          {editingEditorialEntry.photoUrl ? (
+                            <img src={editingEditorialEntry.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            editingEditorialEntry.name?.charAt(0) || 'E'
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-1.5">
+                          <label className="block text-slate-200 font-bold">Profile Photo / Avatar</label>
+                          <div className="flex items-center gap-2">
+                            <label className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center space-x-1.5 cursor-pointer">
+                              {uploadingAvatar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                              <span>{uploadingAvatar ? 'Uploading...' : 'Upload Image'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploadingAvatar}
+                                onChange={(e) => handleEditorialAvatarUpload(e, true)}
+                              />
+                            </label>
+                            {editingEditorialEntry.photoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setEditingEditorialEntry({ ...editingEditorialEntry, photoUrl: '' })}
+                                className="px-2.5 py-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
                         <input

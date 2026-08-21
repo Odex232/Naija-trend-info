@@ -597,41 +597,78 @@ async function startServer() {
 
   // Ads & Placements
   app.get('/api/ads', (req, res) => {
-    res.json(db.ads || []);
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    const deletedSet = new Set<string>(db.deletedAds || []);
+    const activeAds = (db.ads || []).filter((a: any) => !deletedSet.has(a.id));
+    res.json(activeAds);
   });
 
-  app.post('/api/ads', (req, res) => {
+  app.post('/api/ads', requireAdminAuth, async (req, res) => {
     const ad = req.body;
-    ad.id = 'ad-' + Date.now();
+    ad.id = ad.id || ('ad-' + Date.now());
     ad.impressions = ad.impressions || 0;
     ad.clicks = ad.clicks || 0;
     ad.isActive = ad.isActive !== false;
 
+    if (!db.ads) db.ads = [];
+    if (db.deletedAds) {
+      db.deletedAds = db.deletedAds.filter((id: string) => id !== ad.id);
+    }
     db.ads.push(ad);
     saveDatabase();
-    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Ad Created', `Created advertisement campaign "${ad.name}"`, 'Ads Manager');
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'ads',
+          data: db.ads,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e) {}
+    }
+
+    addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Ad Created', `Created advertisement campaign "${ad.name}"`, 'Ads Manager');
     res.json(ad);
   });
 
-  app.put('/api/ads/:id', (req, res) => {
+  app.put('/api/ads/:id', requireAdminAuth, async (req, res) => {
     const { id } = req.params;
-    const index = db.ads.findIndex((a: any) => a.id === id);
+    const index = (db.ads || []).findIndex((a: any) => a.id === id);
     if (index !== -1) {
       db.ads[index] = { ...db.ads[index], ...req.body };
       saveDatabase();
-      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Ad Updated', `Updated advertisement "${db.ads[index].name}"`, 'Ads Manager');
+      const client = getSupabaseClient();
+      if (client) {
+        try {
+          await client.from('supabase_document_store').upsert({
+            key: 'ads',
+            data: db.ads,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'key' });
+        } catch (e) {}
+      }
+      addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Ad Updated', `Updated advertisement "${db.ads[index].name}"`, 'Ads Manager');
       return res.json(db.ads[index]);
     }
     res.status(404).json({ message: 'Ad not found' });
   });
 
-  app.delete('/api/ads/:id', requireAdminAuth, (req, res) => {
+  app.delete('/api/ads/:id', requireAdminAuth, async (req, res) => {
     const { id } = req.params;
-    const initialLen = (db.ads || []).length;
-    db.ads = (db.ads || []).filter((a: any) => a.id !== id);
-    saveDatabase();
-    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Ad Deleted', `Deleted ad campaign ID ${id}`, 'Ads Manager');
-    res.json({ success: true, message: 'Ad campaign deleted successfully', id });
+    try {
+      const result = await dbAdapter.deleteAd(id);
+      addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Ad Deleted', `Permanently deleted ad campaign ID ${id}`, 'Ads Manager');
+      res.json(result);
+    } catch (e: any) {
+      db.ads = (db.ads || []).filter((a: any) => a.id !== id);
+      if (!db.deletedAds) db.deletedAds = [];
+      if (!db.deletedAds.includes(id)) db.deletedAds.push(id);
+      saveDatabase();
+      res.json({ success: true, message: 'Ad campaign deleted successfully', id });
+    }
   });
 
   app.post('/api/ads/:id/track', (req, res) => {
@@ -1383,6 +1420,37 @@ function isBlockedFileType(filename: string): boolean {
     res.json(db.advertisingPackages);
   });
 
+  // Editorial Correspondent Settings (Single source of truth for byline and correspondent profile)
+  app.get('/api/editorial-correspondent', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    try {
+      const corr = await dbAdapter.getEditorialCorrespondent();
+      res.json(corr);
+    } catch (e) {
+      res.json(db.settings?.editorialCorrespondent || {
+        correspondentName: 'Habbey Tech Solutions',
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        role: 'NaijaTrendiInfo Editorial Correspondent',
+        department: 'News Bureau & Correspondents',
+        email: 'editor@naijatrendinfo.com.ng',
+        phone: '+234 813 773 1088',
+        bio: 'Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.'
+      });
+    }
+  });
+
+  app.put('/api/editorial-correspondent', requireAdminAuth, async (req, res) => {
+    try {
+      const updated = await dbAdapter.updateEditorialCorrespondent(req.body);
+      addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Correspondent Updated', `Updated Editorial Correspondent profile for "${updated.correspondentName}"`, 'Editorial Desk');
+      res.json({ success: true, message: 'Editorial Correspondent profile and avatar updated permanently!', data: updated });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message || 'Failed to update Editorial Correspondent settings' });
+    }
+  });
+
   app.get('/api/editorial-desk', (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
@@ -1396,9 +1464,20 @@ function isBlockedFileType(filename: string): boolean {
     res.json(sanitized);
   });
 
-  app.put('/api/editorial-desk', requireAdminAuth, (req, res) => {
+  app.put('/api/editorial-desk', requireAdminAuth, async (req, res) => {
     db.editorialDesk = req.body;
     saveDatabase();
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'editorialDesk',
+          data: db.editorialDesk,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e) {}
+    }
+    addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Editorial Desk Updated', 'Updated full editorial team list', 'Editorial Desk');
     res.json(db.editorialDesk);
   });
 
