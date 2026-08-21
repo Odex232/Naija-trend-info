@@ -30,6 +30,7 @@ import {
   getMigrationStatus,
   runSafeMigrationToSupabase,
   isSupabaseConnected,
+  getSupabaseClient,
   getLocalDb,
   saveLocalDb
 } from './src/server/supabase.js';
@@ -66,7 +67,7 @@ function loadDatabase() {
       users: INITIAL_USERS,
       breakingNews: INITIAL_BREAKING_NEWS,
       articles: INITIAL_ARTICLES,
-      sportsFixtures: INITIAL_SPORTS_FIXTURES,
+      sportsFixtures: [],
       ads: INITIAL_ADS,
       adPlacements: INITIAL_AD_PLACEMENTS,
       settings: INITIAL_SETTINGS,
@@ -262,6 +263,9 @@ async function startServer() {
 
   // Bootstrap initial app state (Hydrated from Supabase or Local Store)
   app.get('/api/bootstrap', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     try {
       const hydrated = await dbAdapter.getBootstrapData();
       res.json(hydrated);
@@ -272,7 +276,7 @@ async function startServer() {
 
   // Comprehensive Multi-Device Master Sync Route
   app.post('/api/sync-all', async (req, res) => {
-    const { articles, categories, breakingNews, settings, quickLinks, pages, editorialDesk, socialLinks, information, ads, sportsFixtures } = req.body;
+    const { articles, categories, breakingNews, settings, users, quickLinks, pages, editorialDesk, socialLinks, information, ads, sportsFixtures } = req.body;
     const deletedSet = new Set<string>(db.deletedArticles || []);
 
     if (Array.isArray(articles) && articles.length > 0) {
@@ -319,6 +323,22 @@ async function startServer() {
       }
     }
 
+    if (Array.isArray(users) && users.length > 0) {
+      db.users = users;
+      if (isSupabaseConnected()) {
+        const client = getSupabaseClient();
+        if (client) {
+          try {
+            await client.from('supabase_document_store').upsert({
+              key: 'users',
+              data: users,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'key' });
+          } catch {}
+        }
+      }
+    }
+
     if (Array.isArray(quickLinks) && quickLinks.length > 0) {
       db.quickLinks = quickLinks;
     }
@@ -361,12 +381,13 @@ async function startServer() {
   });
 
   // Auth Login
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
-    const user = db.users.find((u: any) => u.email.toLowerCase() === cleanEmail);
+    const users = await dbAdapter.getUsers();
+    const user = users.find((u: any) => u.email && u.email.toLowerCase() === cleanEmail);
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials. User email not found.' });
@@ -992,89 +1013,80 @@ function isBlockedFileType(filename: string): boolean {
   });
 
   // Users & Roles
-  app.get('/api/users', (req, res) => {
-    res.json(db.users || []);
+  app.get('/api/users', async (req, res) => {
+    try {
+      const users = await dbAdapter.getUsers();
+      res.json(users);
+    } catch (e: any) {
+      res.json(db.users || []);
+    }
   });
 
-  app.post('/api/users', (req, res) => {
-    const user = req.body;
-    user.id = 'usr-' + Date.now();
-    user.createdAt = new Date().toISOString();
-
-    db.users.push(user);
-    saveDatabase();
-    addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Created', `Created user account for ${user.name} (${user.role})`, 'Users');
-    res.json(user);
+  app.post('/api/users', async (req, res) => {
+    try {
+      const user = await dbAdapter.createUser(req.body);
+      addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Created', `Created user account for ${user.name} (${user.role})`, 'Users');
+      res.json(user);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Failed to create user' });
+    }
   });
 
-  app.put('/api/users/:id', (req, res) => {
-    const { id } = req.params;
-    const index = db.users.findIndex((u: any) => u.id === id);
-    if (index !== -1) {
-      const existing = db.users[index];
-      const updates = { ...req.body };
-      if (updates.password && updates.password.trim().length > 0) {
-        updates.lastPasswordChangedAt = new Date().toISOString();
+  app.put('/api/users/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updated = await dbAdapter.updateUser(id, req.body);
+      if (updated) {
+        addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Updated', `Updated settings/password for user ${updated.name}`, 'Users');
+        return res.json(updated);
       }
-      db.users[index] = { ...existing, ...updates };
-      saveDatabase();
-      addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Updated', `Updated settings/password for user ${db.users[index].name}`, 'Users');
-      return res.json(db.users[index]);
+      res.status(404).json({ message: 'User not found' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Failed to update user' });
     }
-    res.status(404).json({ message: 'User not found' });
   });
 
-  app.post('/api/users/:id/change-password', (req, res) => {
-    const { id } = req.params;
-    const { currentPassword, newPassword } = req.body;
-    const index = db.users.findIndex((u: any) => u.id === id);
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'User account not found' });
+  app.post('/api/users/:id/change-password', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { currentPassword, newPassword } = req.body;
+      const result = await dbAdapter.changeUserPassword(id, currentPassword, newPassword);
+      addAuditLog(result.user?.email || 'admin', result.user?.name || 'User', 'Password Changed', `Changed login password for ${result.user?.name || id}`, 'User Security');
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ success: false, message: e.message || 'Failed to change password' });
     }
-
-    const user = db.users[index];
-    if (user.password && currentPassword && user.password !== currentPassword) {
-      return res.status(400).json({ success: false, message: 'Current password provided is incorrect.' });
-    }
-
-    if (!newPassword || newPassword.trim().length < 4) {
-      return res.status(400).json({ success: false, message: 'New password must be at least 4 characters long.' });
-    }
-
-    db.users[index].password = newPassword.trim();
-    db.users[index].lastPasswordChangedAt = new Date().toISOString();
-    saveDatabase();
-
-    addAuditLog(user.email, user.name, 'Password Changed', `Changed login password for ${user.name}`, 'User Security');
-    return res.json({
-      success: true,
-      message: 'Password updated successfully! You can now log in with your new password.',
-      user: db.users[index]
-    });
   });
 
-  app.delete('/api/users/:id', requireAdminAuth, (req, res) => {
-    const { id } = req.params;
-    const user = (db.users || []).find((u: any) => u.id === id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User account not found' });
+  app.delete('/api/users/:id', requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await dbAdapter.deleteUser(id);
+      addAuditLog('Ajayiodunayo28@gmail.com', 'Ajayi Odunayo', 'User Deleted', `Removed user ID ${id}`, 'Users');
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message || 'Failed to delete user' });
     }
-    db.users = db.users.filter((u: any) => u.id !== id);
-    saveDatabase();
-    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'User Deleted', `Removed user ${user.name} (ID ${id})`, 'Users');
-    res.json({ success: true, message: 'User account deleted successfully', id });
   });
 
   // System Settings & Customization
-  app.get('/api/settings', (req, res) => {
-    res.json(db.settings || INITIAL_SETTINGS);
+  app.get('/api/settings', async (req, res) => {
+    try {
+      const settings = await dbAdapter.getSettings();
+      res.json(settings);
+    } catch (e: any) {
+      res.json(db.settings || INITIAL_SETTINGS);
+    }
   });
 
-  app.put('/api/settings', (req, res) => {
-    db.settings = { ...db.settings, ...req.body };
-    saveDatabase();
-    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Settings Updated', 'Updated global site parameters, SEO, and branding info.', 'System Settings');
-    res.json(db.settings);
+  app.put('/api/settings', async (req, res) => {
+    try {
+      const updated = await dbAdapter.updateSettings(req.body);
+      addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Settings Updated', 'Updated global site parameters, SEO, and branding info.', 'System Settings');
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Failed to update settings' });
+    }
   });
 
   // --- QUICK LINKS MANAGEMENT ROUTES ---
@@ -1467,9 +1479,12 @@ function isBlockedFileType(filename: string): boolean {
 
   // Sports
   app.get('/api/sports/fixtures', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     try {
       const fixtures = await dbAdapter.getSportsFixtures();
-      res.json(fixtures);
+      res.json(fixtures || []);
     } catch (e) {
       const deletedFixSet = new Set<string>(db.deletedSportsFixtures || []);
       res.json((db.sportsFixtures || []).filter((f: any) => !deletedFixSet.has(f.id)));
@@ -1479,6 +1494,8 @@ function isBlockedFileType(filename: string): boolean {
   app.post('/api/sports/fixtures', requireAdminAuth, async (req, res) => {
     try {
       const created = await dbAdapter.createSportsFixture(req.body);
+      db.sportsFixtures = [created, ...(db.sportsFixtures || []).filter((f: any) => f.id !== created.id)];
+      saveDatabase();
       addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Sports Fixture Created', `Created fixture: ${created.homeTeam} vs ${created.awayTeam}`, 'Sports Hub');
       res.json(created);
     } catch (e: any) {
@@ -1490,6 +1507,8 @@ function isBlockedFileType(filename: string): boolean {
     const { id } = req.params;
     try {
       const updated = await dbAdapter.updateSportsFixture(id, req.body);
+      db.sportsFixtures = (db.sportsFixtures || []).map((f: any) => (f.id === id ? { ...f, ...updated } : f));
+      saveDatabase();
       addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Sports Fixture Updated', `Updated score/details for fixture ${id}`, 'Sports Hub');
       res.json(updated);
     } catch (e: any) {
@@ -1500,6 +1519,11 @@ function isBlockedFileType(filename: string): boolean {
   app.delete('/api/sports/fixtures/:id', requireAdminAuth, async (req, res) => {
     const { id } = req.params;
     try {
+      if (!db.deletedSportsFixtures) db.deletedSportsFixtures = [];
+      if (!db.deletedSportsFixtures.includes(id)) db.deletedSportsFixtures.push(id);
+      db.sportsFixtures = (db.sportsFixtures || []).filter((f: any) => f.id !== id);
+      saveDatabase();
+
       const result = await dbAdapter.deleteSportsFixture(id);
       addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Sports Fixture Deleted', `Permanently deleted match fixture ${id}`, 'Sports Hub');
       res.json({ success: true, message: 'Sports fixture permanently deleted from production database.', id });
@@ -1510,6 +1534,14 @@ function isBlockedFileType(filename: string): boolean {
 
   app.delete('/api/sports/fixtures', requireAdminAuth, async (req, res) => {
     try {
+      const allIds = (db.sportsFixtures || []).map((f: any) => f.id);
+      if (!db.deletedSportsFixtures) db.deletedSportsFixtures = [];
+      allIds.forEach((id: string) => {
+        if (!db.deletedSportsFixtures.includes(id)) db.deletedSportsFixtures.push(id);
+      });
+      db.sportsFixtures = [];
+      saveDatabase();
+
       const result = await dbAdapter.deleteAllSportsFixtures();
       addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'All Sports Fixtures Cleared', 'Permanently cleared all match scoreboard fixtures from database.', 'Sports Hub');
       res.json(result);

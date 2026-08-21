@@ -1,4 +1,4 @@
-export type Role = 'Super Admin' | 'Admin' | 'Editor' | 'Author' | 'Reporter' | 'Advert Manager';
+export type Role = 'Super Admin' | 'Admin' | 'Senior Editor' | 'Editor' | 'Author' | 'Reporter' | 'Contributor' | 'Advert Manager';
 
 export interface User {
   id: string;
@@ -7,6 +7,7 @@ export interface User {
   role: Role;
   avatar?: string;
   bio?: string;
+  phone?: string;
   createdAt: string;
   password?: string;
   lastPasswordChangedAt?: string;
@@ -371,6 +372,7 @@ export interface SportsFixture {
   league: string;
   matchDate: string;
   venue?: string;
+  isPublished?: boolean;
 }
 
 export interface DailyTrafficPoint {

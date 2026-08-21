@@ -10,11 +10,13 @@ interface SportsSectionProps {
 }
 
 export const SportsSection: React.FC<SportsSectionProps> = ({
-  fixtures,
-  sportsArticles,
+  fixtures = [],
+  sportsArticles = [],
   onSelectArticle,
   onNavigate
 }) => {
+  const publishedFixtures = (fixtures || []).filter((f) => f && f.isPublished !== false);
+
   return (
     <div className="bg-white/5 backdrop-blur-2xl text-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/10">
       {/* Header */}
@@ -45,7 +47,7 @@ export const SportsSection: React.FC<SportsSectionProps> = ({
       </div>
 
       {/* Live Scores Ticker Row */}
-      {fixtures && fixtures.length > 0 && (
+      {publishedFixtures && publishedFixtures.length > 0 && (
         <div className="py-6 border-b border-white/10">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center space-x-2">
             <Activity className="w-4 h-4 text-emerald-400" />
@@ -53,7 +55,7 @@ export const SportsSection: React.FC<SportsSectionProps> = ({
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {fixtures.slice(0, 4).map((fix) => (
+            {publishedFixtures.slice(0, 4).map((fix) => (
               <div
                 key={fix.id}
                 className="bg-white/5 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 flex flex-col justify-between hover:border-amber-400/50 transition-colors"

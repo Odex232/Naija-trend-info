@@ -50,7 +50,7 @@ export function getLocalDb() {
       users: INITIAL_USERS,
       breakingNews: INITIAL_BREAKING_NEWS,
       articles: INITIAL_ARTICLES,
-      sportsFixtures: INITIAL_SPORTS_FIXTURES,
+      sportsFixtures: [],
       ads: INITIAL_ADS,
       adPlacements: INITIAL_AD_PLACEMENTS,
       settings: INITIAL_SETTINGS,
@@ -1110,19 +1110,27 @@ export const dbAdapter = {
 
   // Settings
   getSettings: async () => {
+    const db = getLocalDb();
     const client = getSupabaseClient();
     if (client) {
       try {
-        const { data, error } = await client.from('site_settings').select('data').eq('id', 'default').single();
-        if (!error && data && data.data) {
-          return data.data;
+        const { data: doc } = await client.from('supabase_document_store').select('data').eq('key', 'settings').maybeSingle();
+        if (doc && doc.data && typeof doc.data === 'object') {
+          db.settings = { ...(db.settings || {}), ...doc.data };
+          saveLocalDb(db);
+          return db.settings;
         }
-      } catch (e) {
-        console.warn('Supabase getSettings notice:', e);
+
+        const { data: row } = await client.from('site_settings').select('data').eq('id', 'default').maybeSingle();
+        if (row && row.data && typeof row.data === 'object') {
+          db.settings = { ...(db.settings || {}), ...row.data };
+          saveLocalDb(db);
+          return db.settings;
+        }
+      } catch (e: any) {
+        console.warn('Supabase getSettings query notice:', e.message);
       }
     }
-
-    const db = getLocalDb();
     return db.settings || INITIAL_SETTINGS;
   },
 
@@ -1134,11 +1142,19 @@ export const dbAdapter = {
     const client = getSupabaseClient();
     if (client) {
       try {
-        await client.from('site_settings').upsert({
-          id: 'default',
+        await client.from('supabase_document_store').upsert({
+          key: 'settings',
           data: db.settings,
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: 'key' });
+
+        try {
+          await client.from('site_settings').upsert({
+            id: 'default',
+            data: db.settings,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        } catch {}
       } catch (e: any) {
         console.error('Error updating settings in Supabase:', e.message);
       }
@@ -1237,7 +1253,12 @@ export const dbAdapter = {
         // Try getting from supabase_document_store 'sportsFixtures'
         const { data: docData } = await client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle();
         if (docData && Array.isArray(docData.data)) {
-          const clean = docData.data.filter((f: any) => !deletedFixtureIds.has(f.id));
+          const clean = docData.data
+            .filter((f: any) => !deletedFixtureIds.has(f.id))
+            .map((f: any) => ({
+              ...f,
+              isPublished: f.isPublished !== false
+            }));
           db.sportsFixtures = clean;
           saveLocalDb(db);
           return clean;
@@ -1258,7 +1279,8 @@ export const dbAdapter = {
               league: f.league,
               venue: f.venue,
               minute: f.minute,
-              matchDate: f.match_date
+              matchDate: f.match_date,
+              isPublished: f.is_published !== false
             }));
           db.sportsFixtures = formatted;
           saveLocalDb(db);
@@ -1269,7 +1291,12 @@ export const dbAdapter = {
       }
     }
 
-    const localList = (db.sportsFixtures || []).filter((f: any) => !deletedFixtureIds.has(f.id));
+    const localList = (db.sportsFixtures || [])
+      .filter((f: any) => !deletedFixtureIds.has(f.id))
+      .map((f: any) => ({
+        ...f,
+        isPublished: f.isPublished !== false
+      }));
     return localList;
   },
 
@@ -1285,7 +1312,8 @@ export const dbAdapter = {
       league: fix.league || 'NPFL',
       venue: fix.venue || 'National Stadium',
       minute: fix.minute || '',
-      matchDate: fix.matchDate || new Date().toISOString()
+      matchDate: fix.matchDate || new Date().toISOString(),
+      isPublished: fix.isPublished !== false
     };
 
     const client = getSupabaseClient();
@@ -1323,7 +1351,8 @@ export const dbAdapter = {
             league: newFix.league,
             venue: newFix.venue,
             minute: newFix.minute,
-            match_date: newFix.matchDate
+            match_date: newFix.matchDate,
+            is_published: newFix.isPublished
           }, { onConflict: 'id' });
         } catch {
           // ignore table error if not provisioned
@@ -1348,7 +1377,7 @@ export const dbAdapter = {
     let updatedFix: any = null;
     const updatedList = list.map((f: any) => {
       if (f.id === id) {
-        updatedFix = { ...f, ...updates };
+        updatedFix = { ...f, ...updates, isPublished: updates.isPublished !== undefined ? updates.isPublished : f.isPublished !== false };
         return updatedFix;
       }
       return f;
@@ -1380,7 +1409,8 @@ export const dbAdapter = {
             league: updatedFix.league,
             venue: updatedFix.venue,
             minute: updatedFix.minute,
-            match_date: updatedFix.matchDate
+            match_date: updatedFix.matchDate,
+            is_published: updatedFix.isPublished !== false
           }).eq('id', id);
         } catch {
           // ignore table error if not provisioned
@@ -1480,6 +1510,214 @@ export const dbAdapter = {
     return { success: true, message: 'All match fixtures permanently deleted from production database.' };
   },
 
+  // Users Management
+  getUsers: async () => {
+    const db = getLocalDb();
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        // Try to fetch from supabase_document_store first for full fidelity
+        const { data: doc } = await client.from('supabase_document_store').select('data').eq('key', 'users').maybeSingle();
+        if (doc && Array.isArray(doc.data) && doc.data.length > 0) {
+          db.users = doc.data;
+          saveLocalDb(db);
+          return db.users;
+        }
+
+        // Fallback to users table
+        const { data: rows, error } = await client.from('users').select('*');
+        if (!error && Array.isArray(rows) && rows.length > 0) {
+          const mappedUsers = rows.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            role: r.role || 'Editor',
+            password: r.password_hash || r.password || '',
+            avatar: r.avatar_url || r.avatar || '',
+            bio: r.bio || '',
+            phone: r.phone || '',
+            createdAt: r.created_at || new Date().toISOString(),
+            lastPasswordChangedAt: r.last_password_changed_at || r.lastPasswordChangedAt
+          }));
+          db.users = mappedUsers;
+          saveLocalDb(db);
+          return db.users;
+        }
+      } catch (e: any) {
+        console.warn('Supabase getUsers query notice:', e.message);
+      }
+    }
+    return db.users || [];
+  },
+
+  createUser: async (userData: any) => {
+    const db = getLocalDb();
+    const newUser = {
+      id: userData.id || 'usr-' + Date.now(),
+      name: userData.name || 'New Editor',
+      email: userData.email || 'editor@naijatrendinfo.com.ng',
+      role: userData.role || 'Editor',
+      password: userData.password || 'AdminPassword123!',
+      avatar: userData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+      bio: userData.bio || '',
+      phone: userData.phone || '',
+      createdAt: userData.createdAt || new Date().toISOString(),
+      lastPasswordChangedAt: userData.lastPasswordChangedAt || null
+    };
+
+    if (!db.users) db.users = [];
+    db.users.push(newUser);
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        // Upsert to document store
+        await client.from('supabase_document_store').upsert({
+          key: 'users',
+          data: db.users,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        // Also upsert to users table
+        try {
+          await client.from('users').upsert({
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+            password_hash: newUser.password,
+            avatar_url: newUser.avatar,
+            bio: newUser.bio,
+            created_at: newUser.createdAt
+          }, { onConflict: 'id' });
+        } catch {}
+      } catch (e: any) {
+        console.error('Error saving new user to Supabase:', e.message);
+      }
+    }
+
+    return newUser;
+  },
+
+  updateUser: async (id: string, updates: any) => {
+    const db = getLocalDb();
+    if (!db.users) db.users = [];
+    const index = db.users.findIndex((u: any) => u.id === id);
+    if (index === -1) {
+      return null;
+    }
+
+    const existing = db.users[index];
+    const updatedUser = { ...existing, ...updates };
+    if (updates.password && updates.password.trim().length > 0 && updates.password !== existing.password) {
+      updatedUser.lastPasswordChangedAt = new Date().toISOString();
+    }
+    db.users[index] = updatedUser;
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        // Update document store
+        await client.from('supabase_document_store').upsert({
+          key: 'users',
+          data: db.users,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        // Update users table
+        try {
+          await client.from('users').upsert({
+            id: updatedUser.id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            password_hash: updatedUser.password,
+            avatar_url: updatedUser.avatar,
+            bio: updatedUser.bio,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        } catch {}
+      } catch (e: any) {
+        console.error('Error updating user in Supabase:', e.message);
+      }
+    }
+
+    return updatedUser;
+  },
+
+  deleteUser: async (id: string) => {
+    const db = getLocalDb();
+    if (!db.users) db.users = [];
+    db.users = db.users.filter((u: any) => u.id !== id);
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'users',
+          data: db.users,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        try {
+          await client.from('users').delete().eq('id', id);
+        } catch {}
+      } catch (e: any) {
+        console.error('Error deleting user from Supabase:', e.message);
+      }
+    }
+
+    return { success: true, id, message: 'User deleted successfully' };
+  },
+
+  changeUserPassword: async (id: string, currentPassword?: string, newPassword?: string) => {
+    const db = getLocalDb();
+    if (!db.users) db.users = [];
+    const index = db.users.findIndex((u: any) => u.id === id);
+    if (index === -1) {
+      throw new Error('User account not found');
+    }
+
+    const user = db.users[index];
+    if (user.password && currentPassword && user.password !== currentPassword) {
+      throw new Error('Current password provided is incorrect.');
+    }
+
+    if (!newPassword || newPassword.trim().length < 4) {
+      throw new Error('New password must be at least 4 characters long.');
+    }
+
+    user.password = newPassword.trim();
+    user.lastPasswordChangedAt = new Date().toISOString();
+    db.users[index] = user;
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'users',
+          data: db.users,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        try {
+          await client.from('users').update({
+            password_hash: user.password,
+            updated_at: new Date().toISOString()
+          }).eq('id', id);
+        } catch {}
+      } catch (e: any) {
+        console.error('Error updating password in Supabase:', e.message);
+      }
+    }
+
+    return { success: true, message: 'Password updated successfully! Synchronized across all browsers and devices.', user };
+  },
+
   // Bootstrap (Returns hydrated unified dataset)
   getBootstrapData: async () => {
     const db = getLocalDb();
@@ -1512,12 +1750,13 @@ export const dbAdapter = {
         }
 
         // Hydrate from Supabase tables & document store
-        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes] = await Promise.allSettled([
+        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes] = await Promise.allSettled([
           client.from('articles').select('*').order('published_at', { ascending: false }),
           client.from('categories').select('*').order('display_order', { ascending: true }),
           client.from('breaking_news').select('*').order('created_at', { ascending: false }),
           client.from('site_settings').select('data').eq('id', 'default').single(),
-          client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle()
+          client.from('supabase_document_store').select('data').eq('key', 'sportsFixtures').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'users').maybeSingle()
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
@@ -1585,6 +1824,10 @@ export const dbAdapter = {
 
         if (sportsRes.status === 'fulfilled' && sportsRes.value.data && Array.isArray(sportsRes.value.data.data)) {
           db.sportsFixtures = sportsRes.value.data.data.filter((f: any) => !deletedFixtureSet.has(f.id));
+        }
+
+        if (usersDocRes.status === 'fulfilled' && usersDocRes.value.data && Array.isArray(usersDocRes.value.data.data) && usersDocRes.value.data.data.length > 0) {
+          db.users = usersDocRes.value.data.data;
         }
 
         saveLocalDb(db);

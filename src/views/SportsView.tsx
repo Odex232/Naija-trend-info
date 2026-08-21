@@ -22,7 +22,9 @@ export const SportsView: React.FC<SportsViewProps> = ({
     (a) => a?.categoryId === 'cat-9' || a?.categoryId === 'cat-10' || a?.categoryName?.toLowerCase().includes('sport')
   );
 
-  const filteredFixtures = (sportsFixtures || []).filter((fix) => {
+  const publishedFixtures = (sportsFixtures || []).filter((f) => f && f.isPublished !== false);
+
+  const filteredFixtures = publishedFixtures.filter((fix) => {
     if (selectedLeague === 'all') return true;
     if (selectedLeague === 'npfl') return fix.league.toLowerCase().includes('npfl');
     if (selectedLeague === 'international') return fix.league.toLowerCase().includes('international') || fix.league.toLowerCase().includes('eagles');

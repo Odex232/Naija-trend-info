@@ -186,6 +186,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // User Modal State
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
+  const [savingUser, setSavingUser] = useState(false);
+  const [showEditingUserPass, setShowEditingUserPass] = useState(false);
 
   // Password Manager State
   const [passCurrent, setPassCurrent] = useState('');
@@ -943,25 +945,29 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     );
   };
 
-  // Save User Account
+  // Save User Account & Security Profile
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser?.email || !editingUser?.name) return;
+    setSavingUser(true);
     try {
       if (editingUser.id) {
         const resUser = await api.updateUser(editingUser.id, editingUser);
         if (currentUser && (editingUser.id === currentUser.id || editingUser.email.toLowerCase() === currentUser.email.toLowerCase())) {
           localStorage.setItem('currentUser', JSON.stringify(resUser));
         }
-        triggerSuccessNotification('User account updated!');
+        triggerSuccessNotification('User account & security profile saved successfully! Synchronized across all devices and browsers.');
       } else {
-        await api.createUser(editingUser);
-        triggerSuccessNotification('New user created!');
+        const newUser = await api.createUser(editingUser);
+        triggerSuccessNotification(`New user account "${newUser.name}" created and synchronized successfully!`);
       }
       setEditingUser(null);
-      onRefreshData();
+      await onRefreshData();
     } catch (e: any) {
-      triggerErrorNotification(e.message || 'Failed to save user');
+      console.error('Failed to save user account:', e);
+      triggerErrorNotification(e.message || 'Failed to save user account');
+    } finally {
+      setSavingUser(false);
     }
   };
 
@@ -5311,17 +5317,56 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Match Status</label>
+                  <select
+                    value={editingFixture.status || 'UPCOMING'}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, status: e.target.value as any })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  >
+                    <option value="UPCOMING">Upcoming</option>
+                    <option value="LIVE">Live</option>
+                    <option value="FINISHED">Finished</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Live Minute (e.g. 75')</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 45+2', FT"
+                    value={editingFixture.minute || ''}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, minute: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block font-semibold mb-1">Match Status</label>
-                <select
-                  value={editingFixture.status || 'UPCOMING'}
-                  onChange={(e) => setEditingFixture({ ...editingFixture, status: e.target.value as any })}
+                <label className="block font-semibold mb-1">Venue / Stadium</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Mobolaji Johnson Arena, Lagos"
+                  value={editingFixture.venue || ''}
+                  onChange={(e) => setEditingFixture({ ...editingFixture, venue: e.target.value })}
                   className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                >
-                  <option value="UPCOMING">Upcoming</option>
-                  <option value="LIVE">Live</option>
-                  <option value="FINISHED">Finished</option>
-                </select>
+                />
+              </div>
+
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-xs">Publish Status</div>
+                  <div className="text-[11px] text-slate-400">Make fixture visible on public Matchday Scoreboard & Sports Hub</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingFixture.isPublished !== false}
+                    onChange={(e) => setEditingFixture({ ...editingFixture, isPublished: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-slate-800">
                 {editingFixture.id ? (
@@ -5381,48 +5426,76 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       {/* User Account Modal */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-xs space-y-4 text-white">
-            <h3 className="font-bold text-base font-serif flex items-center space-x-2">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span>{editingUser.id ? 'Edit User Account & Security' : 'New Admin/Editor Account'}</span>
-            </h3>
-            <form onSubmit={handleSaveUser} className="space-y-3">
-              <div>
-                <label className="block font-semibold mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingUser.name || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                />
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full text-xs space-y-4 text-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-base font-serif flex items-center space-x-2">
+                <Users className="w-5 h-5 text-emerald-400" />
+                <span>{editingUser.id ? 'Edit User Account & Security Profile' : 'New Admin / Staff Account'}</span>
+              </h3>
+              <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 rounded-full text-[10px] font-semibold">
+                <Globe className="w-3 h-3" />
+                <span>Cloud Multi-Device Sync</span>
               </div>
-              <div>
-                <label className="block font-semibold mb-1">Email Address *</label>
-                <input
-                  type="email"
-                  required
-                  value={editingUser.email || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                />
+            </div>
+
+            <form onSubmit={handleSaveUser} className="space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-200">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ajayi Odunayo"
+                    value={editingUser.name || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-200">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. Ajayiodunayo28@gmail.com"
+                    value={editingUser.email || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block font-semibold mb-1">Role & Permissions</label>
-                <select
-                  value={editingUser.role || 'Editor'}
-                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                >
-                  <option value="Admin">Administrator (Full Access)</option>
-                  <option value="Editor">Editor (Publish & Edit)</option>
-                  <option value="Reporter">Reporter (Draft & Submit)</option>
-                </select>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-200">Role & Permissions</label>
+                  <select
+                    value={editingUser.role || 'Editor'}
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                  >
+                    <option value="Super Admin">Super Admin (Full Site & System Control)</option>
+                    <option value="Admin">Administrator (Full Access)</option>
+                    <option value="Senior Editor">Senior Editor (Publish, Review & Edit)</option>
+                    <option value="Editor">Editor (Publish & Edit Articles)</option>
+                    <option value="Reporter">Reporter (Draft & Submit News)</option>
+                    <option value="Contributor">Contributor (Opinion & Columns)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-200">Phone Number (Optional)</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +234 800 000 0000"
+                    value={editingUser.phone || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
               </div>
+
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="font-semibold flex items-center space-x-1">
+                  <label className="font-semibold flex items-center space-x-1 text-slate-200">
                     <Key className="w-3.5 h-3.5 text-amber-400" />
                     <span>Account Login Password</span>
                   </label>
@@ -5431,37 +5504,94 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     onClick={() => {
                       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
                       let res = '';
-                      for (let i = 0; i < 12; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+                      for (let i = 0; i < 14; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
                       setEditingUser({ ...editingUser, password: res });
+                      setShowEditingUserPass(true);
                     }}
-                    className="text-[10px] text-amber-400 hover:underline cursor-pointer"
+                    className="text-[11px] text-amber-400 hover:underline cursor-pointer flex items-center space-x-1"
                   >
-                    Auto-Generate
+                    <Sparkles className="w-3 h-3" />
+                    <span>Auto-Generate Strong Password</span>
                   </button>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Set login password (or leave blank to keep unchanged)"
-                  value={editingUser.password || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type={showEditingUserPass ? 'text' : 'password'}
+                    placeholder={editingUser.id ? "Enter new login password or keep current" : "Set login password (e.g. Habiodun1990)"}
+                    value={editingUser.password || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                    className="w-full bg-slate-950 text-white p-2.5 pr-10 rounded-xl border border-slate-800 font-mono outline-none focus:border-amber-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditingUserPass(!showEditingUserPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                  >
+                    {showEditingUserPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  When saved, this password is immediately synchronized to the cloud database and active on all web browsers and devices.
+                </p>
               </div>
+
               <div>
-                <label className="block font-semibold mb-1">Avatar Image URL</label>
-                <input
-                  type="url"
-                  value={editingUser.avatar || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, avatar: e.target.value })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
+                <label className="block font-semibold mb-1 text-slate-200">Avatar Image URL</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="url"
+                    placeholder="https://images.unsplash.com/photo-..."
+                    value={editingUser.avatar || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, avatar: e.target.value })}
+                    className="flex-1 bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                  />
+                  {editingUser.avatar && (
+                    <img
+                      src={editingUser.avatar}
+                      alt="Avatar Preview"
+                      className="w-9 h-9 rounded-xl object-cover border border-slate-700 shrink-0"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-slate-200">Bio / Editorial Profile Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Senior Investigative Reporter & Political Analyst at NaijaTrendInfo..."
+                  value={editingUser.bio || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, bio: e.target.value })}
+                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 transition-colors resize-none"
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2 bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-700">
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  disabled={savingUser}
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl cursor-pointer transition-colors disabled:opacity-50"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl cursor-pointer">
-                  Save Account
+                <button
+                  type="submit"
+                  disabled={savingUser}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl cursor-pointer shadow-lg shadow-emerald-950/50 flex items-center space-x-2 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {savingUser ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving & Synchronizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                      <span>Save Account & Sync</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

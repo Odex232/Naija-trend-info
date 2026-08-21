@@ -288,51 +288,7 @@ export const INITIAL_ARTICLES: Article[] = [
   }
 ];
 
-export const INITIAL_SPORTS_FIXTURES: SportsFixture[] = [
-  {
-    id: 'fix-1',
-    homeTeam: 'Enyimba FC',
-    awayTeam: 'Rangers International',
-    homeScore: 2,
-    awayScore: 1,
-    status: 'LIVE',
-    minute: "78'",
-    league: 'NPFL (Nigerian Premier Football League)',
-    matchDate: '2026-08-08T16:00:00Z',
-    venue: 'Enyimba International Stadium, Aba'
-  },
-  {
-    id: 'fix-2',
-    homeTeam: 'Rivers United',
-    awayTeam: 'Lobi Stars',
-    homeScore: 1,
-    awayScore: 0,
-    status: 'FINISHED',
-    league: 'NPFL (Nigerian Premier Football League)',
-    matchDate: '2026-08-08T14:00:00Z',
-    venue: 'Adokiye Amiesimaka Stadium, Port Harcourt'
-  },
-  {
-    id: 'fix-3',
-    homeTeam: 'Nigeria (Super Eagles)',
-    awayTeam: 'Ghana (Black Stars)',
-    status: 'UPCOMING',
-    league: 'International Friendly',
-    matchDate: '2026-08-15T17:00:00Z',
-    venue: 'Godswill Akpabio International Stadium, Uyo'
-  },
-  {
-    id: 'fix-4',
-    homeTeam: 'Arsenal',
-    awayTeam: 'Chelsea',
-    homeScore: 3,
-    awayScore: 2,
-    status: 'FINISHED',
-    league: 'English Premier League',
-    matchDate: '2026-08-07T19:00:00Z',
-    venue: 'Emirates Stadium, London'
-  }
-];
+export const INITIAL_SPORTS_FIXTURES: SportsFixture[] = [];
 
 export const INITIAL_ADS: Ad[] = [
   {

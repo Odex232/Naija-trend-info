@@ -520,7 +520,8 @@ export const api = {
           sbSocial,
           sbInfo,
           sbAds,
-          sbSports
+          sbSports,
+          sbUsers
         ] = await Promise.all([
           fetchArticlesFromSupabase(),
           getDocFromSupabase<Category[]>('categories'),
@@ -532,14 +533,17 @@ export const api = {
           getDocFromSupabase<SocialMediaLink[]>('socialLinks'),
           getDocFromSupabase<InformationEntry[]>('information'),
           getDocFromSupabase<Ad[]>('ads'),
-          getDocFromSupabase<SportsFixture[]>('sportsFixtures')
+          getDocFromSupabase<SportsFixture[]>('sportsFixtures'),
+          getDocFromSupabase<User[]>('users')
         ]);
 
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
           const cleanArticles = sbArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
           const cleanAds = Array.isArray(sbAds) ? sbAds.filter((a) => !deletedAdIds.has(a.id)) : [];
           const cleanEditorial = Array.isArray(sbEditorial) ? sbEditorial.filter((e) => !deletedEdIds.has(e.id)) : [];
-          const cleanSports = Array.isArray(sbSports) ? sbSports.filter((f) => !deletedFixtureIds.has(f.id)) : [];
+          const cleanSports = Array.isArray(sbSports)
+            ? sbSports.filter((f) => !deletedFixtureIds.has(f.id)).map((f) => ({ ...f, isPublished: f.isPublished !== false }))
+            : [];
 
           setLocalData('naija_articles', cleanArticles);
           if (Array.isArray(sbCategories) && sbCategories.length > 0) setLocalData('naija_categories', sbCategories);
@@ -551,7 +555,8 @@ export const api = {
           if (Array.isArray(sbSocial) && sbSocial.length > 0) setLocalData('naija_social_links', sbSocial);
           if (Array.isArray(sbInfo) && sbInfo.length > 0) setLocalData('naija_information', sbInfo);
           if (cleanAds.length > 0) setLocalData('naija_ads', cleanAds);
-          if (cleanSports.length > 0) setLocalData('naija_sports_fixtures', cleanSports);
+          setLocalData('naija_sports_fixtures', cleanSports);
+          if (Array.isArray(sbUsers) && sbUsers.length > 0) setLocalData('naija_users', sbUsers);
 
           const finalAds = cleanAds.length > 0
             ? cleanAds
@@ -561,9 +566,11 @@ export const api = {
             ? cleanEditorial
             : getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK).filter((e) => !deletedEdIds.has(e.id));
 
-          const finalSports = cleanSports.length > 0
-            ? cleanSports
-            : getLocalData<SportsFixture[]>('naija_sports_fixtures', []).filter((f) => !deletedFixtureIds.has(f.id));
+          const finalSports = cleanSports;
+
+          const finalUsers = (Array.isArray(sbUsers) && sbUsers.length > 0)
+            ? sbUsers
+            : getLocalData<User[]>('naija_users', INITIAL_USERS);
 
           return {
             settings: sbSettings || getLocalData('naija_settings', INITIAL_SETTINGS),
@@ -572,7 +579,7 @@ export const api = {
             breakingNews: (Array.isArray(sbBreaking) && sbBreaking.length > 0) ? sbBreaking : getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS),
             ads: finalAds,
             adPlacements: INITIAL_AD_PLACEMENTS,
-            users: getLocalData('naija_users', INITIAL_USERS),
+            users: finalUsers,
             comments: getLocalData('naija_comments', []),
             submissions: getLocalData('naija_submissions', []),
             contacts: getLocalData('naija_contacts', []),
@@ -598,6 +605,7 @@ export const api = {
             setDocInSupabase('breakingNews', getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS)).catch(() => {});
             setDocInSupabase('settings', getLocalData('naija_settings', INITIAL_SETTINGS)).catch(() => {});
             setDocInSupabase('pages', getLocalData('naija_pages', INITIAL_PAGES)).catch(() => {});
+            setDocInSupabase('users', getLocalData('naija_users', INITIAL_USERS)).catch(() => {});
             const currentAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
             if (currentAds.length > 0) setDocInSupabase('ads', currentAds).catch(() => {});
             const currentEd = getLocalData<EditorialDeskEntry[]>('naija_editorial_desk', INITIAL_EDITORIAL_DESK).filter((e) => !deletedEdIds.has(e.id));
@@ -860,9 +868,18 @@ export const api = {
       }
       return res;
     } catch (e) {
-      console.warn('Backend auth API unavailable, performing secure local credential match:', e);
+      console.warn('Backend auth API unavailable, performing secure local credential match with cloud sync:', e);
       let allUsers = getLocalData<User[]>('naija_users', INITIAL_USERS);
       
+      // Try to fetch latest users from Supabase document store for cross-device authentication
+      try {
+        const sbUsers = await getDocFromSupabase<User[]>('users');
+        if (Array.isArray(sbUsers) && sbUsers.length > 0) {
+          allUsers = sbUsers;
+          setLocalData('naija_users', allUsers);
+        }
+      } catch {}
+
       // Ensure primary admin account is synced with specified credentials
       let adminUser = allUsers.find((u) => u.email.toLowerCase() === cleanEmail || u.id === 'usr-1');
       if (cleanEmail === 'ajayiodunayo28@gmail.com' || (!allUsers.some(u => u.email.toLowerCase() === 'ajayiodunayo28@gmail.com') && cleanEmail.includes('admin'))) {
@@ -881,7 +898,9 @@ export const api = {
         } else {
           adminUser.name = 'Ajayi Odunayo';
           adminUser.email = 'Ajayiodunayo28@gmail.com';
-          adminUser.password = 'Habiodun1990';
+          if (!adminUser.password) {
+            adminUser.password = 'Habiodun1990';
+          }
           adminUser.role = 'Super Admin';
         }
         setLocalData('naija_users', allUsers);
@@ -902,39 +921,50 @@ export const api = {
   },
 
   changeUserPassword: async (userId: string, currentPassword?: string, newPassword?: string) => {
+    let updatedUser: User | null = null;
+    let message = 'Password updated successfully! Synchronized across all devices and browsers.';
     try {
       const res = await fetchJson<{ success: boolean; message: string; user?: User }>(`/api/users/${userId}/change-password`, {
         method: 'POST',
         body: JSON.stringify({ currentPassword, newPassword })
       });
       if (res.user) {
-        const currentUserStr = localStorage.getItem('currentUser');
-        if (currentUserStr) {
-          const parsed = JSON.parse(currentUserStr);
-          if (parsed.id === userId) {
-            localStorage.setItem('currentUser', JSON.stringify(res.user));
-          }
-        }
+        updatedUser = res.user;
       }
-      return res;
+      if (res.message) {
+        message = res.message;
+      }
     } catch (e: any) {
-      const users = getLocalData<User[]>('naija_users', INITIAL_USERS);
-      const userIndex = users.findIndex((u) => u.id === userId);
-      if (userIndex !== -1) {
-        users[userIndex].password = newPassword;
-        users[userIndex].lastPasswordChangedAt = new Date().toISOString();
-        setLocalData('naija_users', users);
-        const currentUserStr = localStorage.getItem('currentUser');
-        if (currentUserStr) {
-          const parsed = JSON.parse(currentUserStr);
-          if (parsed.id === userId) {
-            localStorage.setItem('currentUser', JSON.stringify(users[userIndex]));
-          }
-        }
-        return { success: true, message: 'Password updated successfully!', user: users[userIndex] };
-      }
-      throw new Error(e.message || 'Failed to update password.');
+      console.warn('Backend changeUserPassword API notice, updating client & cloud store:', e);
     }
+
+    const users = getLocalData<User[]>('naija_users', INITIAL_USERS);
+    const userIndex = users.findIndex((u) => u.id === userId);
+    if (userIndex !== -1) {
+      users[userIndex].password = newPassword?.trim();
+      users[userIndex].lastPasswordChangedAt = new Date().toISOString();
+      if (!updatedUser) updatedUser = users[userIndex];
+    }
+    setLocalData('naija_users', users);
+
+    // Save to Supabase Cloud for multi-browser sync
+    try {
+      await setDocInSupabase('users', users);
+    } catch (sbErr) {
+      console.warn('Supabase password sync notice:', sbErr);
+    }
+
+    const currentUserStr = localStorage.getItem('currentUser');
+    if (currentUserStr && updatedUser) {
+      try {
+        const parsed = JSON.parse(currentUserStr);
+        if (parsed.id === userId || parsed.email?.toLowerCase() === (updatedUser as User).email?.toLowerCase()) {
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }
+      } catch {}
+    }
+
+    return { success: true, message, user: updatedUser || undefined };
   },
 
   logout: async () => {
@@ -1989,66 +2019,136 @@ export const api = {
   // Users & Roles
   getUsers: async () => {
     try {
-      return await fetchJson<User[]>('/api/users');
+      const serverUsers = await fetchJson<User[]>('/api/users');
+      if (Array.isArray(serverUsers) && serverUsers.length > 0) {
+        setLocalData('naija_users', serverUsers);
+        return serverUsers;
+      }
     } catch (e) {
-      return getLocalData('naija_users', INITIAL_USERS);
+      console.warn('Backend getUsers API notice, checking Supabase document store:', e);
     }
+
+    try {
+      const sbUsers = await getDocFromSupabase<User[]>('users');
+      if (Array.isArray(sbUsers) && sbUsers.length > 0) {
+        setLocalData('naija_users', sbUsers);
+        return sbUsers;
+      }
+    } catch {}
+
+    return getLocalData('naija_users', INITIAL_USERS);
   },
 
   createUser: async (user: Partial<User>) => {
+    let createdUser: User | null = null;
     try {
-      return await fetchJson<User>('/api/users', {
+      createdUser = await fetchJson<User>('/api/users', {
         method: 'POST',
         body: JSON.stringify(user)
       });
     } catch (e) {
-      const users = getLocalData('naija_users', INITIAL_USERS);
-      const newUser: User = {
-        id: user.id || `usr-${Date.now()}`,
-        name: user.name || 'New Editor',
-        email: user.email || 'editor@naijatrendinfo.com.ng',
-        role: user.role || 'Editor',
-        avatar: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-        bio: user.bio || '',
-        createdAt: new Date().toISOString()
-      };
-      setLocalData('naija_users', [...users, newUser]);
-      return newUser;
+      console.warn('Backend createUser API notice, creating in local and Supabase cloud store:', e);
     }
+
+    const currentUsers = getLocalData<User[]>('naija_users', INITIAL_USERS);
+    const newUser: User = createdUser || {
+      id: user.id || `usr-${Date.now()}`,
+      name: user.name || 'New Editor',
+      email: user.email || 'editor@naijatrendinfo.com.ng',
+      role: user.role || 'Editor',
+      password: user.password || 'AdminPassword123!',
+      avatar: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      bio: user.bio || '',
+      phone: user.phone || '',
+      createdAt: user.createdAt || new Date().toISOString()
+    };
+
+    const updated = [...currentUsers.filter(u => u.id !== newUser.id), newUser];
+    setLocalData('naija_users', updated);
+
+    // Save to Supabase Cloud
+    try {
+      await setDocInSupabase('users', updated);
+    } catch (sbErr) {
+      console.warn('Supabase createUser cloud sync notice:', sbErr);
+    }
+
+    return newUser;
   },
 
   updateUser: async (id: string, user: Partial<User>) => {
+    let resUser: User | null = null;
     try {
-      return await fetchJson<User>(`/api/users/${id}`, {
+      resUser = await fetchJson<User>(`/api/users/${id}`, {
         method: 'PUT',
         body: JSON.stringify(user)
       });
     } catch (e) {
-      const users = getLocalData('naija_users', INITIAL_USERS);
-      let updatedUser: User | null = null;
-      const updated = users.map((u) => {
-        if (u.id === id) {
-          updatedUser = { ...u, ...user };
-          return updatedUser;
-        }
-        return u;
-      });
-      setLocalData('naija_users', updated);
-      return updatedUser || ({ id, ...user } as User);
+      console.warn('Backend updateUser API notice, falling back to client & cloud sync:', e);
     }
+
+    const currentUsers = getLocalData<User[]>('naija_users', INITIAL_USERS);
+    let finalUpdatedUser: User | null = null;
+    const updated = currentUsers.map((u) => {
+      if (u.id === id) {
+        finalUpdatedUser = resUser || { ...u, ...user };
+        if (user.password && user.password.trim().length > 0 && user.password !== u.password) {
+          finalUpdatedUser.lastPasswordChangedAt = new Date().toISOString();
+        }
+        return finalUpdatedUser;
+      }
+      return u;
+    });
+
+    if (!finalUpdatedUser) {
+      finalUpdatedUser = resUser || ({ id, ...user } as User);
+      updated.push(finalUpdatedUser);
+    }
+
+    setLocalData('naija_users', updated);
+
+    // Update currentUser in localStorage if this user matches
+    const currentUserStr = localStorage.getItem('currentUser');
+    if (currentUserStr) {
+      try {
+        const parsed = JSON.parse(currentUserStr);
+        if (parsed.id === id || (user.email && parsed.email?.toLowerCase() === user.email?.toLowerCase())) {
+          localStorage.setItem('currentUser', JSON.stringify(finalUpdatedUser));
+        }
+      } catch {}
+    }
+
+    // Save to Supabase Cloud for multi-browser and cross-device sync
+    try {
+      await setDocInSupabase('users', updated);
+    } catch (sbErr) {
+      console.warn('Supabase updateUser cloud sync notice:', sbErr);
+    }
+
+    return finalUpdatedUser;
   },
 
   deleteUser: async (id: string) => {
     try {
-      return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/users/${id}`, {
+      await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/users/${id}`, {
         method: 'DELETE'
       });
     } catch (e) {
-      const users = getLocalData('naija_users', INITIAL_USERS);
-      const updated = users.filter((u) => u.id !== id);
-      setLocalData('naija_users', updated);
-      return { success: true, id, message: 'User deleted' };
+      console.warn('Backend deleteUser API notice, updating local and cloud store:', e);
     }
+
+    const currentUsers = getLocalData<User[]>('naija_users', INITIAL_USERS);
+    const updated = currentUsers.filter((u) => u.id !== id);
+    setLocalData('naija_users', updated);
+
+    // Save to Supabase Cloud
+    try {
+      await setDocInSupabase('users', updated);
+    } catch (sbErr) {
+      console.warn('Supabase deleteUser cloud sync notice:', sbErr);
+    }
+
+    return { success: true, id, message: 'User deleted' };
   },
 
   // Settings & Customization
@@ -2533,19 +2633,33 @@ export const api = {
   // Sports
   getSportsFixtures: async () => {
     const deletedFixtureIds = new Set(getLocalData<string[]>('naija_deleted_sports_fixtures', []));
+    
+    // Fetch remote deletion list first to guarantee cross-device consistency
+    try {
+      const delDoc = await getDocFromSupabase<string[]>('deletedSportsFixtures');
+      if (Array.isArray(delDoc)) {
+        delDoc.forEach((id) => deletedFixtureIds.add(id));
+        setLocalData('naija_deleted_sports_fixtures', Array.from(deletedFixtureIds));
+      }
+    } catch (e) {}
+
     try {
       const sbSports = await getDocFromSupabase<SportsFixture[]>('sportsFixtures');
-      if (Array.isArray(sbSports) && sbSports.length > 0) {
-        const clean = sbSports.filter((f) => !deletedFixtureIds.has(f.id));
+      if (Array.isArray(sbSports)) {
+        const clean = sbSports
+          .filter((f) => !deletedFixtureIds.has(f.id))
+          .map((f) => ({ ...f, isPublished: f.isPublished !== false }));
         setLocalData('naija_sports_fixtures', clean);
         return clean;
       }
     } catch (e) {}
 
     try {
-      const serverSports = await fetchJson<SportsFixture[]>('/api/sports/fixtures');
+      const serverSports = await fetchJson<SportsFixture[]>(`/api/sports/fixtures?_t=${Date.now()}`);
       if (Array.isArray(serverSports)) {
-        const clean = serverSports.filter((f) => !deletedFixtureIds.has(f.id));
+        const clean = serverSports
+          .filter((f) => !deletedFixtureIds.has(f.id))
+          .map((f) => ({ ...f, isPublished: f.isPublished !== false }));
         setLocalData('naija_sports_fixtures', clean);
         return clean;
       }
@@ -2554,7 +2668,9 @@ export const api = {
     }
 
     const localSports = getLocalData<SportsFixture[]>('naija_sports_fixtures', []);
-    return localSports.filter((f) => !deletedFixtureIds.has(f.id));
+    return localSports
+      .filter((f) => !deletedFixtureIds.has(f.id))
+      .map((f) => ({ ...f, isPublished: f.isPublished !== false }));
   },
 
   createSportsFixture: async (fix: Partial<SportsFixture>) => {
@@ -2570,7 +2686,8 @@ export const api = {
       league: fix.league || 'NPFL',
       venue: fix.venue || 'National Stadium',
       minute: fix.minute || '',
-      matchDate: fix.matchDate || new Date().toISOString()
+      matchDate: fix.matchDate || new Date().toISOString(),
+      isPublished: fix.isPublished !== false
     };
     const updated = [newFix, ...list];
     setLocalData('naija_sports_fixtures', updated);
@@ -2579,7 +2696,7 @@ export const api = {
     try {
       const serverRes = await fetchJson<SportsFixture>('/api/sports/fixtures', {
         method: 'POST',
-        body: JSON.stringify(fix)
+        body: JSON.stringify(newFix)
       });
       return serverRes || newFix;
     } catch (e) {
@@ -2593,7 +2710,7 @@ export const api = {
     let updatedFix: SportsFixture | null = null;
     const updated = list.map((f) => {
       if (f.id === id) {
-        updatedFix = { ...f, ...fix };
+        updatedFix = { ...f, ...fix, isPublished: fix.isPublished !== undefined ? fix.isPublished : f.isPublished !== false };
         return updatedFix;
       }
       return f;
