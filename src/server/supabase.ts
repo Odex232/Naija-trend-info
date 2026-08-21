@@ -293,7 +293,7 @@ export async function runSafeMigrationToSupabase(options?: {
           image_credit: a.imageCredit || '',
           gallery_images: a.galleryImages || [],
           author_id: a.authorId || 'usr-1',
-          author_name: a.authorName || 'Ajayi Odunayo',
+          author_name: a.authorName || 'Habbey Tech Solutions',
           author_avatar: a.authorAvatar || '',
           status: a.status || 'published',
           is_featured: !!a.isFeatured,
@@ -668,35 +668,40 @@ export const dbAdapter = {
 
         const { data, error } = await query;
         if (!error && Array.isArray(data) && data.length > 0) {
+          const corrName = db.settings?.editorialCorrespondent?.correspondentName || 'Habbey Tech Solutions';
+          const corrAvatar = db.settings?.editorialCorrespondent?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
           return data
             .filter((row) => !deletedSet.has(row.id) && !deletedSet.has(row.slug))
-            .map((row) => ({
-              id: row.id,
-              title: row.title,
-              slug: row.slug,
-              summary: row.summary,
-              content: row.content,
-              categoryId: row.category_id,
-              categoryName: row.category_name,
-              tags: row.tags || [],
-              featuredImage: row.featured_image,
-              imageCaption: row.image_caption,
-              imageCredit: row.image_credit,
-              galleryImages: row.gallery_images || [],
-              authorId: row.author_id,
-              authorName: row.author_name,
-              authorAvatar: row.author_avatar,
-              status: row.status,
-              isFeatured: row.is_featured,
-              isPinned: row.is_pinned,
-              isBreaking: row.is_breaking,
-              isEditorPick: row.is_editor_pick,
-              views: row.views || 0,
-              readTimeMinutes: row.read_time_minutes || 3,
-              publishedAt: row.published_at,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at
-            }));
+            .map((row) => {
+              const isCorr = !row.author_name || row.author_name === 'Ajayi Odunayo' || row.author_name === 'Ajayi odunayo' || row.author_id === 'usr-1' || row.author_name === 'Habbey Tech Solutions';
+              return {
+                id: row.id,
+                title: row.title,
+                slug: row.slug,
+                summary: row.summary,
+                content: row.content,
+                categoryId: row.category_id,
+                categoryName: row.category_name,
+                tags: row.tags || [],
+                featuredImage: row.featured_image,
+                imageCaption: row.image_caption,
+                imageCredit: row.image_credit,
+                galleryImages: row.gallery_images || [],
+                authorId: row.author_id,
+                authorName: isCorr ? corrName : row.author_name,
+                authorAvatar: isCorr && corrAvatar ? corrAvatar : (row.author_avatar || corrAvatar),
+                status: row.status,
+                isFeatured: row.is_featured,
+                isPinned: row.is_pinned,
+                isBreaking: row.is_breaking,
+                isEditorPick: row.is_editor_pick,
+                views: row.views || 0,
+                readTimeMinutes: row.read_time_minutes || 3,
+                publishedAt: row.published_at,
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
+              };
+            });
         }
       } catch (e) {
         console.warn('Supabase getArticles query notice, serving local synced dataset:', e);
@@ -704,7 +709,18 @@ export const dbAdapter = {
     }
 
     // Local DB fallback
-    let list = (db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug));
+    const corrName = db.settings?.editorialCorrespondent?.correspondentName || 'Habbey Tech Solutions';
+    const corrAvatar = db.settings?.editorialCorrespondent?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+    let list = (db.articles || [])
+      .filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug))
+      .map((a: any) => {
+        const isCorr = !a.authorName || a.authorName === 'Ajayi Odunayo' || a.authorName === 'Ajayi odunayo' || a.authorId === 'usr-1' || a.authorName === 'Habbey Tech Solutions';
+        return {
+          ...a,
+          authorName: isCorr ? corrName : a.authorName,
+          authorAvatar: isCorr && corrAvatar ? corrAvatar : (a.authorAvatar || corrAvatar)
+        };
+      });
     if (params?.category) {
       list = list.filter((a: any) => a.categoryId === params.category || a.categoryName?.toLowerCase() === params.category?.toLowerCase());
     }
@@ -810,8 +826,12 @@ export const dbAdapter = {
   },
 
   createArticle: async (article: any) => {
+    const db = getLocalDb();
     const now = new Date().toISOString();
     const cleanSlug = article.slug || (article.title ? article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `art-${Date.now()}`);
+
+    const defaultCorr = db.settings?.editorialCorrespondent?.correspondentName || 'Habbey Tech Solutions';
+    const defaultAvatar = db.settings?.editorialCorrespondent?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
 
     const newArticle = {
       id: article.id || `art-${Date.now()}`,
@@ -827,8 +847,8 @@ export const dbAdapter = {
       imageCredit: article.imageCredit || '',
       galleryImages: Array.isArray(article.galleryImages) ? article.galleryImages : [],
       authorId: article.authorId || 'usr-1',
-      authorName: article.authorName || 'Ajayi Odunayo',
-      authorAvatar: article.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      authorName: article.authorName && article.authorName !== 'Ajayi Odunayo' && article.authorName !== 'Ajayi odunayo' ? article.authorName : defaultCorr,
+      authorAvatar: article.authorAvatar || defaultAvatar,
       status: article.status || 'published',
       isFeatured: !!article.isFeatured,
       isPinned: !!article.isPinned,
@@ -892,7 +912,6 @@ export const dbAdapter = {
     }
 
     // Mirror to local memory/disk backup
-    const db = getLocalDb();
     db.articles = [newArticle, ...(db.articles || []).filter((a: any) => a.id !== newArticle.id)];
     saveLocalDb(db);
 
@@ -1753,6 +1772,28 @@ export const dbAdapter = {
     if (!db.settings) db.settings = {};
     db.settings.editorialCorrespondent = updatedCorr;
 
+    // Synchronize author name and avatar on all correspondent articles in local db
+    if (Array.isArray(db.articles)) {
+      db.articles = db.articles.map((art: any) => {
+        if (
+          !art.authorName ||
+          art.authorName === 'Ajayi Odunayo' ||
+          art.authorName === 'Ajayi odunayo' ||
+          art.authorId === 'usr-1' ||
+          art.authorName === 'Habbey Tech Solutions' ||
+          art.authorName === updatedCorr.correspondentName ||
+          art.authorName.toLowerCase().includes('editorial correspondent')
+        ) {
+          return {
+            ...art,
+            authorName: updatedCorr.correspondentName,
+            authorAvatar: updatedCorr.avatarUrl || art.authorAvatar
+          };
+        }
+        return art;
+      });
+    }
+
     if (Array.isArray(db.editorialDesk)) {
       const leadIndex = db.editorialDesk.findIndex((e: any) => e.id === 'ed-1' || (e.role && e.role.includes('Correspondent')));
       if (leadIndex !== -1) {
@@ -1796,6 +1837,12 @@ export const dbAdapter = {
         await client.from('supabase_document_store').upsert({
           key: 'editorialDesk',
           data: db.editorialDesk,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+        await client.from('supabase_document_store').upsert({
+          key: 'articles',
+          data: db.articles,
           updated_at: new Date().toISOString()
         }, { onConflict: 'key' });
       } catch (e: any) {
@@ -1997,7 +2044,18 @@ export const dbAdapter = {
       }
     }
 
-    db.articles = (db.articles || []).filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug));
+    const corrName = db.settings?.editorialCorrespondent?.correspondentName || 'Habbey Tech Solutions';
+    const corrAvatar = db.settings?.editorialCorrespondent?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+    db.articles = (db.articles || [])
+      .filter((a: any) => !deletedSet.has(a.id) && !deletedSet.has(a.slug))
+      .map((a: any) => {
+        const isCorr = !a.authorName || a.authorName === 'Ajayi Odunayo' || a.authorName === 'Ajayi odunayo' || a.authorId === 'usr-1' || a.authorName === 'Habbey Tech Solutions';
+        return {
+          ...a,
+          authorName: isCorr ? corrName : a.authorName,
+          authorAvatar: isCorr && corrAvatar ? corrAvatar : (a.authorAvatar || corrAvatar)
+        };
+      });
     db.sportsFixtures = (db.sportsFixtures || []).filter((f: any) => !deletedFixtureSet.has(f.id));
     db.ads = (db.ads || []).filter((a: any) => !deletedAdSet.has(a.id));
     return db;

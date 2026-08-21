@@ -539,7 +539,20 @@ export const api = {
         ]);
 
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
-          const cleanArticles = sbArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
+          const activeCorr = sbSettings?.editorialCorrespondent || getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS)?.editorialCorrespondent;
+          const corrName = activeCorr?.correspondentName || 'Habbey Tech Solutions';
+          const corrAvatar = activeCorr?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+
+          const cleanArticles = sbArticles
+            .filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug))
+            .map((a) => {
+              const isCorr = !a.authorName || a.authorName === 'Ajayi Odunayo' || a.authorName === 'Ajayi odunayo' || a.authorId === 'usr-1' || a.authorName === 'Habbey Tech Solutions';
+              return {
+                ...a,
+                authorName: isCorr ? corrName : a.authorName,
+                authorAvatar: isCorr && corrAvatar ? corrAvatar : (a.authorAvatar || corrAvatar)
+              };
+            });
           const cleanAds = Array.isArray(sbAds) ? sbAds.filter((a) => !deletedAdIds.has(a.id)) : [];
           const cleanEditorial = Array.isArray(sbEditorial)
             ? sbEditorial
@@ -672,6 +685,10 @@ export const api = {
     }
 
     // 3. LOCAL STORAGE DATASET FALLBACK
+    const activeCorr = getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS)?.editorialCorrespondent;
+    const corrName = activeCorr?.correspondentName || 'Habbey Tech Solutions';
+    const corrAvatar = activeCorr?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+
     let storedArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
     const articleIds = new Set(storedArticles.map((a) => a.id));
     for (const initArt of INITIAL_ARTICLES) {
@@ -679,7 +696,16 @@ export const api = {
         storedArticles.push(initArt);
       }
     }
-    storedArticles = storedArticles.filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug));
+    storedArticles = storedArticles
+      .filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug))
+      .map((a) => {
+        const isCorr = !a.authorName || a.authorName === 'Ajayi Odunayo' || a.authorName === 'Ajayi odunayo' || a.authorId === 'usr-1' || a.authorName === 'Habbey Tech Solutions';
+        return {
+          ...a,
+          authorName: isCorr ? corrName : a.authorName,
+          authorAvatar: isCorr && corrAvatar ? corrAvatar : (a.authorAvatar || corrAvatar)
+        };
+      });
     storedArticles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
     const finalStoredAds = getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
@@ -1078,12 +1104,17 @@ export const api = {
   },
 
   getArticleBySlugOrId: async (slugOrId: string) => {
+    const activeCorr = getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS)?.editorialCorrespondent;
+    const defaultCorrName = activeCorr?.correspondentName || 'Habbey Tech Solutions';
+    const defaultAvatar = activeCorr?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+
     // 1. Check direct Supabase
     try {
       const sb = getClientSupabase();
       if (sb) {
         const { data } = await sb.from('articles').select('*').or(`slug.eq.${slugOrId},id.eq.${slugOrId}`).maybeSingle();
         if (data) {
+          const isCorr = !data.author_name || data.author_name === 'Ajayi Odunayo' || data.author_name === 'Ajayi odunayo' || data.author_id === 'usr-1' || data.author_name === 'Habbey Tech Solutions';
           return {
             id: data.id,
             title: data.title,
@@ -1098,8 +1129,8 @@ export const api = {
             imageCredit: data.image_credit || '',
             galleryImages: Array.isArray(data.gallery_images) ? data.gallery_images : [],
             authorId: data.author_id || 'usr-1',
-            authorName: data.author_name || 'Ajayi Odunayo',
-            authorAvatar: data.author_avatar || '',
+            authorName: isCorr ? defaultCorrName : data.author_name,
+            authorAvatar: isCorr && defaultAvatar ? defaultAvatar : (data.author_avatar || defaultAvatar),
             status: data.status || 'published',
             isFeatured: !!data.is_featured,
             isPinned: !!data.is_pinned,
@@ -1132,6 +1163,10 @@ export const api = {
     const now = new Date().toISOString();
     const slug = article.slug || (article.title ? article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `article-${Date.now()}`);
 
+    const activeCorr = getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS)?.editorialCorrespondent;
+    const defaultCorrName = activeCorr?.correspondentName || 'Habbey Tech Solutions';
+    const defaultAvatar = activeCorr?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
+
     const newArticle: Article = {
       id: article.id || `art-${Date.now()}`,
       title: article.title || 'Untitled Article',
@@ -1146,8 +1181,8 @@ export const api = {
       imageCredit: article.imageCredit || '',
       galleryImages: article.galleryImages || [],
       authorId: article.authorId || 'usr-1',
-      authorName: article.authorName || 'Ajayi Odunayo',
-      authorAvatar: article.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      authorName: article.authorName && article.authorName !== 'Ajayi Odunayo' && article.authorName !== 'Ajayi odunayo' ? article.authorName : defaultCorrName,
+      authorAvatar: article.authorAvatar || defaultAvatar,
       status: article.status || 'published',
       isFeatured: !!article.isFeatured,
       isPinned: !!article.isPinned,
@@ -2629,7 +2664,30 @@ export const api = {
     setLocalData('naija_editorial_desk', edList);
     setDocInSupabase('editorialDesk', edList).catch(() => {});
 
-    // 4. Update on server
+    // 4. Update articles authorName & authorAvatar locally & in Supabase
+    const articles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const updatedArticles = articles.map((art) => {
+      if (
+        !art.authorName ||
+        art.authorName === 'Ajayi Odunayo' ||
+        art.authorName === 'Ajayi odunayo' ||
+        art.authorId === 'usr-1' ||
+        art.authorName === 'Habbey Tech Solutions' ||
+        art.authorName === current.correspondentName ||
+        art.authorName.toLowerCase().includes('editorial correspondent')
+      ) {
+        return {
+          ...art,
+          authorName: updated.correspondentName,
+          authorAvatar: updated.avatarUrl || art.authorAvatar
+        };
+      }
+      return art;
+    });
+    setLocalData('naija_articles', updatedArticles);
+    setDocInSupabase('articles', updatedArticles).catch(() => {});
+
+    // 5. Update on server
     try {
       const res = await fetchJson<{ success: boolean; data: EditorialCorrespondentSettings; message?: string }>('/api/editorial-correspondent', {
         method: 'PUT',

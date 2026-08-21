@@ -304,7 +304,7 @@
       "imageCredit": "",
       "galleryImages": [],
       "authorId": "usr-1",
-      "authorName": "Ajayi Odunayo",
+      "authorName": "Habbey Tech Solutions",
       "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": true,
@@ -314,8 +314,8 @@
       "views": 0,
       "readTimeMinutes": 1,
       "publishedAt": "2026-08-19T15:56:43.179+00:00",
-      "createdAt": "2026-08-21T09:45:32.882+00:00",
-      "updatedAt": "2026-08-21T09:45:32.882+00:00"
+      "createdAt": "2026-08-21T10:00:49.684Z",
+      "updatedAt": "2026-08-21T10:00:49.684Z"
     },
     {
       "id": "art-1787123465216",
@@ -331,7 +331,7 @@
       "imageCredit": "",
       "galleryImages": [],
       "authorId": "usr-1",
-      "authorName": "Ajayi Odunayo",
+      "authorName": "Habbey Tech Solutions",
       "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": true,
@@ -341,8 +341,8 @@
       "views": 0,
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-19T07:11:05.205+00:00",
-      "createdAt": "2026-08-21T09:45:32.713+00:00",
-      "updatedAt": "2026-08-21T09:45:32.713+00:00"
+      "createdAt": "2026-08-21T10:00:49.920Z",
+      "updatedAt": "2026-08-21T10:00:49.920Z"
     },
     {
       "id": "art-1787039631278",
@@ -358,7 +358,7 @@
       "imageCredit": "",
       "galleryImages": [],
       "authorId": "usr-1",
-      "authorName": "Ajayi Odunayo",
+      "authorName": "Habbey Tech Solutions",
       "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": true,
@@ -368,8 +368,8 @@
       "views": 0,
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-18T07:53:51.266+00:00",
-      "createdAt": "2026-08-21T09:45:32.524+00:00",
-      "updatedAt": "2026-08-21T09:45:32.524+00:00"
+      "createdAt": "2026-08-21T10:00:50.124Z",
+      "updatedAt": "2026-08-21T10:00:50.124Z"
     },
     {
       "id": "art-1",
@@ -693,7 +693,17 @@
     "officeAddress": "14 Broad Street, Marina, Lagos State / Plot 502 Central Business District, Abuja, Nigeria",
     "siteDescription": "Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, entertainment, and investigative reporting.",
     "googleAdsensePubId": "ca-pub-1234567890123456",
-    "adsterraSmartlinkUrl": "https://adsterra.example.com/smartlink-naijatrendiinfo"
+    "adsterraSmartlinkUrl": "https://adsterra.example.com/smartlink-naijatrendiinfo",
+    "editorialCorrespondent": {
+      "bio": "Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.",
+      "role": "NaijaTrendiInfo Editorial Correspondent",
+      "email": "editor@naijatrendinfo.com.ng",
+      "phone": "+234 813 773 1088",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+      "updatedAt": "2026-08-21T10:32:58.984Z",
+      "department": "News Bureau & Correspondents",
+      "correspondentName": "Habbey Tech Solutions"
+    }
   },
   "socialLinks": [
     {
@@ -883,7 +893,7 @@
       "seoTitle": "About Us | NaijaTrendiInfo - Nigeria News Platform",
       "seoDescription": "NaijaTrendiInfo is Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, and investigative journalism.",
       "seoKeywords": "NaijaTrendiInfo, About Us, Nigerian News, Lagos Bureau, Abuja Bureau, Investigative Journalism",
-      "authorName": "Ajayi Odunayo",
+      "authorName": "Habbey Tech Solutions",
       "status": "published",
       "visibility": "public",
       "navigationPlacement": "footer",
@@ -915,7 +925,7 @@
       "seoTitle": "Editorial Desk & Leadership | NaijaTrendiInfo",
       "seoDescription": "Discover the editors and correspondents powering truth and investigative reporting at NaijaTrendiInfo.",
       "seoKeywords": "Editorial Desk, Nigerian Journalists, Managing Editor, Lagos Newsroom, Abuja Bureau",
-      "authorName": "Ajayi Odunayo",
+      "authorName": "Habbey Tech Solutions",
       "status": "published",
       "visibility": "public",
       "navigationPlacement": "footer",
@@ -1057,13 +1067,14 @@
   "editorialDesk": [
     {
       "id": "ed-1",
-      "bio": "Veteran investigative journalist with 15+ years experience in Nigerian media.",
+      "bio": "Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.",
       "name": "Habbey Tech Solutions",
-      "role": "Executive Managing Editor & Publisher",
+      "role": "NaijaTrendiInfo Editorial Correspondent",
       "email": "editor@naijatrendinfo.com.ng",
-      "phone": "+234 8137731088",
+      "phone": "+234 813 773 1088",
       "isActive": true,
-      "department": "Editor-in-Chief"
+      "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+      "department": "News Bureau & Correspondents"
     },
     {
       "id": "ed-2",
@@ -1133,6 +1144,60 @@
   "submissions": [],
   "contacts": [],
   "auditLogs": [
+    {
+      "id": "log-1787308385095-e3i6",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Multi-Browser Cloud Sync",
+      "details": "Synchronized database updates across connected devices and browsers.",
+      "resource": "System Sync",
+      "createdAt": "2026-08-21T10:33:05.095Z"
+    },
+    {
+      "id": "log-1787308379166-y68f",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Correspondent Updated",
+      "details": "Updated Editorial Correspondent profile for \"Habbey Tech Solutions\"",
+      "resource": "Editorial Desk",
+      "createdAt": "2026-08-21T10:32:59.166Z"
+    },
+    {
+      "id": "log-1787308364504-9zqt",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Correspondent Updated",
+      "details": "Updated Editorial Correspondent profile for \"Habbey Tech Solutions\"",
+      "resource": "Editorial Desk",
+      "createdAt": "2026-08-21T10:32:44.504Z"
+    },
+    {
+      "id": "log-1787306648792-6uey",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Multi-Browser Cloud Sync",
+      "details": "Synchronized database updates across connected devices and browsers.",
+      "resource": "System Sync",
+      "createdAt": "2026-08-21T10:04:08.792Z"
+    },
+    {
+      "id": "log-1787306623474-u44f",
+      "userEmail": "Ajayiodunayo28@gmail.com",
+      "userName": "Ajayi Odunayo",
+      "action": "User Updated",
+      "details": "Updated settings/password for user Habbey Tech Solutions ",
+      "resource": "Users",
+      "createdAt": "2026-08-21T10:03:43.474Z"
+    },
+    {
+      "id": "log-1787306450428-w0pj",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Multi-Browser Cloud Sync",
+      "details": "Synchronized database updates across connected devices and browsers.",
+      "resource": "System Sync",
+      "createdAt": "2026-08-21T10:00:50.428Z"
+    },
     {
       "id": "log-1787306037429-25dq",
       "userEmail": "admin@naijatrendinfo.com.ng",
@@ -1299,6 +1364,149 @@
   "backups": [],
   "analytics": {
     "liveVisitorFeed": [
+      {
+        "id": "evt-1787308380204-617",
+        "path": "/article/ai-artificial-intelligence-changing-the-world-of-tech",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Enugu (Independence Layout)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:33:00.204Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787308365542-657",
+        "path": "/article/ai-artificial-intelligence-changing-the-world-of-tech",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Kaduna Central",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:32:45.542Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787308316926-317",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Abuja FCT (Maitama / Central)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:31:56.926Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787308316735-551",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Enugu (Independence Layout)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:31:56.735Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787308266287-883",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Kano City (Kano)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:31:06.287Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787308265866-708",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Enugu (Independence Layout)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:31:05.866Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306625018-950",
+        "path": "/article/the-fg-has-reopened-free-cac-business-name-registration",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:03:45.018Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306462485-70",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Kano City (Kano)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:01:02.485Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306462100-805",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Enugu (Independence Layout)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:01:02.100Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306456023-632",
+        "path": "/",
+        "title": "NaijaTrendiInfo - Nigeria News",
+        "category": "General",
+        "location": "Abeokuta (Ogun)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:00:56.023Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306451679-832",
+        "path": "/article/ai-artificial-intelligence-changing-the-world-of-tech",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Lagos (Ikeja, Mainland)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T10:00:51.679Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306394046-910",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Abeokuta (Ogun)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:59:54.046Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787306394039-243",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Houston TX, United States (Diaspora)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-21T09:59:54.039Z",
+        "timeAgo": "Just now"
+      },
       {
         "id": "evt-1787306001918-935",
         "path": "/article/the-fg-has-reopened-free-cac-business-name-registration",

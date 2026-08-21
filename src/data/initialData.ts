@@ -247,7 +247,7 @@ export const INITIAL_ARTICLES: Article[] = [
     imageCaption: 'Premiere night red carpet event celebrating Nigerian cinema.',
     imageCredit: 'Entertainment Desk',
     authorId: 'usr-1',
-    authorName: 'Chidubem Okechukwu',
+    authorName: 'Habbey Tech Solutions',
     authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
     status: 'published',
     isFeatured: false,
