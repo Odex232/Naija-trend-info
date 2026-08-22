@@ -81,6 +81,7 @@ import { MediaLibrary } from '../components/MediaLibrary';
 import { SocialMediaManager } from '../components/SocialMediaManager';
 import { WebsiteAnalyticsDashboard } from '../components/WebsiteAnalyticsDashboard';
 import { SupabaseMigrationDashboard } from '../components/SupabaseMigrationDashboard';
+import { AdsManager } from '../components/admin/AdsManager';
 import { Share2 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
@@ -176,9 +177,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Breaking News Modal State
   const [editingBreaking, setEditingBreaking] = useState<Partial<BreakingNews> | null>(null);
-
-  // Ad Modal State
-  const [editingAd, setEditingAd] = useState<Partial<Ad> | null>(null);
 
   // Sports Fixture Modal State
   const [editingFixture, setEditingFixture] = useState<Partial<SportsFixture> | null>(null);
@@ -700,50 +698,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       onRefreshData();
     } catch (e: any) {
       triggerErrorNotification(e.message || 'Failed to save breaking news');
-    }
-  };
-
-  // Delete Ad
-  const handleDeleteAd = (id: string) => {
-    const target = ads.find((a) => a.id === id);
-    const campaignName = target?.name || 'this ad campaign';
-    askConfirmation(
-      'Delete Ad Campaign',
-      `Are you sure you want to permanently delete "${campaignName}"? This action will remove the ad immediately from live banners and database storage.`,
-      async () => {
-        setDeletingId(id);
-        try {
-          const res = await api.deleteAd(id);
-          if (editingAd?.id === id) setEditingAd(null);
-          triggerSuccessNotification(res.message || 'Ad campaign deleted successfully');
-          await onRefreshData();
-        } catch (e: any) {
-          console.error('Delete ad failed:', e);
-          triggerErrorNotification(e.message || 'Failed to delete ad campaign');
-        } finally {
-          setDeletingId(null);
-        }
-      },
-      { confirmLabel: 'Delete Campaign', isDanger: true }
-    );
-  };
-
-  // Save Ad
-  const handleSaveAd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingAd?.name) return;
-    try {
-      if (editingAd.id) {
-        await api.updateAd(editingAd.id, editingAd);
-        triggerSuccessNotification('Ad campaign updated!');
-      } else {
-        await api.createAd(editingAd);
-        triggerSuccessNotification('New ad campaign created!');
-      }
-      setEditingAd(null);
-      onRefreshData();
-    } catch (e: any) {
-      triggerErrorNotification(e.message || 'Failed to save ad');
     }
   };
 
@@ -2035,145 +1989,21 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
           {/* TAB 5: ADS & PLACEMENTS */}
           {activeTab === 'ads' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold font-serif text-white">Ads & Placement Manager</h1>
-                  <p className="text-xs text-slate-400 mt-1">Configure Google AdSense, Adsterra, and Custom Advertiser Banners.</p>
-                </div>
-                <button
-                  onClick={() => setEditingAd({ name: '', type: 'custom', isActive: true, desktopVisible: true, mobileVisible: true })}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create Ad Campaign</span>
-                </button>
-              </div>
-
-              {/* Placements Matrix */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <h3 className="font-bold text-sm text-white">Visual Ad Placement Configuration</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {adPlacements.map((p) => (
-                    <div key={p.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
-                      <div className="font-bold text-emerald-400">{p.position}</div>
-                      <div className="text-slate-300">Network: <span className="font-semibold uppercase text-amber-300">{p.networkType}</span></div>
-                      <div className="text-[10px] text-slate-500">Target: {p.deviceTarget}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Ads List */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
-                    <span>Active Ad Campaigns</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                      {ads.length}
-                    </span>
-                  </h3>
-                </div>
-
-                {ads.length === 0 ? (
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
-                    <p className="text-xs text-slate-400">No ad campaigns found. Create custom sponsor banners, Google AdSense, or Adsterra units.</p>
-                    <button
-                      onClick={() => setEditingAd({ name: '', type: 'custom', isActive: true, desktopVisible: true, mobileVisible: true })}
-                      className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Create First Ad Campaign</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {ads.map((ad) => (
-                      <div key={ad.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 hover:border-slate-700 transition-colors">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-bold text-sm text-white">{ad.name}</h4>
-                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">{ad.type.replace('_', ' ')}</span>
-                          </div>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${ad.isActive ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
-                            {ad.isActive ? 'Active' : 'Paused'}
-                          </span>
-                        </div>
-
-                        {ad.bannerUrl && (
-                          <div className="rounded-lg overflow-hidden border border-slate-800 bg-black/40 max-h-24 flex items-center justify-center">
-                            <img src={ad.bannerUrl} alt={ad.name} className="w-full h-auto object-cover max-h-24" />
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl text-center text-xs font-mono border border-slate-800/50">
-                          <div>
-                            <div className="text-slate-500 text-[10px]">Impressions</div>
-                            <div className="text-white font-bold">{ad.impressions?.toLocaleString() ?? 0}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500 text-[10px]">Clicks</div>
-                            <div className="text-emerald-400 font-bold">{ad.clicks?.toLocaleString() ?? 0}</div>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-                          <button
-                            onClick={async () => {
-                              try {
-                                await api.updateAd(ad.id, { isActive: !ad.isActive });
-                                triggerSuccessNotification(`Campaign "${ad.name}" ${ad.isActive ? 'paused' : 'activated'}`);
-                                await onRefreshData();
-                              } catch (err: any) {
-                                triggerErrorNotification('Failed to toggle ad status');
-                              }
-                            }}
-                            className="text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors"
-                          >
-                            {ad.isActive ? 'Pause Campaign' : 'Resume Campaign'}
-                          </button>
-
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingAd(ad);
-                              }}
-                              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium flex items-center space-x-1 cursor-pointer transition-colors"
-                              title="Edit Ad Campaign"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              disabled={deletingId === ad.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAd(ad.id);
-                              }}
-                              className="px-2.5 py-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg text-xs font-medium flex items-center space-x-1 cursor-pointer disabled:opacity-50 transition-colors"
-                              title="Delete Ad Campaign"
-                            >
-                              {deletingId === ad.id ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
-                                  <span>Deleting...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Delete</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <AdsManager
+              ads={ads}
+              adPlacements={adPlacements}
+              settings={settings}
+              onRefreshData={onRefreshData}
+              triggerSuccessNotification={triggerSuccessNotification}
+              triggerErrorNotification={triggerErrorNotification}
+              askConfirmation={(title, message, onConfirm, opts) =>
+                askConfirmation(title, message, onConfirm, {
+                  confirmLabel: opts?.confirmLabel,
+                  cancelLabel: opts?.cancelLabel,
+                  isDanger: opts?.isDanger
+                })
+              }
+            />
           )}
 
           {/* TAB 6: MEDIA LIBRARY */}
@@ -6030,97 +5860,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <button type="submit" className="px-5 py-2 bg-emerald-600 font-bold rounded-xl">
                   Publish Alert
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Ad Campaign Modal */}
-      {editingAd && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full text-xs space-y-4 text-white">
-            <h3 className="font-bold text-base font-serif">Ad Campaign Setup</h3>
-            <form onSubmit={handleSaveAd} className="space-y-3">
-              <div>
-                <label className="block font-semibold mb-1">Campaign Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingAd.name || ''}
-                  onChange={(e) => setEditingAd({ ...editingAd, name: e.target.value })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold mb-1">Ad Network Type</label>
-                <select
-                  value={editingAd.type || 'custom'}
-                  onChange={(e) => setEditingAd({ ...editingAd, type: e.target.value as any })}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                >
-                  <option value="google_adsense">Google AdSense</option>
-                  <option value="adsterra">Adsterra</option>
-                  <option value="custom">Custom Advertiser Banner</option>
-                </select>
-              </div>
-
-              {editingAd.type === 'custom' && (
-                <>
-                  <div>
-                    <label className="block font-semibold mb-1">Banner Image URL</label>
-                    <input
-                      type="url"
-                      value={editingAd.bannerUrl || ''}
-                      onChange={(e) => setEditingAd({ ...editingAd, bannerUrl: e.target.value })}
-                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1">Destination URL</label>
-                    <input
-                      type="url"
-                      value={editingAd.destinationUrl || ''}
-                      onChange={(e) => setEditingAd({ ...editingAd, destinationUrl: e.target.value })}
-                      className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
-                    />
-                  </div>
-                </>
-              )}
-
-              {(editingAd.type === 'google_adsense' || editingAd.type === 'adsterra') && (
-                <div>
-                  <label className="block font-semibold mb-1">Ad Unit HTML/Script Code</label>
-                  <textarea
-                    rows={3}
-                    value={editingAd.adCode || ''}
-                    onChange={(e) => setEditingAd({ ...editingAd, adCode: e.target.value })}
-                    className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 font-mono text-[11px]"
-                  ></textarea>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center pt-3 border-t border-slate-800">
-                {editingAd.id ? (
-                  <button
-                    type="button"
-                    disabled={deletingId === editingAd.id}
-                    onClick={() => handleDeleteAd(editingAd.id!)}
-                    className="px-3.5 py-2 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 font-semibold rounded-xl flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {deletingId === editingAd.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                    <span>Delete Campaign</span>
-                  </button>
-                ) : <div />}
-
-                <div className="flex items-center space-x-2">
-                  <button type="button" onClick={() => setEditingAd(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl cursor-pointer">
-                    Cancel
-                  </button>
-                  <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-white cursor-pointer">
-                    Save Campaign
-                  </button>
-                </div>
               </div>
             </form>
           </div>

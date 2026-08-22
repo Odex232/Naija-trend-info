@@ -685,14 +685,86 @@ async function startServer() {
   });
 
   app.get('/api/ad-placements', (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     res.json(db.adPlacements || []);
   });
 
-  app.put('/api/ad-placements', (req, res) => {
+  app.put('/api/ad-placements', requireAdminAuth, async (req, res) => {
     db.adPlacements = req.body;
     saveDatabase();
-    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Ad Placements Updated', 'Saved visual layout placement parameters for advertisements', 'Ads Manager');
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'adPlacements',
+          data: db.adPlacements,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e) {}
+    }
+    addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Ad Placements Updated', 'Saved visual layout placement parameters for advertisements', 'Ads Manager');
     res.json(db.adPlacements);
+  });
+
+  app.get('/api/ads-settings', (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    const settings = {
+      googleAdSense: {
+        enabled: db.settings?.googleAdSenseEnabled !== false,
+        publisherId: db.settings?.googleAdsensePubId || 'ca-pub-1234567890123456',
+        autoAds: db.settings?.googleAdSenseAutoAds || false,
+        testMode: db.settings?.googleAdSenseTestMode || false
+      },
+      adsterra: {
+        enabled: db.settings?.adsterraEnabled !== false
+      },
+      adsTxt: db.settings?.adsTxt || db.adsTxt || `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
+# Google AdSense
+google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+
+# Adsterra Network
+# adsterra.com, DIRECT
+`,
+      disableAdsSitewide: db.settings?.disableAdsSitewide || false,
+      disabledArticleIds: db.settings?.disabledArticleIds || [],
+      disabledCategoryIds: db.settings?.disabledCategoryIds || []
+    };
+    res.json(settings);
+  });
+
+  app.put('/api/ads-settings', requireAdminAuth, async (req, res) => {
+    const newSettings = req.body;
+    if (!db.settings) db.settings = {};
+    if (newSettings.googleAdSense) {
+      db.settings.googleAdsensePubId = newSettings.googleAdSense.publisherId;
+      db.settings.googleAdSenseEnabled = newSettings.googleAdSense.enabled;
+      db.settings.googleAdSenseAutoAds = newSettings.googleAdSense.autoAds;
+      db.settings.googleAdSenseTestMode = newSettings.googleAdSense.testMode;
+    }
+    if (newSettings.adsterra) {
+      db.settings.adsterraEnabled = newSettings.adsterra.enabled;
+    }
+    if (typeof newSettings.adsTxt === 'string') {
+      db.settings.adsTxt = newSettings.adsTxt;
+      db.adsTxt = newSettings.adsTxt;
+    }
+    db.settings.disableAdsSitewide = !!newSettings.disableAdsSitewide;
+    db.settings.disabledArticleIds = newSettings.disabledArticleIds || [];
+    db.settings.disabledCategoryIds = newSettings.disabledCategoryIds || [];
+    saveDatabase();
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'settings',
+          data: db.settings,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e) {}
+    }
+    addAuditLog((req as any).user?.email || 'admin@naijatrendinfo.com.ng', (req as any).user?.name || 'Admin', 'Ad Settings Updated', 'Updated monetization settings, ads.txt, and provider rules', 'Ads Manager');
+    res.json({ success: true, settings: db.settings });
   });
 
 function getFileTypeCategory(filename: string, mimeType: string): 'image' | 'video' | 'audio' | 'document' | 'office' | 'archive' | 'other' {
@@ -2204,6 +2276,24 @@ function isBlockedFileType(filename: string): boolean {
     xml += `</urlset>`;
     res.header('Content-Type', 'application/xml; charset=utf-8');
     res.send(xml);
+  });
+
+  // SEO & Monetization: ads.txt (Authorized Digital Sellers)
+  app.get('/ads.txt', (req, res) => {
+    const customAdsTxt = db.settings?.adsTxt || db.adsTxt;
+    if (customAdsTxt && typeof customAdsTxt === 'string' && customAdsTxt.trim().length > 0) {
+      res.header('Content-Type', 'text/plain; charset=utf-8');
+      return res.send(customAdsTxt);
+    }
+    const defaultAdsTxt = `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
+# Google AdSense
+google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+
+# Adsterra Network
+# adsterra.com, DIRECT
+`;
+    res.header('Content-Type', 'text/plain; charset=utf-8');
+    res.send(defaultAdsTxt);
   });
 
   // SEO: Robots.txt

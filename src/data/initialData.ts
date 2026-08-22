@@ -4,6 +4,7 @@ import {
   BreakingNews,
   Ad,
   AdPlacement,
+  AdsSettings,
   WebsiteSettings,
   SocialMediaLink,
   QuickLink,
@@ -334,13 +335,45 @@ export const INITIAL_ADS: Ad[] = [
 ];
 
 export const INITIAL_AD_PLACEMENTS: AdPlacement[] = [
-  { id: 'place-1', position: 'Header', adId: 'ad-1', networkType: 'custom', deviceTarget: 'all' },
-  { id: 'place-2', position: 'Below Breaking News', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all' },
-  { id: 'place-3', position: 'Sidebar Top', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'desktop' },
-  { id: 'place-4', position: 'Between Articles', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all' },
-  { id: 'place-5', position: 'Middle of Article', adId: 'ad-1', networkType: 'custom', deviceTarget: 'all' },
-  { id: 'place-6', position: 'Mobile Sticky', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'mobile' }
+  { id: 'place-1', position: 'Header', slotKey: 'AD_SLOT_HEADER', label: 'Header Top Leaderboard', adId: 'ad-1', networkType: 'custom', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Prominently displayed above the main header or right under top navigation.' },
+  { id: 'place-2', position: 'Top Homepage', slotKey: 'AD_SLOT_TOP_HOMEPAGE', label: 'Top Homepage Banner', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Positioned below header and breaking news ticker on homepage.' },
+  { id: 'place-3', position: 'Below Breaking News', slotKey: 'AD_SLOT_BELOW_NAV', label: 'Below Breaking News', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Banner displayed directly under breaking news alerts on category and article pages.' },
+  { id: 'place-4', position: 'Below Hero Section', slotKey: 'AD_SLOT_HERO_BOTTOM', label: 'Below Hero Grid', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Appears after the main top editorial stories showcase on the homepage.' },
+  { id: 'place-5', position: 'Homepage Content', slotKey: 'AD_SLOT_HOMEPAGE_CONTENT', label: 'Homepage Content Stream', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'all', reservedHeight: 250, enabled: true, description: 'In-feed banner between major category blocks on homepage.' },
+  { id: 'place-6', position: 'Between Articles', slotKey: 'AD_SLOT_BETWEEN_ARTICLES', label: 'Between News Feed Articles', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Inserted naturally between article cards in list feeds.' },
+  { id: 'place-7', position: 'Sidebar Top', slotKey: 'AD_SLOT_SIDEBAR_TOP', label: 'Sidebar Top (300x250 / 300x600)', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'desktop', reservedHeight: 250, enabled: true, description: 'Top position on the right sidebar across desktop layouts.' },
+  { id: 'place-8', position: 'Sidebar Middle', slotKey: 'AD_SLOT_SIDEBAR_MIDDLE', label: 'Sidebar Middle', adId: 'ad-1', networkType: 'custom', deviceTarget: 'desktop', reservedHeight: 250, enabled: true, description: 'Middle position in sidebar between trending and editors pick widgets.' },
+  { id: 'place-9', position: 'Sidebar Bottom', slotKey: 'AD_SLOT_SIDEBAR_BOTTOM', label: 'Sidebar Bottom Sticky', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'desktop', reservedHeight: 250, enabled: true, description: 'Bottom position on sidebar for high-visibility engagement.' },
+  { id: 'place-10', position: 'Before Article', slotKey: 'AD_SLOT_ARTICLE_TOP', label: 'Before Article Body', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Directly above article title / featured image on article view.' },
+  { id: 'place-11', position: 'After First Paragraph', slotKey: 'AD_SLOT_ARTICLE_INTRO', label: 'After Article Introduction', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'High engagement slot directly under the opening lead paragraph.' },
+  { id: 'place-12', position: 'Middle of Article', slotKey: 'AD_SLOT_ARTICLE_MIDDLE', label: 'Middle of Article In-Feed', adId: 'ad-1', networkType: 'custom', deviceTarget: 'all', reservedHeight: 250, enabled: true, description: 'Inserted halfway through long-form investigative and news stories.' },
+  { id: 'place-13', position: 'After Article', slotKey: 'AD_SLOT_ARTICLE_BOTTOM', label: 'After Article Content', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'all', reservedHeight: 250, enabled: true, description: 'Appears directly before the comments section and author box.' },
+  { id: 'place-14', position: 'Before Related Articles', slotKey: 'AD_SLOT_RELATED_TOP', label: 'Before Related Stories', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Placed between comments and related article recommendations.' },
+  { id: 'place-15', position: 'Category Page', slotKey: 'AD_SLOT_CATEGORY', label: 'Category Page Header Banner', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Displayed on category landing pages.' },
+  { id: 'place-16', position: 'Search Page', slotKey: 'AD_SLOT_SEARCH', label: 'Search Results Page Banner', adId: 'ad-2', networkType: 'google_adsense', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Displayed above search query result listings.' },
+  { id: 'place-17', position: 'Footer', slotKey: 'AD_SLOT_FOOTER', label: 'Footer Pre-Bottom Leaderboard', adId: 'ad-1', networkType: 'custom', deviceTarget: 'all', reservedHeight: 90, enabled: true, description: 'Displayed directly above the master website footer.' },
+  { id: 'place-18', position: 'Mobile Sticky', slotKey: 'AD_SLOT_MOBILE_STICKY', label: 'Mobile Sticky Footer Banner', adId: 'ad-3', networkType: 'adsterra', deviceTarget: 'mobile', reservedHeight: 50, enabled: true, description: 'Fixed non-intrusive bottom 320x50 banner on mobile devices with close option.' }
 ];
+
+export const INITIAL_ADS_SETTINGS: AdsSettings = {
+  googleAdSense: {
+    enabled: true,
+    publisherId: 'ca-pub-1234567890123456',
+    autoAds: false,
+    testMode: false
+  },
+  adsterra: {
+    enabled: true
+  },
+  adsTxt: `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
+# Google AdSense
+google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+
+# Adsterra Network (Add official publisher records below)
+# adsterra.com, PUBLISHER_ID, DIRECT
+`,
+  disableAdsSitewide: false
+};
 
 export const INITIAL_SETTINGS: WebsiteSettings = {
   siteName: 'NaijaTrendiInfo',

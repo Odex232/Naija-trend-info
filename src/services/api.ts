@@ -4,6 +4,7 @@ import {
   BreakingNews,
   Ad,
   AdPlacement,
+  AdsSettings,
   WebsiteSettings,
   SocialMediaLink,
   QuickLink,
@@ -31,6 +32,7 @@ import {
   INITIAL_ARTICLES,
   INITIAL_ADS,
   INITIAL_AD_PLACEMENTS,
+  INITIAL_ADS_SETTINGS,
   INITIAL_SETTINGS,
   INITIAL_SOCIAL_LINKS,
   INITIAL_QUICK_LINKS,
@@ -522,7 +524,8 @@ export const api = {
           sbInfo,
           sbAds,
           sbSports,
-          sbUsers
+          sbUsers,
+          sbPlacements
         ] = await Promise.all([
           fetchArticlesFromSupabase(),
           getDocFromSupabase<Category[]>('categories'),
@@ -535,7 +538,8 @@ export const api = {
           getDocFromSupabase<InformationEntry[]>('information'),
           getDocFromSupabase<Ad[]>('ads'),
           getDocFromSupabase<SportsFixture[]>('sportsFixtures'),
-          getDocFromSupabase<User[]>('users')
+          getDocFromSupabase<User[]>('users'),
+          getDocFromSupabase<AdPlacement[]>('adPlacements')
         ]);
 
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
@@ -578,12 +582,17 @@ export const api = {
           if (Array.isArray(sbSocial) && sbSocial.length > 0) setLocalData('naija_social_links', sbSocial);
           if (Array.isArray(sbInfo) && sbInfo.length > 0) setLocalData('naija_information', sbInfo);
           if (cleanAds.length > 0) setLocalData('naija_ads', cleanAds);
+          if (Array.isArray(sbPlacements) && sbPlacements.length > 0) setLocalData('naija_ad_placements', sbPlacements);
           setLocalData('naija_sports_fixtures', cleanSports);
           if (Array.isArray(sbUsers) && sbUsers.length > 0) setLocalData('naija_users', sbUsers);
 
           const finalAds = cleanAds.length > 0
             ? cleanAds
             : getLocalData<Ad[]>('naija_ads', INITIAL_ADS).filter((a) => !deletedAdIds.has(a.id));
+
+          const finalPlacements = (Array.isArray(sbPlacements) && sbPlacements.length > 0)
+            ? sbPlacements
+            : getLocalData<AdPlacement[]>('naija_ad_placements', INITIAL_AD_PLACEMENTS);
 
           const finalEditorial = cleanEditorial.length > 0
             ? cleanEditorial
@@ -601,7 +610,7 @@ export const api = {
             articles: cleanArticles,
             breakingNews: (Array.isArray(sbBreaking) && sbBreaking.length > 0) ? sbBreaking : getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS),
             ads: finalAds,
-            adPlacements: INITIAL_AD_PLACEMENTS,
+            adPlacements: finalPlacements,
             users: finalUsers,
             comments: getLocalData('naija_comments', []),
             submissions: getLocalData('naija_submissions', []),
@@ -718,7 +727,7 @@ export const api = {
       articles: storedArticles,
       breakingNews: getLocalData('naija_breaking_news', INITIAL_BREAKING_NEWS),
       ads: finalStoredAds,
-      adPlacements: INITIAL_AD_PLACEMENTS,
+      adPlacements: getLocalData<AdPlacement[]>('naija_ad_placements', INITIAL_AD_PLACEMENTS),
       users: getLocalData('naija_users', INITIAL_USERS),
       comments: getLocalData('naija_comments', []),
       submissions: getLocalData('naija_submissions', []),
@@ -1541,14 +1550,32 @@ export const api = {
       id: newId,
       name: ad.name || 'New Sponsor Ad',
       type: ad.type || 'custom',
+      format: ad.format || 'responsive',
+      status: ad.status || (ad.isActive !== false ? 'active' : 'paused'),
+      publisherId: ad.publisherId || '',
+      adUnitId: ad.adUnitId || '',
+      adCode: ad.adCode || '',
       bannerUrl: ad.bannerUrl || '',
       destinationUrl: ad.destinationUrl || 'https://naijatrendinfo.com.ng',
+      advertiserName: ad.advertiserName || '',
+      campaignName: ad.campaignName || '',
+      startDate: ad.startDate || '',
+      endDate: ad.endDate || '',
+      deviceTarget: ad.deviceTarget || 'all',
+      pageTarget: ad.pageTarget || 'all',
+      disabledCategoryIds: ad.disabledCategoryIds || [],
+      disabledArticleIds: ad.disabledArticleIds || [],
+      priority: ad.priority || 1,
+      frequencyLimit: ad.frequencyLimit || 0,
       desktopVisible: ad.desktopVisible !== false,
       mobileVisible: ad.mobileVisible !== false,
-      impressions: 0,
-      clicks: 0,
-      isActive: ad.isActive !== false,
-      adCode: ad.adCode || ''
+      tabletVisible: ad.tabletVisible !== false,
+      impressions: ad.impressions || 0,
+      clicks: ad.clicks || 0,
+      isActive: ad.isActive !== false && ad.status !== 'paused' && ad.status !== 'disabled',
+      notes: ad.notes || '',
+      createdAt: ad.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     const updated = [newAd, ...ads.filter((a) => a.id !== newAd.id)];
     setLocalData('naija_ads', updated);
@@ -1571,7 +1598,7 @@ export const api = {
     let updatedAd: Ad | null = null;
     const updated = ads.map((a) => {
       if (a.id === id) {
-        updatedAd = { ...a, ...ad };
+        updatedAd = { ...a, ...ad, updatedAt: new Date().toISOString() };
         return updatedAd;
       }
       return a;
@@ -1632,6 +1659,67 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ type })
     }).catch(() => ({ success: true })),
+
+  getAdPlacements: async () => {
+    try {
+      const sbPlacements = await getDocFromSupabase<AdPlacement[]>('adPlacements');
+      if (Array.isArray(sbPlacements) && sbPlacements.length > 0) {
+        setLocalData('naija_ad_placements', sbPlacements);
+        return sbPlacements;
+      }
+    } catch (e) {}
+
+    try {
+      const serverPlacements = await fetchJson<AdPlacement[]>(`/api/ad-placements?_t=${Date.now()}`);
+      if (Array.isArray(serverPlacements) && serverPlacements.length > 0) {
+        setLocalData('naija_ad_placements', serverPlacements);
+        return serverPlacements;
+      }
+    } catch (e) {}
+
+    return getLocalData<AdPlacement[]>('naija_ad_placements', INITIAL_AD_PLACEMENTS);
+  },
+
+  updateAdPlacements: async (placements: AdPlacement[]) => {
+    setLocalData('naija_ad_placements', placements);
+    setDocInSupabase('adPlacements', placements).catch(() => {});
+    try {
+      const res = await fetchJson<AdPlacement[]>('/api/ad-placements', {
+        method: 'PUT',
+        body: JSON.stringify(placements)
+      });
+      return res || placements;
+    } catch (e) {
+      return placements;
+    }
+  },
+
+  getAdsSettings: async () => {
+    try {
+      const serverSettings = await fetchJson<AdsSettings>(`/api/ads-settings?_t=${Date.now()}`);
+      if (serverSettings) {
+        setLocalData('naija_ads_settings', serverSettings);
+        return serverSettings;
+      }
+    } catch (e) {}
+
+    return getLocalData<AdsSettings>('naija_ads_settings', INITIAL_ADS_SETTINGS);
+  },
+
+  updateAdsSettings: async (settings: Partial<AdsSettings>) => {
+    const current = getLocalData<AdsSettings>('naija_ads_settings', INITIAL_ADS_SETTINGS);
+    const updated = { ...current, ...settings };
+    setLocalData('naija_ads_settings', updated);
+    try {
+      const res = await fetchJson<{ success: boolean; settings: any }>('/api/ads-settings', {
+        method: 'PUT',
+        body: JSON.stringify(updated)
+      });
+      return res?.settings || updated;
+    } catch (e) {
+      return updated;
+    }
+  },
 
   // Media Library
   getMedia: async (publishedOnly: boolean = false) => {

@@ -78,25 +78,40 @@ export interface BreakingNews {
 }
 
 export type AdType = 'google_adsense' | 'adsterra' | 'custom';
+export type AdStatus = 'active' | 'paused' | 'disabled' | 'draft' | 'error' | 'pending_review';
+export type AdDeviceTarget = 'all' | 'mobile' | 'desktop' | 'tablet';
+export type AdPageTarget = 'all' | 'home' | 'article' | 'category' | 'search';
 
 export interface Ad {
   id: string;
   name: string;
   type: AdType;
-  publisherId?: string; // AdSense
-  adUnitId?: string; // AdSense
-  adCode?: string; // Raw HTML / Adsterra / AdSense
-  bannerUrl?: string; // Custom
-  destinationUrl?: string; // Custom
-  advertiserName?: string; // Custom
+  format?: string; // 'responsive' | 'banner_728x90' | 'rectangle_300x250' | 'leaderboard_970x90' | 'skyscraper_300x600' | 'mobile_320x50' | 'native' | 'popunder' | 'social_bar' | 'in_article' | 'auto';
+  status?: AdStatus;
+  publisherId?: string; // AdSense (e.g. ca-pub-...)
+  adUnitId?: string; // AdSense slot ID
+  adCode?: string; // Raw HTML / Adsterra snippet / AdSense script
+  bannerUrl?: string; // Custom image
+  destinationUrl?: string; // Custom target URL
+  advertiserName?: string; // Custom sponsor name
   campaignName?: string;
   startDate?: string;
   endDate?: string;
+  deviceTarget?: AdDeviceTarget;
+  pageTarget?: AdPageTarget;
+  disabledCategoryIds?: string[];
+  disabledArticleIds?: string[];
+  priority?: number;
+  frequencyLimit?: number;
   desktopVisible: boolean;
   mobileVisible: boolean;
+  tabletVisible?: boolean;
   isActive: boolean;
   impressions: number;
   clicks: number;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type PlacementPosition =
@@ -114,15 +129,47 @@ export type PlacementPosition =
   | 'Middle of Article'
   | 'Before Related Articles'
   | 'After Article'
+  | 'Category Page'
+  | 'Search Page'
   | 'Footer'
   | 'Mobile Sticky';
 
 export interface AdPlacement {
   id: string;
   position: PlacementPosition;
+  slotKey?: string; // e.g. AD_SLOT_HEADER, AD_SLOT_ARTICLE_TOP
+  label?: string;
   adId?: string; // Selected Ad ID
   networkType: 'google_adsense' | 'adsterra' | 'custom' | 'disabled';
-  deviceTarget: 'all' | 'mobile' | 'desktop';
+  deviceTarget: AdDeviceTarget;
+  reservedHeight?: number; // CLS reserved pixel height
+  description?: string;
+  enabled?: boolean;
+  priority?: number;
+  updatedAt?: string;
+}
+
+export interface GoogleAdSenseConfig {
+  enabled: boolean;
+  publisherId: string; // ca-pub-XXXXXXXXXXXXXXXX
+  autoAds: boolean;
+  testMode?: boolean;
+}
+
+export interface AdsterraConfig {
+  enabled: boolean;
+  socialBarKey?: string;
+  nativeKey?: string;
+  bannerKey?: string;
+}
+
+export interface AdsSettings {
+  googleAdSense: GoogleAdSenseConfig;
+  adsterra: AdsterraConfig;
+  adsTxt: string;
+  disableAdsSitewide?: boolean;
+  disabledArticleIds?: string[];
+  disabledCategoryIds?: string[];
 }
 
 export interface MediaFile {
