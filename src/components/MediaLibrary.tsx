@@ -41,6 +41,7 @@ interface MediaLibraryProps {
     onConfirm: () => void;
   }) => void;
   onErrorNotification: (msg: string) => void;
+  onSuccessNotification?: (msg: string) => void;
   mode?: 'standalone' | 'picker';
   onSelectMedia?: (media: MediaFile) => void;
   allowedTypes?: Array<'image' | 'video' | 'audio' | 'document' | 'office' | 'archive' | 'other'>;
@@ -51,6 +52,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
   onRefresh,
   onAskConfirmation,
   onErrorNotification,
+  onSuccessNotification,
   mode = 'standalone',
   onSelectMedia,
   allowedTypes
@@ -62,6 +64,10 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'size'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  // Multi-Selection State for Batch Management & Bulk Deletion
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
 
   // Uploading state
   const [isDragging, setIsDragging] = useState(false);
@@ -87,6 +93,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
   const [editIsPublished, setEditIsPublished] = useState(true);
   const [editUrl, setEditUrl] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isDeletingCurrent, setIsDeletingCurrent] = useState(false);
 
   // Clipboard Feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -344,20 +351,73 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
   const handleDeleteMedia = (file: MediaFile) => {
     onAskConfirmation({
       title: 'Permanently Delete File?',
-      message: `Are you sure you want to permanently delete "${file.originalName}"? This action cannot be undone and will remove the file from storage.`,
+      message: `Are you sure you want to permanently delete "${file.title || file.originalName}"? This action cannot be undone and will remove the file from storage and database.`,
       confirmText: 'Delete Permanently',
       cancelText: 'Cancel',
       type: 'danger',
       onConfirm: async () => {
         try {
-          await api.deleteMedia(file.id);
+          const res = await api.deleteMedia(file.id);
+          setSelectedMediaIds((prev) => prev.filter((id) => id !== file.id));
+          if (editingMedia?.id === file.id) {
+            setEditingMedia(null);
+          }
           onRefresh();
+          if (onSuccessNotification) {
+            onSuccessNotification(res.message || 'Media file permanently deleted');
+          }
         } catch (err: any) {
           console.error(err);
           onErrorNotification(err.message || 'Failed to delete media file');
         }
       }
     });
+  };
+
+  // Handle Multi-Select Bulk Delete
+  const handleDeleteBatch = () => {
+    if (selectedMediaIds.length === 0) return;
+    const count = selectedMediaIds.length;
+    onAskConfirmation({
+      title: `Permanently Delete ${count} Media Files?`,
+      message: `Are you sure you want to permanently delete these ${count} selected media files? This action cannot be undone and will completely remove them from storage.`,
+      confirmText: `Delete ${count} Files`,
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        setIsBatchDeleting(true);
+        try {
+          const res = await api.deleteMediaBatch(selectedMediaIds);
+          setSelectedMediaIds([]);
+          onRefresh();
+          if (onSuccessNotification) {
+            onSuccessNotification(res.message || `${count} media files deleted successfully`);
+          }
+        } catch (err: any) {
+          console.error(err);
+          onErrorNotification(err.message || 'Failed to delete selected media files');
+        } finally {
+          setIsBatchDeleting(false);
+        }
+      }
+    });
+  };
+
+  // Toggle Single Selection
+  const toggleSelectMedia = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedMediaIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Toggle Select All (Filtered)
+  const toggleSelectAllFiltered = () => {
+    if (selectedMediaIds.length === filteredFiles.length && filteredFiles.length > 0) {
+      setSelectedMediaIds([]);
+    } else {
+      setSelectedMediaIds(filteredFiles.map((f) => f.id));
+    }
   };
 
   // Copy URL to Clipboard
@@ -675,15 +735,63 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
           </div>
         </div>
 
-        {/* Counter Info */}
-        <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-          <span>
-            Showing <strong className="text-white font-mono">{filteredFiles.length}</strong> {filteredFiles.length === 1 ? 'file' : 'files'}
-            {searchQuery ? ` matching "${searchQuery}"` : ''}
-          </span>
+        {/* Counter Info & Bulk Selection Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 pt-2 border-t border-slate-800/80">
+          <div className="flex items-center space-x-3">
+            <span>
+              Showing <strong className="text-white font-mono">{filteredFiles.length}</strong> {filteredFiles.length === 1 ? 'file' : 'files'}
+              {searchQuery ? ` matching "${searchQuery}"` : ''}
+            </span>
+            {filteredFiles.length > 0 && mode !== 'picker' && (
+              <button
+                type="button"
+                onClick={toggleSelectAllFiltered}
+                className="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer underline text-[11px]"
+              >
+                {selectedMediaIds.length === filteredFiles.length ? 'Deselect All' : 'Select All Filtered'}
+              </button>
+            )}
+          </div>
           <span>Page {currentPage} of {totalPages}</span>
         </div>
       </div>
+
+      {/* Floating / Sticky Bulk Action Toolbar */}
+      {selectedMediaIds.length > 0 && mode !== 'picker' && (
+        <div className="bg-emerald-950/90 border border-emerald-500/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center space-x-3">
+            <span className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 font-bold flex items-center justify-center font-mono text-xs">
+              {selectedMediaIds.length}
+            </span>
+            <div>
+              <h4 className="text-sm font-bold text-white">
+                {selectedMediaIds.length} Media {selectedMediaIds.length === 1 ? 'File' : 'Files'} Selected
+              </h4>
+              <p className="text-[11px] text-emerald-200/80">
+                Perform bulk deletion or selection management across your media storage.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setSelectedMediaIds([])}
+              className="px-3 py-1.5 bg-slate-900/80 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+            >
+              Clear Selection
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteBatch}
+              disabled={isBatchDeleting}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-rose-600/30 flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{isBatchDeleting ? 'Deleting Selected...' : `Delete Selected Media (${selectedMediaIds.length})`}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Files Display */}
       {filteredFiles.length === 0 ? (
@@ -700,11 +808,14 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
           {paginatedFiles.map((file) => {
             const cat = getCategory(file);
             const isImage = cat === 'image';
+            const isSelected = selectedMediaIds.includes(file.id);
 
             return (
               <div
                 key={file.id}
-                className="group relative bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-600 transition-all shadow-md hover:shadow-xl flex flex-col"
+                className={`group relative bg-slate-900 rounded-2xl border transition-all shadow-md hover:shadow-xl flex flex-col ${
+                  isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-800 hover:border-slate-600'
+                }`}
               >
                 {/* Media Thumbnail Container */}
                 <div className="relative aspect-video bg-slate-950 flex items-center justify-center overflow-hidden border-b border-slate-800/80">
@@ -738,6 +849,24 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                       {file.isPublished !== false ? 'Published' : 'Draft'}
                     </span>
                   </div>
+
+                  {/* Top Right Selection Checkbox */}
+                  {mode !== 'picker' && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => toggleSelectMedia(file.id, e)}
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md'
+                            : 'bg-slate-900/80 text-transparent border-slate-600 hover:border-emerald-400 hover:text-emerald-400/50'
+                        }`}
+                        title={isSelected ? 'Deselect Item' : 'Select Item for Bulk Actions'}
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Hover Overlay Action Controls */}
                   <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
@@ -789,7 +918,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDeleteMedia(file)}
-                          className="p-2 bg-slate-800 hover:bg-rose-600 text-white rounded-xl transition-colors cursor-pointer"
+                          className="p-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl transition-colors cursor-pointer"
                           title="Delete File"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -799,8 +928,8 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                   </div>
                 </div>
 
-                {/* File Metadata Details */}
-                <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+                {/* File Metadata Details & Persistent Action Toolbar */}
+                <div className="p-3.5 flex-1 flex flex-col justify-between space-y-3">
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="text-xs font-bold text-white truncate" title={file.title || file.originalName}>
@@ -818,6 +947,30 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                     <span className="text-emerald-400 font-bold">Downloads: {(file.downloadCount || 0).toLocaleString()}</span>
                     <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
                   </div>
+
+                  {/* Prominent Card Bottom Action Controls */}
+                  {mode !== 'picker' && (
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(file)}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center space-x-1"
+                        title="Edit Metadata"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMedia(file)}
+                        className="flex-1 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/25 hover:border-rose-600 px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center space-x-1 shadow-xs"
+                        title="Permanently Delete This Media File"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -829,6 +982,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
           <table className="w-full text-left text-xs text-slate-300 min-w-[700px]">
             <thead className="bg-slate-950 text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
+                {mode !== 'picker' && <th className="py-3 px-3 w-10 text-center">Select</th>}
                 <th className="py-3 px-4">Preview</th>
                 <th className="py-3 px-4">Title / Name</th>
                 <th className="py-3 px-4">Type</th>
@@ -841,9 +995,25 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
               {paginatedFiles.map((file) => {
                 const cat = getCategory(file);
                 const isImage = cat === 'image';
+                const isSelected = selectedMediaIds.includes(file.id);
 
                 return (
-                  <tr key={file.id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={file.id} className={`hover:bg-slate-800/50 transition-colors ${isSelected ? 'bg-emerald-950/20' : ''}`}>
+                    {mode !== 'picker' && (
+                      <td className="py-2.5 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => toggleSelectMedia(file.id, e)}
+                          className={`w-5 h-5 rounded flex items-center justify-center border mx-auto transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                              : 'bg-slate-950 text-transparent border-slate-700 hover:border-emerald-400'
+                          }`}
+                        >
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </button>
+                      </td>
+                    )}
                     <td className="py-2.5 px-4 w-16">
                       <div className="w-10 h-10 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
                         {isImage ? (
@@ -865,7 +1035,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                     <td className="py-2.5 px-4 text-slate-300 font-mono">{formatFileSize(file.size)}</td>
                     <td className="py-2.5 px-4 text-slate-400">{new Date(file.uploadedAt).toLocaleDateString()}</td>
                     <td className="py-2.5 px-4 text-right">
-                      <div className="flex items-center justify-end space-x-1">
+                      <div className="flex items-center justify-end space-x-1.5">
                         {mode === 'picker' && onSelectMedia ? (
                           <button
                             type="button"
@@ -880,7 +1050,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                             <button
                               type="button"
                               onClick={() => handleCopyUrl(file)}
-                              className="p-1.5 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer"
                               title="Copy Public URL"
                             >
                               {copiedId === file.id ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
@@ -889,7 +1059,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                               href={file.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-1.5 hover:bg-blue-500/20 text-slate-300 hover:text-blue-400 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-blue-500/20 text-slate-300 hover:text-blue-400 rounded-lg transition-colors cursor-pointer"
                               title="Open File"
                             >
                               <ExternalLink className="w-4 h-4" />
@@ -897,7 +1067,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                             <button
                               type="button"
                               onClick={() => openEditModal(file)}
-                              className="p-1.5 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400 rounded-lg transition-colors cursor-pointer"
                               title="Edit Metadata"
                             >
                               <Edit3 className="w-4 h-4" />
@@ -905,10 +1075,11 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDeleteMedia(file)}
-                              className="p-1.5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 rounded-lg transition-colors"
-                              title="Delete File"
+                              className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 rounded-xl transition-all font-bold text-[11px] flex items-center space-x-1 cursor-pointer shadow-xs"
+                              title="Permanently Delete Media File"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
                             </button>
                           </>
                         )}
@@ -1092,22 +1263,33 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
               <button
                 type="button"
-                onClick={() => setEditingMedia(null)}
-                className="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                onClick={() => editingMedia && handleDeleteMedia(editingMedia)}
+                className="px-4 py-2 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/25 hover:border-rose-600 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 shadow-xs"
               >
-                Cancel
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Media Asset</span>
               </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={isSavingEdit}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-emerald-600/20"
-              >
-                {isSavingEdit ? 'Saving...' : 'Save Media Changes'}
-              </button>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingMedia(null)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={isSavingEdit}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-emerald-600/20"
+                >
+                  {isSavingEdit ? 'Saving...' : 'Save Media Changes'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

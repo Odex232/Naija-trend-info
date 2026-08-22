@@ -1896,21 +1896,89 @@ export const dbAdapter = {
     return { success: true, id, message: 'Ad campaign permanently deleted successfully' };
   },
 
+  // Media Library Management with Permanent Deletion
+  getMediaFiles: async () => {
+    const db = getLocalDb();
+    const deletedMediaSet = new Set<string>(db.deletedMedia || []);
+    return (db.mediaFiles || []).filter((m: any) => !deletedMediaSet.has(m.id));
+  },
+
+  deleteMediaFile: async (id: string) => {
+    const db = getLocalDb();
+    if (!db.deletedMedia) db.deletedMedia = [];
+    if (!db.deletedMedia.includes(id)) db.deletedMedia.push(id);
+    db.mediaFiles = (db.mediaFiles || []).filter((m: any) => m.id !== id);
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'mediaFiles',
+          data: db.mediaFiles,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+        await client.from('supabase_document_store').upsert({
+          key: 'deletedMedia',
+          data: db.deletedMedia,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e: any) {
+        console.warn('Supabase deleteMedia notice:', e.message);
+      }
+    }
+
+    return { success: true, id, message: 'Media file permanently deleted successfully' };
+  },
+
+  deleteMediaBatch: async (ids: string[]) => {
+    const db = getLocalDb();
+    if (!db.deletedMedia) db.deletedMedia = [];
+    const idSet = new Set(ids);
+    ids.forEach((id) => {
+      if (!db.deletedMedia.includes(id)) db.deletedMedia.push(id);
+    });
+    db.mediaFiles = (db.mediaFiles || []).filter((m: any) => !idSet.has(m.id));
+    saveLocalDb(db);
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('supabase_document_store').upsert({
+          key: 'mediaFiles',
+          data: db.mediaFiles,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+        await client.from('supabase_document_store').upsert({
+          key: 'deletedMedia',
+          data: db.deletedMedia,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e: any) {
+        console.warn('Supabase deleteMediaBatch notice:', e.message);
+      }
+    }
+
+    return { success: true, count: ids.length, message: `${ids.length} media files permanently deleted` };
+  },
+
   // Bootstrap (Returns hydrated unified dataset)
   getBootstrapData: async () => {
     const db = getLocalDb();
     const deletedSet = new Set<string>(db.deletedArticles || []);
     const deletedFixtureSet = new Set<string>(db.deletedSportsFixtures || []);
     const deletedAdSet = new Set<string>(db.deletedAds || []);
+    const deletedMediaSet = new Set<string>(db.deletedMedia || []);
     const client = getSupabaseClient();
 
     if (client) {
       try {
         // Fetch remote deleted lists to ensure perfect cross-device sync
-        const [delArticlesDoc, delFixturesDoc, delAdsDoc] = await Promise.allSettled([
+        const [delArticlesDoc, delFixturesDoc, delAdsDoc, delMediaDoc] = await Promise.allSettled([
           client.from('supabase_document_store').select('data').eq('key', 'deletedArticles').maybeSingle(),
           client.from('supabase_document_store').select('data').eq('key', 'deletedSportsFixtures').maybeSingle(),
-          client.from('supabase_document_store').select('data').eq('key', 'deletedAds').maybeSingle()
+          client.from('supabase_document_store').select('data').eq('key', 'deletedAds').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'deletedMedia').maybeSingle()
         ]);
 
         if (delArticlesDoc.status === 'fulfilled' && delArticlesDoc.value.data && Array.isArray(delArticlesDoc.value.data.data)) {
@@ -1937,8 +2005,16 @@ export const dbAdapter = {
           });
         }
 
+        if (delMediaDoc.status === 'fulfilled' && delMediaDoc.value.data && Array.isArray(delMediaDoc.value.data.data)) {
+          delMediaDoc.value.data.data.forEach((id: string) => {
+            deletedMediaSet.add(id);
+            if (!db.deletedMedia) db.deletedMedia = [];
+            if (!db.deletedMedia.includes(id)) db.deletedMedia.push(id);
+          });
+        }
+
         // Hydrate from Supabase tables & document store
-        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes, adsDocRes, placementsDocRes] = await Promise.allSettled([
+        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes, adsDocRes, placementsDocRes, mediaDocRes] = await Promise.allSettled([
           client.from('articles').select('*').order('published_at', { ascending: false }),
           client.from('categories').select('*').order('display_order', { ascending: true }),
           client.from('breaking_news').select('*').order('created_at', { ascending: false }),
@@ -1947,7 +2023,8 @@ export const dbAdapter = {
           client.from('supabase_document_store').select('data').eq('key', 'users').maybeSingle(),
           client.from('supabase_document_store').select('data').eq('key', 'editorialDesk').maybeSingle(),
           client.from('supabase_document_store').select('data').eq('key', 'ads').maybeSingle(),
-          client.from('supabase_document_store').select('data').eq('key', 'adPlacements').maybeSingle()
+          client.from('supabase_document_store').select('data').eq('key', 'adPlacements').maybeSingle(),
+          client.from('supabase_document_store').select('data').eq('key', 'mediaFiles').maybeSingle()
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
@@ -2038,6 +2115,10 @@ export const dbAdapter = {
           db.adPlacements = placementsDocRes.value.data.data;
         }
 
+        if (mediaDocRes.status === 'fulfilled' && mediaDocRes.value.data && Array.isArray(mediaDocRes.value.data.data)) {
+          db.mediaFiles = mediaDocRes.value.data.data.filter((m: any) => !deletedMediaSet.has(m.id));
+        }
+
         saveLocalDb(db);
       } catch (e) {
         console.warn('Bootstrap hydration notice from Supabase:', e);
@@ -2058,6 +2139,7 @@ export const dbAdapter = {
       });
     db.sportsFixtures = (db.sportsFixtures || []).filter((f: any) => !deletedFixtureSet.has(f.id));
     db.ads = (db.ads || []).filter((a: any) => !deletedAdSet.has(a.id));
+    db.mediaFiles = (db.mediaFiles || []).filter((m: any) => !deletedMediaSet.has(m.id));
     return db;
   }
 };

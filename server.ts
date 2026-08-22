@@ -865,24 +865,72 @@ function isBlockedFileType(filename: string): boolean {
     res.status(404).json({ success: false, message: 'Media file not found' });
   });
 
-  app.delete('/api/media/:id', requireAdminAuth, (req, res) => {
+  app.delete('/api/media/:id', requireAdminAuth, async (req, res) => {
     const { id } = req.params;
-    const media = db.mediaFiles.find((m: any) => m.id === id);
+    const media = (db.mediaFiles || []).find((m: any) => m.id === id);
     if (media) {
       if (media.url && media.url.startsWith('/uploads/')) {
         const filePath = path.join(__dirname, media.url);
         if (fs.existsSync(filePath)) {
-          try { fs.unlinkSync(filePath); } catch (e) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (e) {
             console.error('Failed to delete physical upload file:', e);
           }
         }
       }
-      db.mediaFiles = db.mediaFiles.filter((m: any) => m.id !== id);
+      if (!db.deletedMedia) db.deletedMedia = [];
+      if (!db.deletedMedia.includes(id)) db.deletedMedia.push(id);
+      db.mediaFiles = (db.mediaFiles || []).filter((m: any) => m.id !== id);
       saveDatabase();
+      try {
+        await dbAdapter.deleteMediaFile(id);
+      } catch (err: any) {
+        console.warn('Supabase media delete sync notice:', err.message);
+      }
       addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Media Deleted', `Permanently deleted media file "${media.title || media.originalName}"`, 'Media Library');
       return res.json({ success: true, message: `Media file deleted successfully`, id });
     }
-    res.status(404).json({ success: false, message: 'Media item not found' });
+    // Also mark as deleted in cloud store if it was already removed locally
+    if (!db.deletedMedia) db.deletedMedia = [];
+    if (!db.deletedMedia.includes(id)) db.deletedMedia.push(id);
+    saveDatabase();
+    try {
+      await dbAdapter.deleteMediaFile(id);
+    } catch {}
+    return res.json({ success: true, message: `Media item deleted successfully`, id });
+  });
+
+  app.post('/api/media/batch-delete', requireAdminAuth, async (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No media IDs provided for deletion' });
+    }
+    const idSet = new Set<string>(ids);
+    const toDelete = (db.mediaFiles || []).filter((m: any) => idSet.has(m.id));
+    for (const media of toDelete) {
+      if (media.url && media.url.startsWith('/uploads/')) {
+        const filePath = path.join(__dirname, media.url);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (e) {}
+        }
+      }
+    }
+    if (!db.deletedMedia) db.deletedMedia = [];
+    ids.forEach((id: string) => {
+      if (!db.deletedMedia.includes(id)) db.deletedMedia.push(id);
+    });
+    db.mediaFiles = (db.mediaFiles || []).filter((m: any) => !idSet.has(m.id));
+    saveDatabase();
+    try {
+      await dbAdapter.deleteMediaBatch(ids);
+    } catch (err: any) {
+      console.warn('Supabase media batch delete sync notice:', err.message);
+    }
+    addAuditLog('admin@naijatrendinfo.com.ng', 'Admin', 'Bulk Media Deleted', `Permanently deleted ${ids.length} media files from media library`, 'Media Library');
+    return res.json({ success: true, count: ids.length, message: `${ids.length} media files permanently deleted` });
   });
 
   // Comments

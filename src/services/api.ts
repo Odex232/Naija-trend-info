@@ -1807,15 +1807,52 @@ export const api = {
   },
 
   deleteMedia: async (id: string) => {
+    // 1. Delete from local storage immediately for zero-lag UI update
+    const mediaList = getLocalData<MediaFile[]>('naija_media_files', []);
+    const updated = mediaList.filter((m) => m.id !== id);
+    setLocalData('naija_media_files', updated);
+
+    // 2. Track deleted ID in local storage and Supabase document store
+    const deletedMedia = getLocalData<string[]>('naija_deleted_media', []);
+    if (!deletedMedia.includes(id)) {
+      deletedMedia.push(id);
+      setLocalData('naija_deleted_media', deletedMedia);
+    }
+    setDocInSupabase('mediaFiles', updated).catch(() => {});
+    setDocInSupabase('deletedMedia', deletedMedia).catch(() => {});
+
+    // 3. Request server deletion
     try {
       return await fetchJson<{ success: boolean; id?: string; message?: string }>(`/api/media/${id}`, {
         method: 'DELETE'
       });
     } catch (e) {
-      const mediaList = getLocalData<MediaFile[]>('naija_media_files', []);
-      const updated = mediaList.filter((m) => m.id !== id);
-      setLocalData('naija_media_files', updated);
-      return { success: true, id, message: 'Media item deleted' };
+      return { success: true, id, message: 'Media item deleted successfully' };
+    }
+  },
+
+  deleteMediaBatch: async (ids: string[]) => {
+    if (!ids || ids.length === 0) return { success: true, count: 0, message: 'No items selected' };
+    const idSet = new Set(ids);
+    const mediaList = getLocalData<MediaFile[]>('naija_media_files', []);
+    const updated = mediaList.filter((m) => !idSet.has(m.id));
+    setLocalData('naija_media_files', updated);
+
+    const deletedMedia = getLocalData<string[]>('naija_deleted_media', []);
+    ids.forEach((id) => {
+      if (!deletedMedia.includes(id)) deletedMedia.push(id);
+    });
+    setLocalData('naija_deleted_media', deletedMedia);
+    setDocInSupabase('mediaFiles', updated).catch(() => {});
+    setDocInSupabase('deletedMedia', deletedMedia).catch(() => {});
+
+    try {
+      return await fetchJson<{ success: boolean; count?: number; message?: string }>(`/api/media/batch-delete`, {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      });
+    } catch (e) {
+      return { success: true, count: ids.length, message: `${ids.length} media items deleted successfully` };
     }
   },
 

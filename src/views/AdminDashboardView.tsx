@@ -2177,6 +2177,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 })
               }
               onErrorNotification={triggerErrorNotification}
+              onSuccessNotification={triggerSuccessNotification}
               mode="standalone"
             />
           )}
