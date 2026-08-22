@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { WebsiteSettings, EditorialDeskEntry, InformationEntry, SitePage, AdvertisingPackage } from '../types';
 import { api } from '../services/api';
+import { SEOHead } from '../components/SEOHead';
 
 interface InfoViewProps {
   pageKey: string;
@@ -110,6 +111,12 @@ export const InfoView: React.FC<InfoViewProps> = ({
   if (pageKey === 'submit-news' || pageKey === 'submit-news-tip') {
     return (
       <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6">
+        <SEOHead
+          title="Submit News Tip & Whistleblower Reports – NaijaTrendiInfo"
+          description="Submit breaking news tips, eyewitness photos, videos, or confidential reports securely to the NaijaTrendiInfo editorial desk."
+          canonicalPath="/submit-news"
+          ogType="website"
+        />
         <div className="bg-white/5 backdrop-blur-2xl rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl text-slate-100 space-y-6">
           <div className="flex items-center space-x-3 text-emerald-400">
             <Upload className="w-8 h-8" />
@@ -248,6 +255,31 @@ export const InfoView: React.FC<InfoViewProps> = ({
   if (pageKey === 'contact' || pageKey === 'contact-us') {
     return (
       <div className="py-8 max-w-5xl mx-auto px-4 sm:px-6 space-y-8">
+        <SEOHead
+          title="Contact Us, Bureau Locations & Editorial Feedback – NaijaTrendiInfo"
+          description="Get in touch with the NaijaTrendiInfo newsroom, leadership desk, advertising team, or submit feedback regarding our Nigerian news coverage."
+          canonicalPath="/contact-us"
+          ogType="website"
+          structuredData={[
+            {
+              '@context': 'https://schema.org',
+              '@type': 'ContactPage',
+              'name': 'Contact NaijaTrendiInfo',
+              'url': 'https://www.naijatrendinfo.com.ng/contact-us',
+              'mainEntity': {
+                '@type': 'NewsMediaOrganization',
+                'name': 'NaijaTrendiInfo',
+                'telephone': settings.contactPhone || '+234 800 000 0000',
+                'email': settings.contactEmail || 'contact@naijatrendinfo.com.ng',
+                'address': {
+                  '@type': 'PostalAddress',
+                  'streetAddress': settings.officeAddress || 'Abuja / Lagos, Nigeria',
+                  'addressCountry': 'NG'
+                }
+              }
+            }
+          ]}
+        />
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* Contact Details (Col 5) */}
           <div className="md:col-span-5 bg-white/5 backdrop-blur-2xl text-white rounded-3xl p-8 border border-white/10 shadow-2xl space-y-6">
@@ -429,8 +461,27 @@ export const InfoView: React.FC<InfoViewProps> = ({
     (p) => p.status === 'published' && (p.slug === normalizedKey || p.slug === pageKey || p.id === pageKey)
   );
 
+  const pageTitle = cmsPage ? cmsPage.title :
+    normalizedKey === 'about-us' ? 'About Us – NaijaTrendiInfo' :
+    normalizedKey === 'advertise-with-us' ? 'Advertise With Us – NaijaTrendiInfo' :
+    normalizedKey === 'editorial-desk' ? 'Editorial Desk & Leadership – NaijaTrendiInfo' :
+    normalizedKey === 'privacy-policy' ? 'Privacy Policy – NaijaTrendiInfo' :
+    normalizedKey === 'terms-of-service' ? 'Terms of Service – NaijaTrendiInfo' :
+    normalizedKey === 'disclaimer' ? 'General Disclaimer – NaijaTrendiInfo' :
+    normalizedKey === 'cookie-policy' ? 'Cookie Policy – NaijaTrendiInfo' :
+    `${pageKey.replace('-', ' ')} – NaijaTrendiInfo`;
+
+  const pageDescription = cmsPage?.description ||
+    `Official publication of NaijaTrendiInfo regarding ${pageTitle}. Leading Nigerian digital news organization.`;
+
   return (
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6">
+      <SEOHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalPath={`/${normalizedKey}`}
+        ogType="website"
+      />
       <div className="bg-white/5 backdrop-blur-2xl rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl space-y-6 text-slate-100">
         {/* Page Header */}
         <div className="border-b border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

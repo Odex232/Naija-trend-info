@@ -14,6 +14,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
     day: 'numeric'
   });
 
+  const imageAltText = article.imageAlt || article.imageCaption || article.title;
+
   if (variant === 'featured') {
     return (
       <div
@@ -22,7 +24,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
       >
         <img
           src={article.featuredImage}
-          alt={article.title}
+          alt={imageAltText}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-90"
           referrerPolicy="no-referrer"
         />
@@ -92,7 +94,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
       >
         <img
           src={article.featuredImage}
-          alt={article.title}
+          alt={imageAltText}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-70"
           referrerPolicy="no-referrer"
         />
@@ -126,7 +128,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
         <div className="w-full sm:w-48 h-32 shrink-0 rounded-xl overflow-hidden relative bg-slate-900 border border-slate-800">
           <img
             src={article.featuredImage}
-            alt={article.title}
+            alt={imageAltText}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             referrerPolicy="no-referrer"
           />
@@ -166,7 +168,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
         <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden bg-slate-900 border border-slate-800 relative">
           <img
             src={article.featuredImage}
-            alt={article.title}
+            alt={imageAltText}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             referrerPolicy="no-referrer"
           />
@@ -194,7 +196,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
       <div className="relative h-48 overflow-hidden bg-slate-900">
         <img
           src={article.featuredImage}
-          alt={article.title}
+          alt={imageAltText}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           referrerPolicy="no-referrer"
         />

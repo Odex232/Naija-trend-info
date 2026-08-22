@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trophy, Activity, Calendar, MapPin, Search } from 'lucide-react';
 import { SportsFixture, Article } from '../types';
 import { ArticleCard } from '../components/ArticleCard';
+import { SEOHead } from '../components/SEOHead';
 
 interface SportsViewProps {
   sportsFixtures: SportsFixture[];
@@ -34,6 +35,14 @@ export const SportsView: React.FC<SportsViewProps> = ({
 
   return (
     <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
+      <SEOHead
+        title="Sports News, NPFL Fixtures & Live Football Scores – NaijaTrendiInfo"
+        description="Comprehensive Nigerian sports news, NPFL matchday fixtures, Super Eagles updates, Premier League coverage, and transfer news."
+        keywords="Nigerian sports news, NPFL fixtures, Super Eagles, Nigerian football news, NPFL live scores, Naija sports"
+        canonicalPath="/sports"
+        ogType="website"
+      />
+
       {/* Banner */}
       <div className="bg-white/5 backdrop-blur-2xl text-white rounded-3xl p-8 shadow-2xl border border-white/10">
         <div className="flex items-center space-x-2 text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">

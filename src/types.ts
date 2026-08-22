@@ -27,6 +27,7 @@ export interface Article {
   featuredImage: string;
   imageCaption?: string;
   imageCredit?: string;
+  imageAlt?: string;
   galleryImages?: string[];
   authorId: string;
   authorName: string;
@@ -40,6 +41,11 @@ export interface Article {
   readTimeMinutes: number;
   publishedAt: string;
   updatedAt: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  canonicalUrl?: string;
+  isNoIndex?: boolean;
 }
 
 export interface Category {
@@ -360,6 +366,15 @@ export interface WebsiteSettings {
   sportsHub?: SportsHubSettings;
   contactPage?: ContactPageSettings;
   editorialCorrespondent?: EditorialCorrespondentSettings;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
+  defaultOgImage?: string;
+  googleSiteVerification?: string;
+  bingSiteVerification?: string;
+  twitterHandle?: string;
+  facebookPageUrl?: string;
+  allowIndexing?: boolean;
 }
 
 export interface AuditLog {

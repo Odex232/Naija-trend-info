@@ -19,6 +19,7 @@ import { Article, Ad, AdPlacement, Comment } from '../types';
 import { AdDisplay } from '../components/AdDisplay';
 import { CommentSection } from '../components/CommentSection';
 import { ArticleCard } from '../components/ArticleCard';
+import { SEOHead } from '../components/SEOHead';
 
 interface ArticleViewProps {
   article: Article;
@@ -51,6 +52,69 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
   });
 
   const pageUrl = window.location.href;
+  const canonicalArticleUrl = article.canonicalUrl || `https://www.naijatrendinfo.com.ng/article/${article.slug}`;
+
+  // Structured Data Schema for Google News and Search
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'NewsArticle',
+      'mainEntityOfPage': {
+        '@type': 'WebPage',
+        '@id': canonicalArticleUrl
+      },
+      'headline': article.seoTitle || article.title,
+      'description': article.seoDescription || article.summary,
+      'image': [
+        article.featuredImage || 'https://www.naijatrendinfo.com.ng/icon.png'
+      ],
+      'datePublished': article.publishedAt,
+      'dateModified': article.updatedAt || article.publishedAt,
+      'author': {
+        '@type': 'Person',
+        'name': article.authorName || 'NaijaTrendiInfo Editorial Desk',
+        'jobTitle': 'Editorial Correspondent'
+      },
+      'publisher': {
+        '@type': 'NewsMediaOrganization',
+        'name': 'NaijaTrendiInfo',
+        'url': 'https://www.naijatrendinfo.com.ng/',
+        'logo': {
+          '@type': 'ImageObject',
+          'url': 'https://www.naijatrendinfo.com.ng/icon.png',
+          'width': 512,
+          'height': 512
+        }
+      },
+      'articleSection': article.categoryName,
+      'keywords': (article.tags || []).join(', '),
+      'inLanguage': 'en-NG'
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        {
+          '@type': 'ListItem',
+          'position': 1,
+          'name': 'Home',
+          'item': 'https://www.naijatrendinfo.com.ng/'
+        },
+        {
+          '@type': 'ListItem',
+          'position': 2,
+          'name': article.categoryName,
+          'item': `https://www.naijatrendinfo.com.ng/category/${article.categoryName.toLowerCase()}`
+        },
+        {
+          '@type': 'ListItem',
+          'position': 3,
+          'name': article.title,
+          'item': canonicalArticleUrl
+        }
+      ]
+    }
+  ];
 
   const handleShare = (platform: string) => {
     const text = encodeURIComponent(`${article.title} - NaijaTrendiInfo`);
@@ -75,6 +139,22 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 
   return (
     <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6">
+      <SEOHead
+        title={article.seoTitle || `${article.title} | NaijaTrendiInfo`}
+        description={article.seoDescription || article.summary}
+        keywords={article.tags}
+        canonicalUrl={canonicalArticleUrl}
+        ogType="article"
+        ogImage={article.featuredImage}
+        ogImageAlt={article.imageAlt || article.imageCaption || article.title}
+        author={article.authorName}
+        publishedTime={article.publishedAt}
+        modifiedTime={article.updatedAt || article.publishedAt}
+        section={article.categoryName}
+        isNoIndex={article.isNoIndex}
+        structuredData={structuredData}
+      />
+
       {/* Back Button & Breadcrumbs */}
       <div className="flex items-center space-x-2 text-xs font-medium text-slate-500 mb-6">
         <button
@@ -213,7 +293,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             <figure className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800">
               <img
                 src={article.featuredImage}
-                alt={article.title}
+                alt={article.imageAlt || article.imageCaption || article.title}
                 className="w-full h-auto max-h-[500px] object-cover"
                 referrerPolicy="no-referrer"
               />

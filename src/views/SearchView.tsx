@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Filter, Calendar } from 'lucide-react';
 import { Article, Category } from '../types';
 import { ArticleCard } from '../components/ArticleCard';
+import { SEOHead } from '../components/SEOHead';
 
 interface SearchViewProps {
   initialQuery: string;
@@ -36,6 +37,13 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
   return (
     <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
+      <SEOHead
+        title={term ? `Search Results for "${term}" – NaijaTrendiInfo` : 'Search News Archive – NaijaTrendiInfo'}
+        description="Search published news, reports, sports coverage, politics, business, and entertainment articles on NaijaTrendiInfo."
+        canonicalPath="/search"
+        isNoIndex={true}
+      />
+
       {/* Search Bar Header */}
       <div className="bg-white/5 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
         <h1 className="text-2xl font-bold font-serif text-white mb-4 flex items-center space-x-2">

@@ -332,7 +332,7 @@
       "galleryImages": [],
       "authorId": "usr-1",
       "authorName": "Habbey Tech Solutions",
-      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+      "authorAvatar": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
       "status": "published",
       "isFeatured": true,
       "isPinned": true,
@@ -359,7 +359,7 @@
       "galleryImages": [],
       "authorId": "usr-1",
       "authorName": "Habbey Tech Solutions",
-      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+      "authorAvatar": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
       "status": "published",
       "isFeatured": true,
       "isPinned": true,
@@ -663,7 +663,7 @@
   ],
   "settings": {
     "logoUrl": "",
-    "siteUrl": "https://naijatrendinfo.com.ng",
+    "siteUrl": "https://www.naijatrendinfo.com.ng",
     "language": "English (NG)",
     "siteName": "NaijaTrendiInfo",
     "timeZone": "Africa/Lagos (GMT+1)",
@@ -699,11 +699,16 @@
       "role": "NaijaTrendiInfo Editorial Correspondent",
       "email": "editor@naijatrendinfo.com.ng",
       "phone": "+234 813 773 1088",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
-      "updatedAt": "2026-08-21T10:32:58.984Z",
+      "avatarUrl": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
+      "updatedAt": "2026-08-22T09:19:52.243Z",
       "department": "News Bureau & Correspondents",
       "correspondentName": "Habbey Tech Solutions"
-    }
+    },
+    "seoTitle": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+    "seoDescription": "Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting.",
+    "seoKeywords": "NaijaTrendiInfo, Nigeria news, Nigerian news, breaking news Nigeria, sports news Nigeria, football news, entertainment news, tech news Nigeria, business news, Naija trend info",
+    "allowIndexing": true,
+    "defaultOgImage": "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=1200"
   },
   "socialLinks": [
     {
@@ -1073,7 +1078,7 @@
       "email": "editor@naijatrendinfo.com.ng",
       "phone": "+234 813 773 1088",
       "isActive": true,
-      "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+      "photoUrl": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
       "department": "News Bureau & Correspondents"
     },
     {
@@ -1144,6 +1149,42 @@
   "submissions": [],
   "contacts": [],
   "auditLogs": [
+    {
+      "id": "log-1787390792532-pevo",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Multi-Browser Cloud Sync",
+      "details": "Synchronized database updates across connected devices and browsers.",
+      "resource": "System Sync",
+      "createdAt": "2026-08-22T09:26:32.532Z"
+    },
+    {
+      "id": "log-1787390392406-ndqt",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Correspondent Updated",
+      "details": "Updated Editorial Correspondent profile for \"Habbey Tech Solutions\"",
+      "resource": "Editorial Desk",
+      "createdAt": "2026-08-22T09:19:52.406Z"
+    },
+    {
+      "id": "log-1787390391388-jh1m",
+      "userEmail": "admin@naijatrendinfo.com.ng",
+      "userName": "Admin",
+      "action": "Editorial Desk Updated",
+      "details": "Updated full editorial team list",
+      "resource": "Editorial Desk",
+      "createdAt": "2026-08-22T09:19:51.388Z"
+    },
+    {
+      "id": "log-1787389765707-t26r",
+      "userEmail": "Ajayiodunayo28@gmail.com",
+      "userName": "Ajayi Odunayo",
+      "action": "Admin Login",
+      "details": "User authenticated successfully into Admin Dashboard.",
+      "resource": "Authentication",
+      "createdAt": "2026-08-22T09:09:25.707Z"
+    },
     {
       "id": "log-1787308385095-e3i6",
       "userEmail": "admin@naijatrendinfo.com.ng",
@@ -1364,6 +1405,149 @@
   "backups": [],
   "analytics": {
     "liveVisitorFeed": [
+      {
+        "id": "evt-1787390714037-217",
+        "path": "/",
+        "title": "NaijaTrendiInfo - Nigeria News",
+        "category": "General",
+        "location": "Port Harcourt (Rivers)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:25:14.037Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390669786-215",
+        "path": "/",
+        "title": "NaijaTrendiInfo - Nigeria News",
+        "category": "General",
+        "location": "Lagos (Ikeja, Mainland)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:24:29.786Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390614158-855",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:23:34.158Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390611850-777",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Kano City (Kano)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:23:31.850Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390394161-56",
+        "path": "/article/ai-artificial-intelligence-changing-the-world-of-tech",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Lagos (Lekki / Victoria Island)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:19:54.161Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390305941-916",
+        "path": "/article/ai-artificial-intelligence-changing-the-world-of-tech",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "London, United Kingdom (Diaspora)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:18:25.941Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390283151-822",
+        "path": "/",
+        "title": "NaijaTrendiInfo - Nigeria News",
+        "category": "General",
+        "location": "Lagos (Ikeja, Mainland)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:18:03.151Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390253925-524",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Port Harcourt (Rivers)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:17:33.925Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787390251937-805",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:17:31.937Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787389688410-956",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Abuja FCT (Maitama / Central)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:08:08.410Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787389688211-137",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Benin City (Edo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:08:08.211Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787389663028-123",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "London, United Kingdom (Diaspora)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:07:43.028Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787389663025-80",
+        "path": "/",
+        "title": "My Google AI Studio App",
+        "category": "General",
+        "location": "Ibadan (Oyo)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-22T09:07:43.025Z",
+        "timeAgo": "Just now"
+      },
       {
         "id": "evt-1787308380204-617",
         "path": "/article/ai-artificial-intelligence-changing-the-world-of-tech",
@@ -1880,94 +2064,6 @@
         "browser": "Google Chrome",
         "timestamp": "2026-08-21T06:29:59.645Z",
         "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293564399-562",
-        "path": "/",
-        "title": "NaijaTrendiInfo - Nigeria News",
-        "category": "General",
-        "location": "Enugu (Independence Layout)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:26:04.399Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293558919-350",
-        "path": "/sports",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Kaduna Central",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:25:58.919Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293550651-409",
-        "path": "/sports",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Enugu (Independence Layout)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:25:50.651Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293474457-505",
-        "path": "/sports",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Kano City (Kano)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:24:34.457Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293371852-576",
-        "path": "/sports",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "London, United Kingdom (Diaspora)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:22:51.852Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293276811-461",
-        "path": "/sports",
-        "title": "Sports Hub",
-        "category": "General",
-        "location": "Houston TX, United States (Diaspora)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:21:16.811Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293247471-554",
-        "path": "/",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Houston TX, United States (Diaspora)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:20:47.471Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293247301-632",
-        "path": "/",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Abuja FCT (Maitama / Central)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:20:47.301Z",
-        "timeAgo": "Just now"
       }
     ],
     "customEvents": []
@@ -1975,5 +2071,8 @@
   "deletedSportsFixtures": [
     "fix-1787296264892"
   ],
-  "deletedArticles": []
+  "deletedArticles": [],
+  "deletedMedia": [
+    "media-1787334354481"
+  ]
 }

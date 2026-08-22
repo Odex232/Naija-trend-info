@@ -344,8 +344,8 @@ export const INITIAL_AD_PLACEMENTS: AdPlacement[] = [
 
 export const INITIAL_SETTINGS: WebsiteSettings = {
   siteName: 'NaijaTrendiInfo',
-  siteDescription: 'Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, entertainment, and investigative reporting.',
-  siteUrl: 'https://naijatrendinfo.com.ng',
+  siteDescription: 'Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting.',
+  siteUrl: 'https://www.naijatrendinfo.com.ng',
   logoUrl: '',
   faviconUrl: '',
   copyrightText: '© 2026 NaijaTrendiInfo Media Group. All rights reserved.',
@@ -357,6 +357,15 @@ export const INITIAL_SETTINGS: WebsiteSettings = {
   googleAdsensePubId: 'ca-pub-1234567890123456',
   adsterraSmartlinkUrl: 'https://adsterra.example.com/smartlink-naijatrendiinfo',
   analyticsId: 'G-NAIJA2026TREND',
+  seoTitle: 'NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories',
+  seoDescription: 'Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting.',
+  seoKeywords: 'NaijaTrendiInfo, Nigeria news, Nigerian news, breaking news Nigeria, sports news Nigeria, football news, entertainment news, tech news Nigeria, business news, Naija trend info',
+  defaultOgImage: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=1200',
+  googleSiteVerification: '',
+  bingSiteVerification: '',
+  twitterHandle: '@NaijaTrendiInfo',
+  facebookPageUrl: 'https://facebook.com/NaijaTrendiInfo',
+  allowIndexing: true,
   economicIndex: {
     showTopTicker: true,
     usdNgnRate: '₦1,485.50',

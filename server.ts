@@ -2103,57 +2103,156 @@ function isBlockedFileType(filename: string): boolean {
   // Helper function to resolve dynamic base URL for custom domain support
   const getDynamicBaseUrl = (req: express.Request) => {
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.headers['x-forwarded-host'] || req.get('host') || 'naijatrendinfo.com.ng';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'www.naijatrendinfo.com.ng';
+    // Prefer the official canonical domain if on standard domain or localhost
+    if (host.includes('naijatrendinfo.com.ng')) {
+      return 'https://www.naijatrendinfo.com.ng';
+    }
     return `${proto}://${host}`;
   };
 
-  // SEO: Sitemap.xml
-  app.get('/sitemap.xml', (req, res) => {
-    const siteUrl = db.settings?.siteUrl || getDynamicBaseUrl(req);
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-    xml += `  <url><loc>${siteUrl}/</loc><changefreq>always</changefreq><priority>1.0</priority></url>\n`;
-    xml += `  <url><loc>${siteUrl}/sports</loc><changefreq>hourly</changefreq><priority>0.8</priority></url>\n`;
+  // Helper to escape XML special characters
+  const escapeXml = (unsafe: string) => {
+    if (!unsafe) return '';
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  };
 
-    db.categories.forEach((cat: any) => {
-      xml += `  <url><loc>${siteUrl}/category/${cat.slug}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
+  // SEO: Dynamic XML Sitemap with Google Image Schema
+  app.get('/sitemap.xml', (req, res) => {
+    const siteUrl = 'https://www.naijatrendinfo.com.ng';
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+    
+    // Static & Core Landing Pages
+    xml += `  <url>\n    <loc>${siteUrl}/</loc>\n    <changefreq>always</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+    xml += `  <url>\n    <loc>${siteUrl}/sports</loc>\n    <changefreq>hourly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+
+    // Static CMS & Institutional Pages
+    const cmsPages = [
+      'about-us',
+      'contact-us',
+      'editorial-desk',
+      'privacy-policy',
+      'terms-of-service',
+      'disclaimer',
+      'cookie-policy',
+      'advertise-with-us',
+      'submit-news'
+    ];
+    cmsPages.forEach((slug) => {
+      xml += `  <url>\n    <loc>${siteUrl}/${slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
     });
 
-    db.articles.forEach((art: any) => {
-      xml += `  <url><loc>${siteUrl}/article/${art.slug}</loc><lastmod>${art.updatedAt ? art.updatedAt.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>\n`;
+    // Dynamic Categories
+    (db.categories || []).forEach((cat: any) => {
+      if (cat.slug) {
+        xml += `  <url>\n    <loc>${siteUrl}/category/${escapeXml(cat.slug)}</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      }
+    });
+
+    // Published Articles (Filtered by status & index permission)
+    const publishedArticles = (db.articles || []).filter(
+      (art: any) => (art.status === 'published' || !art.status) && !art.isNoIndex
+    );
+
+    publishedArticles.forEach((art: any) => {
+      const slug = art.slug || art.id;
+      const lastModDate = art.updatedAt ? art.updatedAt.split('T')[0] : (art.publishedAt ? art.publishedAt.split('T')[0] : new Date().toISOString().split('T')[0]);
+      
+      xml += `  <url>\n    <loc>${siteUrl}/article/${escapeXml(slug)}</loc>\n    <lastmod>${lastModDate}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n`;
+
+      if (art.featuredImage && typeof art.featuredImage === 'string' && art.featuredImage.startsWith('http')) {
+        xml += `    <image:image>\n      <image:loc>${escapeXml(art.featuredImage)}</image:loc>\n      <image:title>${escapeXml(art.imageAlt || art.title || '')}</image:title>\n      <image:caption>${escapeXml(art.imageCaption || art.summary || art.title || '')}</image:caption>\n    </image:image>\n`;
+      }
+
+      xml += `  </url>\n`;
     });
 
     xml += `</urlset>`;
-    res.header('Content-Type', 'application/xml');
+    res.header('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xml);
+  });
+
+  // SEO: Dedicated Google News XML Sitemap (Recent 48-72h news articles)
+  app.get('/news-sitemap.xml', (req, res) => {
+    const siteUrl = 'https://www.naijatrendinfo.com.ng';
+    const twoDaysAgo = Date.now() - (72 * 60 * 60 * 1000);
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n`;
+
+    const recentNews = (db.articles || [])
+      .filter((art: any) => {
+        if (art.status && art.status !== 'published') return false;
+        if (art.isNoIndex) return false;
+        const pubTime = new Date(art.publishedAt || art.createdAt || Date.now()).getTime();
+        return pubTime >= twoDaysAgo;
+      })
+      .slice(0, 100);
+
+    recentNews.forEach((art: any) => {
+      const slug = art.slug || art.id;
+      const pubDate = new Date(art.publishedAt || art.createdAt || Date.now()).toISOString();
+      const keywords = art.seoKeywords || `${art.categoryName || 'News'}, Nigeria, NaijaTrendiInfo, breaking news`;
+
+      xml += `  <url>\n    <loc>${siteUrl}/article/${escapeXml(slug)}</loc>\n    <news:news>\n      <news:publication>\n        <news:name>NaijaTrendiInfo</news:name>\n        <news:language>en</news:language>\n      </news:publication>\n      <news:publication_date>${pubDate}</news:publication_date>\n      <news:title>${escapeXml(art.seoTitle || art.title)}</news:title>\n      <news:keywords>${escapeXml(keywords)}</news:keywords>\n    </news:news>\n  </url>\n`;
+    });
+
+    xml += `</urlset>`;
+    res.header('Content-Type', 'application/xml; charset=utf-8');
     res.send(xml);
   });
 
   // SEO: Robots.txt
   app.get('/robots.txt', (req, res) => {
-    const siteUrl = db.settings?.siteUrl || getDynamicBaseUrl(req);
-    const content = `User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${siteUrl}/sitemap.xml\n`;
-    res.header('Content-Type', 'text/plain');
+    const allowIndexing = db.settings?.allowIndexing !== false;
+    let content = `User-agent: *\n`;
+    if (allowIndexing) {
+      content += `Allow: /\nDisallow: /admin\nDisallow: /api/\n\n`;
+      content += `Sitemap: https://www.naijatrendinfo.com.ng/sitemap.xml\n`;
+      content += `Sitemap: https://www.naijatrendinfo.com.ng/news-sitemap.xml\n`;
+    } else {
+      content += `Disallow: /\n`;
+    }
+    res.header('Content-Type', 'text/plain; charset=utf-8');
     res.send(content);
   });
 
-  // SEO: RSS feed
+  // SEO: RSS 2.0 Syndication Feed
   app.get('/rss.xml', (req, res) => {
-    const siteUrl = db.settings?.siteUrl || getDynamicBaseUrl(req);
-    let rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n<channel>\n`;
-    rss += `<title>NaijaTrendiInfo - Nigeria News</title>\n`;
-    rss += `<link>${siteUrl}</link>\n`;
-    rss += `<description>Breaking News, Politics, Business, Sports, Tech and Entertainment in Nigeria</description>\n`;
+    const siteUrl = 'https://www.naijatrendinfo.com.ng';
+    const siteTitle = db.settings?.seoTitle || db.settings?.siteName || 'NaijaTrendiInfo - Nigeria News';
+    const siteDesc = db.settings?.seoDescription || 'Breaking News, Politics, Business, Sports, Tech and Entertainment in Nigeria';
 
-    db.articles.slice(0, 20).forEach((art: any) => {
-      rss += `<item>\n`;
-      rss += `<title><![CDATA[${art.title}]]></title>\n`;
-      rss += `<link>${siteUrl}/article/${art.slug}</link>\n`;
-      rss += `<description><![CDATA[${art.summary}]]></description>\n`;
-      rss += `<pubDate>${new Date(art.publishedAt || Date.now()).toUTCString()}</pubDate>\n`;
-      rss += `</item>\n`;
+    let rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n<channel>\n`;
+    rss += `  <title>${escapeXml(siteTitle)}</title>\n`;
+    rss += `  <link>${siteUrl}</link>\n`;
+    rss += `  <description>${escapeXml(siteDesc)}</description>\n`;
+    rss += `  <language>en-ng</language>\n`;
+    rss += `  <atom:link href="${siteUrl}/rss.xml" rel="self" type="application/rss+xml" />\n`;
+    rss += `  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n`;
+
+    const published = (db.articles || []).filter((a: any) => (a.status === 'published' || !a.status) && !a.isNoIndex).slice(0, 50);
+
+    published.forEach((art: any) => {
+      const slug = art.slug || art.id;
+      rss += `  <item>\n`;
+      rss += `    <title><![CDATA[${art.seoTitle || art.title}]]></title>\n`;
+      rss += `    <link>${siteUrl}/article/${slug}</link>\n`;
+      rss += `    <guid isPermaLink="true">${siteUrl}/article/${slug}</guid>\n`;
+      rss += `    <description><![CDATA[${art.seoDescription || art.summary || ''}]]></description>\n`;
+      rss += `    <pubDate>${new Date(art.publishedAt || art.createdAt || Date.now()).toUTCString()}</pubDate>\n`;
+      if (art.categoryName) {
+        rss += `    <category><![CDATA[${art.categoryName}]]></category>\n`;
+      }
+      rss += `  </item>\n`;
     });
 
     rss += `</channel>\n</rss>`;
-    res.header('Content-Type', 'application/xml');
+    res.header('Content-Type', 'application/xml; charset=utf-8');
     res.send(rss);
   });
 
@@ -2182,7 +2281,34 @@ function isBlockedFileType(filename: string): boolean {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, { maxAge: '1y', immutable: true, index: false }));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).send('Application build not found');
+      }
+      let html = fs.readFileSync(indexPath, 'utf-8');
+
+      // SSR Meta tag injection for article pages (Googlebot, crawlers, and social shares)
+      const articleMatch = req.path.match(/^\/article\/([^/?#]+)/);
+      if (articleMatch) {
+        const slug = decodeURIComponent(articleMatch[1]);
+        const art = (db.articles || []).find((a: any) => a.slug === slug || a.id === slug);
+        if (art && (art.status === 'published' || !art.status) && !art.isNoIndex) {
+          const title = `${art.seoTitle || art.title} – NaijaTrendiInfo`;
+          const desc = art.seoDescription || art.summary || '';
+          const img = art.featuredImage || 'https://www.naijatrendinfo.com.ng/og-image.jpg';
+          const url = `https://www.naijatrendinfo.com.ng/article/${art.slug || art.id}`;
+
+          html = html
+            .replace(/<title>.*?<\/title>/i, `<title>${escapeXml(title)}</title>`)
+            .replace(/<meta name="description" content=".*?"\s*\/?>/i, `<meta name="description" content="${escapeXml(desc)}" />`)
+            .replace(/<meta property="og:title" content=".*?"\s*\/?>/i, `<meta property="og:title" content="${escapeXml(title)}" />`)
+            .replace(/<meta property="og:description" content=".*?"\s*\/?>/i, `<meta property="og:description" content="${escapeXml(desc)}" />`)
+            .replace(/<meta property="og:image" content=".*?"\s*\/?>/i, `<meta property="og:image" content="${escapeXml(img)}" />`)
+            .replace(/<meta property="og:url" content=".*?"\s*\/?>/i, `<meta property="og:url" content="${escapeXml(url)}" />`);
+        }
+      }
+
+      res.send(html);
     });
   }
 

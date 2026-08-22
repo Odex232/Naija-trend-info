@@ -4,6 +4,7 @@ import { ArticleCard } from '../components/ArticleCard';
 import { AdDisplay } from '../components/AdDisplay';
 import { SportsSection } from '../components/SportsSection';
 import { PublicMediaDownloadsSection } from '../components/PublicMediaDownloadsSection';
+import { SEOHead } from '../components/SEOHead';
 import { Flame, Star, TrendingUp, Sparkles, ChevronRight, Newspaper, Radio, Globe, Shield, Landmark } from 'lucide-react';
 
 interface HomeViewProps {
@@ -44,6 +45,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="space-y-10 py-6">
+      <SEOHead
+        title={settings?.seoTitle || 'NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories'}
+        description={settings?.seoDescription || settings?.siteDescription || 'Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting.'}
+        keywords={settings?.seoKeywords || 'NaijaTrendiInfo, Nigeria news, Nigerian news, breaking news Nigeria, sports news Nigeria, football news, entertainment news, tech news Nigeria, business news, Naija trend info'}
+        canonicalPath="/"
+        ogType="website"
+        ogImage={settings?.defaultOgImage || leadStory?.featuredImage || 'https://www.naijatrendinfo.com.ng/icon.png'}
+        googleSiteVerification={settings?.googleSiteVerification}
+        bingSiteVerification={settings?.bingSiteVerification}
+        isNoIndex={settings?.allowIndexing === false}
+      />
       {/* Top Banner Ad Placement */}
       <AdDisplay position="Header" placements={adPlacements} ads={ads} className="max-w-7xl mx-auto px-4" />
 

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#020617" />
+  <circle cx="256" cy="256" r="210" fill="url(#brandGrad)" opacity="0.15" />
+  <path d="M140 372 V140 H200 L312 290 V140 H372 V372 H312 L200 222 V372 Z" fill="#ffffff" />
+  <circle cx="380" cy="140" r="26" fill="url(#goldGrad)" />
+  <path d="M120 410 H392" stroke="url(#brandGrad)" stroke-width="12" stroke-linecap="round" />
+</svg>
