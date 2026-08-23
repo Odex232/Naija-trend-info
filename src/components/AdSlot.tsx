@@ -143,15 +143,19 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           document.head.appendChild(script);
         }
 
-        // Trigger adsbygoogle push after DOM attachment
+        // Trigger adsbygoogle push after DOM attachment only on uninitialized tags
         const timer = setTimeout(() => {
           try {
             if (containerRef.current) {
               const insElements = containerRef.current.querySelectorAll('ins.adsbygoogle');
               insElements.forEach((ins) => {
-                const status = ins.getAttribute('data-adsbygoogle-status');
-                if (!status) {
-                  ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+                const isLoaded = ins.getAttribute('data-adsbygoogle-status') || ins.getAttribute('data-ad-status');
+                if (!isLoaded) {
+                  try {
+                    ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+                  } catch (pushErr) {
+                    console.debug('adsbygoogle push captured:', pushErr);
+                  }
                 }
               });
             }
