@@ -182,7 +182,7 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
   try {
     // 1. Relational row upsert
     try {
-      await sb.from('articles').upsert({
+      const basePayload: any = {
         id: article.id,
         title: article.title,
         slug: article.slug || article.id,
@@ -208,14 +208,23 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
         published_at: article.publishedAt || new Date().toISOString(),
         updated_at: article.updatedAt || new Date().toISOString(),
         seo_title: article.seoTitle || article.title,
-        seo_description: article.seoDescription || article.summary,
+        seo_description: article.seoDescription || article.summary
+      };
+
+      const fullPayload = {
+        ...basePayload,
         video_url: article.videoUrl || '',
         video_caption: article.videoCaption || '',
         video_type: article.videoType || 'none',
         video_placement: article.videoPlacement || 'hero',
         is_video_article: !!article.isVideoArticle,
         video_duration: article.videoDuration || ''
-      }, { onConflict: 'id' });
+      };
+
+      const { error: upsertError } = await sb.from('articles').upsert(fullPayload, { onConflict: 'id' });
+      if (upsertError && (upsertError.message?.includes('is_video_article') || upsertError.message?.includes('column') || upsertError.message?.includes('schema cache'))) {
+        await sb.from('articles').upsert(basePayload, { onConflict: 'id' });
+      }
     } catch (e) {
       console.warn('Relational article upsert note:', e);
     }

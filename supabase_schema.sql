@@ -28,10 +28,24 @@ CREATE TABLE IF NOT EXISTS public.articles (
     is_editor_pick BOOLEAN DEFAULT false,
     views INTEGER DEFAULT 0,
     read_time_minutes INTEGER DEFAULT 3,
+    video_url TEXT DEFAULT '',
+    video_caption TEXT DEFAULT '',
+    video_type TEXT DEFAULT 'none',
+    video_placement TEXT DEFAULT 'hero',
+    is_video_article BOOLEAN DEFAULT false,
+    video_duration TEXT DEFAULT '',
     published_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure video columns exist for existing installations
+ALTER TABLE IF EXISTS public.articles ADD COLUMN IF NOT EXISTS video_url TEXT DEFAULT '';
+ALTER TABLE IF EXISTS public.articles ADD COLUMN IF NOT EXISTS video_caption TEXT DEFAULT '';
+ALTER TABLE IF EXISTS public.articles ADD COLUMN IF NOT EXISTS video_type TEXT DEFAULT 'none';
+ALTER TABLE IF EXISTS public.articles ADD COLUMN IF NOT EXISTS video_placement TEXT DEFAULT 'hero';
+ALTER TABLE IF EXISTS public.articles ADD COLUMN IF NOT EXISTS is_video_article BOOLEAN DEFAULT false;
+ALTER TABLE IF EXISTS public.articles ADD COLUMN IF NOT EXISTS video_duration TEXT DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_articles_slug ON public.articles(slug);
 CREATE INDEX IF NOT EXISTS idx_articles_category ON public.articles(category_id);

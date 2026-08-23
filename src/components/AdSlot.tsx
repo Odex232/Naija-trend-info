@@ -149,13 +149,12 @@ export const AdSlot: React.FC<AdSlotProps> = ({
             if (containerRef.current) {
               const insElements = containerRef.current.querySelectorAll('ins.adsbygoogle');
               insElements.forEach((ins) => {
-                const isLoaded =
-                  ins.getAttribute('data-adsbygoogle-status') ||
-                  ins.getAttribute('data-ad-status') ||
-                  ins.getAttribute('data-adsbygoogle-pushed') === 'true' ||
-                  (ins.children && ins.children.length > 0);
+                const status = ins.getAttribute('data-adsbygoogle-status') || ins.getAttribute('data-ad-status');
+                const isPushed = ins.getAttribute('data-adsbygoogle-pushed') === 'true';
+                const hasIframe = ins.querySelector('iframe') !== null;
+                const hasChildren = (ins.children && ins.children.length > 0);
 
-                if (!isLoaded) {
+                if (!status && !isPushed && !hasIframe && !hasChildren) {
                   // Mark as pushed immediately before executing push
                   ins.setAttribute('data-adsbygoogle-pushed', 'true');
                   try {
@@ -171,7 +170,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           } catch (adsenseErr: any) {
             console.debug('AdSense initialization notice:', adsenseErr?.message || adsenseErr);
           }
-        }, 150);
+        }, 200);
 
         return () => clearTimeout(timer);
       } catch (err: any) {
