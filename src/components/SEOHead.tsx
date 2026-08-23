@@ -17,6 +17,7 @@ export interface SEOHeadProps {
   structuredData?: Record<string, any> | Array<Record<string, any>>;
   googleSiteVerification?: string;
   bingSiteVerification?: string;
+  pinterestVerificationCode?: string;
 }
 
 const PRODUCTION_ORIGIN = 'https://www.naijatrendinfo.com.ng';
@@ -37,7 +38,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   isNoIndex = false,
   structuredData,
   googleSiteVerification,
-  bingSiteVerification
+  bingSiteVerification,
+  pinterestVerificationCode = '61e1ab291f2ad5fb3b64dd51934c2241'
 }) => {
   useEffect(() => {
     // 1. Dynamic Page Title
@@ -138,6 +140,9 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     if (bingSiteVerification) {
       setMetaTag('name', 'msvalidate.01', bingSiteVerification);
     }
+    if (pinterestVerificationCode) {
+      setMetaTag('name', 'p:domain_verify', pinterestVerificationCode);
+    }
 
     // 9. Dynamic JSON-LD Structured Data Injection
     const scriptId = 'dynamic-seo-jsonld';
@@ -221,7 +226,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     isNoIndex,
     structuredData,
     googleSiteVerification,
-    bingSiteVerification
+    bingSiteVerification,
+    pinterestVerificationCode
   ]);
 
   return null;

@@ -589,7 +589,7 @@
       "desktopVisible": true,
       "mobileVisible": true,
       "isActive": true,
-      "impressions": 42102,
+      "impressions": 42110,
       "clicks": 1840
     },
     {
@@ -602,7 +602,7 @@
       "desktopVisible": true,
       "mobileVisible": true,
       "isActive": true,
-      "impressions": 115002,
+      "impressions": 115018,
       "clicks": 3420
     },
     {
@@ -708,6 +708,7 @@
     "seoDescription": "Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting.",
     "seoKeywords": "NaijaTrendiInfo, Nigeria news, Nigerian news, breaking news Nigeria, sports news Nigeria, football news, entertainment news, tech news Nigeria, business news, Naija trend info",
     "allowIndexing": true,
+    "pinterestVerificationCode": "61e1ab291f2ad5fb3b64dd51934c2241",
     "defaultOgImage": "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=1200"
   },
   "socialLinks": [
@@ -1406,6 +1407,138 @@
   "analytics": {
     "liveVisitorFeed": [
       {
+        "id": "evt-1787520057122-17",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Kaduna Central",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T21:20:57.122Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787520055143-986",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Port Harcourt (Rivers)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T21:20:55.143Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787519572382-863",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Kano City (Kano)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T21:12:52.382Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787519572108-129",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Lagos (Ikeja, Mainland)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T21:12:52.108Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517988971-959",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Abuja FCT (Maitama / Central)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:46:28.971Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517902585-577",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Kaduna Central",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:45:02.585Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517812570-882",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Enugu (Independence Layout)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:43:32.570Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517812205-959",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Port Harcourt (Rivers)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:43:32.205Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517736033-629",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Port Harcourt (Rivers)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:42:16.033Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517735793-336",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Houston TX, United States (Diaspora)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:42:15.793Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517652046-650",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Kaduna Central",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:40:52.046Z",
+        "timeAgo": "Just now"
+      },
+      {
+        "id": "evt-1787517652044-49",
+        "path": "/",
+        "title": "NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories",
+        "category": "General",
+        "location": "Lagos (Lekki / Victoria Island)",
+        "device": "Android Smartphone",
+        "browser": "Google Chrome",
+        "timestamp": "2026-08-23T20:40:52.044Z",
+        "timeAgo": "Just now"
+      },
+      {
         "id": "evt-1787390714037-217",
         "path": "/",
         "title": "NaijaTrendiInfo - Nigeria News",
@@ -1931,138 +2064,6 @@
         "device": "Android Smartphone",
         "browser": "Google Chrome",
         "timestamp": "2026-08-21T06:43:04.392Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294584115-136",
-        "path": "/",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Houston TX, United States (Diaspora)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:43:04.115Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294435997-294",
-        "path": "/",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Benin City (Edo)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:40:35.997Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294384520-337",
-        "path": "/",
-        "title": "NaijaTrendiInfo - Nigeria News",
-        "category": "General",
-        "location": "Houston TX, United States (Diaspora)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:39:44.520Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294380379-990",
-        "path": "/",
-        "title": "NaijaTrendiInfo - Nigeria News",
-        "category": "General",
-        "location": "Port Harcourt (Rivers)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:39:40.379Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294309288-899",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Houston TX, United States (Diaspora)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:38:29.288Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294222444-270",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Abuja FCT (Maitama / Central)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:37:02.444Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294037014-298",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Lagos (Ikeja, Mainland)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:33:57.014Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294022193-669",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Port Harcourt (Rivers)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:33:42.193Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787294000694-483",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Lagos (Ikeja, Mainland)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:33:20.694Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293943202-543",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Lagos (Ikeja, Mainland)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:32:23.202Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293819513-774",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Kano City (Kano)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:30:19.513Z",
-        "timeAgo": "Just now"
-      },
-      {
-        "id": "evt-1787293799645-520",
-        "path": "/article/osundecides2026",
-        "title": "My Google AI Studio App",
-        "category": "General",
-        "location": "Kano City (Kano)",
-        "device": "Android Smartphone",
-        "browser": "Google Chrome",
-        "timestamp": "2026-08-21T06:29:59.645Z",
         "timeAgo": "Just now"
       }
     ],

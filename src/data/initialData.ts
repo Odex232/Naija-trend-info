@@ -396,6 +396,7 @@ export const INITIAL_SETTINGS: WebsiteSettings = {
   defaultOgImage: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=1200',
   googleSiteVerification: '',
   bingSiteVerification: '',
+  pinterestVerificationCode: '61e1ab291f2ad5fb3b64dd51934c2241',
   twitterHandle: '@NaijaTrendiInfo',
   facebookPageUrl: 'https://facebook.com/NaijaTrendiInfo',
   allowIndexing: true,

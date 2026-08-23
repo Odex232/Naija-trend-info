@@ -2299,11 +2299,18 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
   // SEO: Robots.txt
   app.get('/robots.txt', (req, res) => {
     const allowIndexing = db.settings?.allowIndexing !== false;
-    let content = `User-agent: *\n`;
+    let content = `# Robots.txt for NaijaTrendiInfo (https://naijatrendinfo.com.ng & https://www.naijatrendinfo.com.ng)\nUser-agent: *\n`;
     if (allowIndexing) {
-      content += `Allow: /\nDisallow: /admin\nDisallow: /api/\n\n`;
+      content += `Allow: /\nDisallow: /admin\nDisallow: /admin/\nDisallow: /api/\nDisallow: /login\n\n`;
+      content += `# Pinterest Crawlers & Verification Bots\n`;
+      content += `User-agent: Pinterestbot\nAllow: /\nAllow: /uploads/\n\n`;
+      content += `User-agent: Pinterest\nAllow: /\nAllow: /uploads/\n\n`;
+      content += `User-agent: Googlebot\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\n`;
+      content += `User-agent: Bingbot\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\n`;
       content += `Sitemap: https://www.naijatrendinfo.com.ng/sitemap.xml\n`;
       content += `Sitemap: https://www.naijatrendinfo.com.ng/news-sitemap.xml\n`;
+      content += `Sitemap: https://naijatrendinfo.com.ng/sitemap.xml\n`;
+      content += `Sitemap: https://naijatrendinfo.com.ng/news-sitemap.xml\n`;
     } else {
       content += `Disallow: /\n`;
     }
@@ -2376,6 +2383,16 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
         return res.status(404).send('Application build not found');
       }
       let html = fs.readFileSync(indexPath, 'utf-8');
+
+      // Dynamic Pinterest Verification Tag Injection
+      const pinterestCode = db.settings?.pinterestVerificationCode || '61e1ab291f2ad5fb3b64dd51934c2241';
+      if (pinterestCode) {
+        if (html.includes('name="p:domain_verify"')) {
+          html = html.replace(/<meta name="p:domain_verify" content=".*?"\s*\/?>/i, `<meta name="p:domain_verify" content="${escapeXml(pinterestCode)}" />`);
+        } else {
+          html = html.replace('</head>', `  <meta name="p:domain_verify" content="${escapeXml(pinterestCode)}" />\n  </head>`);
+        }
+      }
 
       // SSR Meta tag injection for article pages (Googlebot, crawlers, and social shares)
       const articleMatch = req.path.match(/^\/article\/([^/?#]+)/);

@@ -425,6 +425,7 @@ export interface WebsiteSettings {
   defaultOgImage?: string;
   googleSiteVerification?: string;
   bingSiteVerification?: string;
+  pinterestVerificationCode?: string;
   twitterHandle?: string;
   facebookPageUrl?: string;
   allowIndexing?: boolean;

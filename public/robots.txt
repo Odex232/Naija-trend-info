@@ -1,10 +1,19 @@
-# Robots.txt for NaijaTrendiInfo (https://www.naijatrendinfo.com.ng)
+# Robots.txt for NaijaTrendiInfo (https://naijatrendinfo.com.ng & https://www.naijatrendinfo.com.ng)
 User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
 Disallow: /api/
 Disallow: /login
+
+# Pinterest Crawlers & Verification Bots
+User-agent: Pinterestbot
+Allow: /
+Allow: /uploads/
+
+User-agent: Pinterest
+Allow: /
+Allow: /uploads/
 
 User-agent: Googlebot
 Allow: /
@@ -25,3 +34,6 @@ Disallow: /api/
 
 Sitemap: https://www.naijatrendinfo.com.ng/sitemap.xml
 Sitemap: https://www.naijatrendinfo.com.ng/news-sitemap.xml
+Sitemap: https://naijatrendinfo.com.ng/sitemap.xml
+Sitemap: https://naijatrendinfo.com.ng/news-sitemap.xml
+

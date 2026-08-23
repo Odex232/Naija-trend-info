@@ -54,6 +54,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         ogImage={settings?.defaultOgImage || leadStory?.featuredImage || 'https://www.naijatrendinfo.com.ng/icon.png'}
         googleSiteVerification={settings?.googleSiteVerification}
         bingSiteVerification={settings?.bingSiteVerification}
+        pinterestVerificationCode={settings?.pinterestVerificationCode || '61e1ab291f2ad5fb3b64dd51934c2241'}
         isNoIndex={settings?.allowIndexing === false}
       />
       {/* Top Banner Ad Placement */}
