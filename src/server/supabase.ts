@@ -858,7 +858,17 @@ export const dbAdapter = {
       readTimeMinutes: article.readTimeMinutes || 3,
       publishedAt: article.publishedAt || now,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      seoTitle: article.seoTitle || article.title,
+      seoDescription: article.seoDescription || article.summary,
+      seoKeywords: article.seoKeywords || [],
+      canonicalUrl: article.canonicalUrl,
+      isNoIndex: article.isNoIndex,
+      videoUrl: article.videoUrl || '',
+      videoCaption: article.videoCaption || '',
+      videoPlacement: article.videoPlacement || 'hero',
+      isVideoArticle: !!article.isVideoArticle || Boolean(article.videoUrl),
+      videoDuration: article.videoDuration || ''
     };
 
     const client = getSupabaseClient();

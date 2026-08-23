@@ -13,13 +13,17 @@ import {
   Facebook,
   Linkedin,
   Send,
-  Link2
+  Link2,
+  Video,
+  Play,
+  Film
 } from 'lucide-react';
 import { Article, Ad, AdPlacement, Comment } from '../types';
 import { AdDisplay } from '../components/AdDisplay';
 import { CommentSection } from '../components/CommentSection';
 import { ArticleCard } from '../components/ArticleCard';
 import { SEOHead } from '../components/SEOHead';
+import { parseVideoUrl } from '../utils/videoHelper';
 
 interface ArticleViewProps {
   article: Article;
@@ -289,20 +293,113 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               </button>
             </div>
 
-            {/* Featured Image */}
-            <figure className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800">
-              <img
-                src={article.featuredImage}
-                alt={article.imageAlt || article.imageCaption || article.title}
-                className="w-full h-auto max-h-[500px] object-cover"
-                referrerPolicy="no-referrer"
-              />
-              {article.imageCaption && (
-                <figcaption className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs text-center border-t border-slate-200 dark:border-slate-700">
-                  {article.imageCaption} {article.imageCredit && `| Credit: ${article.imageCredit}`}
-                </figcaption>
-              )}
-            </figure>
+            {/* Video Player Component */}
+            {article.videoUrl && parseVideoUrl(article.videoUrl).isValid && (() => {
+              const parsed = parseVideoUrl(article.videoUrl);
+              const videoElement = (
+                <div className="mb-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl">
+                  <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                      </span>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Film className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Featured Video Report</span>
+                      </span>
+                      <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-800">
+                        {parsed.providerLabel}
+                      </span>
+                    </div>
+                    {article.videoDuration && (
+                      <span className="text-xs font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
+                        ⏱ {article.videoDuration}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="relative w-full aspect-video bg-black">
+                    {parsed.provider === 'direct' ? (
+                      <video controls playsInline className="w-full h-full object-contain">
+                        <source src={parsed.embedUrl} type="video/mp4" />
+                        Your browser does not support HTML5 video.
+                      </video>
+                    ) : (
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={article.videoCaption || article.title}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      ></iframe>
+                    )}
+                  </div>
+
+                  {article.videoCaption && (
+                    <div className="p-3 bg-slate-900/95 text-slate-300 text-xs flex items-center justify-between border-t border-slate-800">
+                      <span className="font-medium">{article.videoCaption}</span>
+                      <span className="text-[11px] text-slate-400">NaijaTrendiInfo Broadcast Desk</span>
+                    </div>
+                  )}
+                </div>
+              );
+
+              if (article.videoPlacement === 'hero' || !article.videoPlacement) {
+                return videoElement;
+              }
+              return null;
+            })()}
+
+            {/* Featured Image (when not overridden by hero video or when static image is also preserved) */}
+            {(!article.videoUrl || article.videoPlacement !== 'hero') && (
+              <figure className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800">
+                <img
+                  src={article.featuredImage}
+                  alt={article.imageAlt || article.imageCaption || article.title}
+                  className="w-full h-auto max-h-[500px] object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                {article.imageCaption && (
+                  <figcaption className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs text-center border-t border-slate-200 dark:border-slate-700">
+                    {article.imageCaption} {article.imageCredit && `| Credit: ${article.imageCredit}`}
+                  </figcaption>
+                )}
+              </figure>
+            )}
+
+            {/* Video Player when placement is before_content */}
+            {article.videoUrl && article.videoPlacement === 'before_content' && parseVideoUrl(article.videoUrl).isValid && (() => {
+              const parsed = parseVideoUrl(article.videoUrl);
+              return (
+                <div className="mb-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl">
+                  <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Video Coverage</span>
+                    </span>
+                    <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-800">
+                      {parsed.providerLabel}
+                    </span>
+                  </div>
+                  <div className="relative w-full aspect-video bg-black">
+                    {parsed.provider === 'direct' ? (
+                      <video controls playsInline className="w-full h-full object-contain">
+                        <source src={parsed.embedUrl} type="video/mp4" />
+                      </video>
+                    ) : (
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={article.videoCaption || article.title}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Ad Placement: Before Article */}
             <AdDisplay position="Before Article" placements={adPlacements} ads={ads} />
@@ -312,6 +409,39 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               className="prose prose-slate dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 font-sans text-sm sm:text-base leading-relaxed space-y-4"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
+
+            {/* Video Player when placement is after_content */}
+            {article.videoUrl && article.videoPlacement === 'after_content' && parseVideoUrl(article.videoUrl).isValid && (() => {
+              const parsed = parseVideoUrl(article.videoUrl);
+              return (
+                <div className="my-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl">
+                  <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Supplementary Video Coverage</span>
+                    </span>
+                    <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-800">
+                      {parsed.providerLabel}
+                    </span>
+                  </div>
+                  <div className="relative w-full aspect-video bg-black">
+                    {parsed.provider === 'direct' ? (
+                      <video controls playsInline className="w-full h-full object-contain">
+                        <source src={parsed.embedUrl} type="video/mp4" />
+                      </video>
+                    ) : (
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={article.videoCaption || article.title}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Ad Placement: Middle of Article */}
             <AdDisplay position="Middle of Article" placements={adPlacements} ads={ads} />

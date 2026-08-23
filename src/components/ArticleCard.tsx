@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Clock, Calendar, Flame, Pin, Sparkles, User } from 'lucide-react';
+import { Eye, Clock, Calendar, Flame, Pin, Sparkles, User, Play, Film } from 'lucide-react';
 import { Article } from '../types';
 
 interface ArticleCardProps {
@@ -15,6 +15,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
   });
 
   const imageAltText = article.imageAlt || article.imageCaption || article.title;
+  const isVideo = Boolean(article.isVideoArticle || article.videoUrl);
 
   if (variant === 'featured') {
     return (
@@ -30,11 +31,23 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#07111F] via-[#07111F]/70 to-transparent"></div>
 
+        {isVideo && (
+          <div className="absolute top-6 right-6 w-12 h-12 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-rose-500 transition-transform">
+            <Play className="w-5 h-5 fill-white ml-0.5" />
+          </div>
+        )}
+
         <div className="relative z-10 space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="bg-[#00B87C] text-white font-extrabold px-3 py-1 rounded-md tracking-wider uppercase text-[10px] shadow-sm">
               {article.categoryName}
             </span>
+            {isVideo && (
+              <span className="bg-rose-600 text-white font-black px-2.5 py-1 rounded-md tracking-wider uppercase text-[10px] flex items-center gap-1 shadow-sm">
+                <Film className="w-3 h-3" />
+                <span>Video Story</span>
+              </span>
+            )}
             {article.isBreaking && (
               <span className="bg-[#E63946] text-white font-black px-2.5 py-1 rounded-md tracking-wider uppercase text-[10px] animate-pulse">
                 Breaking News
@@ -100,10 +113,23 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#07111F] via-[#07111F]/70 to-transparent"></div>
 
+        {isVideo && (
+          <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-md">
+            <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+          </div>
+        )}
+
         <div className="relative z-10 space-y-1.5">
-          <span className="bg-[#00B87C] text-white font-extrabold text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider inline-block">
-            {article.categoryName}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="bg-[#00B87C] text-white font-extrabold text-[10px] px-2.5 py-0.5 rounded uppercase tracking-wider inline-block">
+              {article.categoryName}
+            </span>
+            {isVideo && (
+              <span className="bg-rose-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded uppercase">
+                Video
+              </span>
+            )}
+          </div>
 
           <h3 className="text-sm font-bold font-serif leading-snug line-clamp-2 group-hover:text-[#00B87C] transition-colors">
             {article.title}
@@ -132,9 +158,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             referrerPolicy="no-referrer"
           />
-          <span className="absolute top-2 left-2 bg-[#00B87C] text-white font-extrabold text-[10px] px-2 py-0.5 rounded tracking-wider uppercase">
-            {article.categoryName}
-          </span>
+          <div className="absolute top-2 left-2 flex items-center gap-1">
+            <span className="bg-[#00B87C] text-white font-extrabold text-[10px] px-2 py-0.5 rounded tracking-wider uppercase">
+              {article.categoryName}
+            </span>
+            {isVideo && (
+              <span className="bg-rose-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5">
+                <Play className="w-2.5 h-2.5 fill-current" />
+                <span>Video</span>
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col justify-between py-0.5">
@@ -172,12 +206,24 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             referrerPolicy="no-referrer"
           />
+          {isVideo && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <Play className="w-4 h-4 fill-white text-white" />
+            </div>
+          )}
         </div>
 
         <div className="flex-1">
-          <span className="text-[10px] font-bold text-[#00B87C] uppercase tracking-wider">
-            {article.categoryName}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-[#00B87C] uppercase tracking-wider">
+              {article.categoryName}
+            </span>
+            {isVideo && (
+              <span className="text-[9px] font-bold text-rose-400 uppercase">
+                • Video
+              </span>
+            )}
+          </div>
           <h4 className="font-bold text-xs text-slate-100 group-hover:text-[#00B87C] transition-colors line-clamp-2 leading-snug">
             {article.title}
           </h4>
@@ -200,10 +246,23 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onSelect, var
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           referrerPolicy="no-referrer"
         />
+        {isVideo && (
+          <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/10 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <Play className="w-4 h-4 fill-white ml-0.5" />
+            </div>
+          </div>
+        )}
         <div className="absolute top-3 left-3 flex items-center space-x-1.5">
           <span className="bg-[#00B87C] text-white font-extrabold text-[10px] px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
             {article.categoryName}
           </span>
+          {isVideo && (
+            <span className="bg-rose-600 text-white font-bold text-[10px] px-2 py-1 rounded-md uppercase flex items-center gap-1 shadow-sm">
+              <Film className="w-3 h-3" />
+              <span>Video</span>
+            </span>
+          )}
           {article.isBreaking && (
             <span className="bg-[#E63946] text-white font-black text-[10px] px-2 py-1 rounded-md uppercase animate-pulse">
               Breaking

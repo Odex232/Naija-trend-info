@@ -82,7 +82,8 @@ import { SocialMediaManager } from '../components/SocialMediaManager';
 import { WebsiteAnalyticsDashboard } from '../components/WebsiteAnalyticsDashboard';
 import { SupabaseMigrationDashboard } from '../components/SupabaseMigrationDashboard';
 import { AdsManager } from '../components/admin/AdsManager';
-import { Share2 } from 'lucide-react';
+import { Share2, Video, Play, Film, Youtube } from 'lucide-react';
+import { parseVideoUrl, generateVideoEmbedHtml } from '../utils/videoHelper';
 
 interface AdminDashboardViewProps {
   currentUser: User;
@@ -597,7 +598,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       categoryName: cat ? cat.name : 'General',
       authorId: currentUser.id,
       authorName: currentUser.name,
-      authorAvatar: currentUser.avatar
+      authorAvatar: currentUser.avatar,
+      videoUrl: editingArticle.videoUrl?.trim() || '',
+      videoCaption: editingArticle.videoCaption?.trim() || '',
+      videoPlacement: editingArticle.videoPlacement || 'hero',
+      isVideoArticle: editingArticle.isVideoArticle !== undefined ? editingArticle.isVideoArticle : Boolean(editingArticle.videoUrl?.trim()),
+      videoDuration: editingArticle.videoDuration?.trim() || ''
     };
 
     try {
@@ -5548,6 +5554,208 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   onChange={(e) => setEditingArticle({ ...editingArticle, summary: e.target.value })}
                   className="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800"
                 ></textarea>
+              </div>
+
+              {/* DEDICATED VIDEO URL LINK EDITOR & LIVE PLAYER */}
+              <div className="bg-slate-950 border border-indigo-500/40 rounded-2xl p-5 space-y-4 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                      <Film className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                        <span>Video URL Link Editor & Multimedia Post</span>
+                        <span className="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-800 font-normal">
+                          YouTube • Vimeo • TikTok • MP4
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400">Attach or embed a full video report directly to this article with live player playback.</p>
+                    </div>
+                  </div>
+                  {editingArticle?.videoUrl && parseVideoUrl(editingArticle.videoUrl).isValid && (
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-700/80 flex items-center gap-1 font-bold">
+                      <Check className="w-3 h-3" />
+                      <span>{parseVideoUrl(editingArticle.videoUrl).providerLabel}</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-slate-300 text-xs">
+                      Video URL Link / Embed Source
+                      <span className="text-[10px] text-slate-400 ml-2 font-normal">
+                        (e.g., https://www.youtube.com/watch?v=..., https://youtu.be/..., https://tiktok.com/@... or .mp4 link)
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        value={editingArticle?.videoUrl || ''}
+                        onChange={(e) => {
+                          const url = e.target.value;
+                          setEditingArticle({
+                            ...editingArticle,
+                            videoUrl: url,
+                            isVideoArticle: url.trim().length > 0 ? true : editingArticle?.isVideoArticle
+                          });
+                        }}
+                        className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 font-mono text-xs focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* LIVE VIDEO PLAYER PREVIEW */}
+                  {editingArticle?.videoUrl && parseVideoUrl(editingArticle.videoUrl).isValid && (() => {
+                    const parsed = parseVideoUrl(editingArticle.videoUrl);
+                    return (
+                      <div className="bg-slate-900/90 p-3.5 rounded-xl border border-indigo-500/30 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-indigo-300 flex items-center space-x-1.5">
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>Live Video Player Preview</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400">Status: Ready for broadcast</span>
+                        </div>
+
+                        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner border border-slate-800">
+                          {parsed.provider === 'direct' ? (
+                            <video controls className="w-full h-full object-contain">
+                              <source src={parsed.embedUrl} type="video/mp4" />
+                              Your browser does not support HTML5 video.
+                            </video>
+                          ) : (
+                            <iframe
+                              src={parsed.embedUrl}
+                              title="Live Video Preview"
+                              className="w-full h-full border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            ></iframe>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-slate-300 text-xs">Video Caption / Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Watch: Live coverage & analysis"
+                        value={editingArticle?.videoCaption || ''}
+                        onChange={(e) => setEditingArticle({ ...editingArticle, videoCaption: e.target.value })}
+                        className="w-full bg-slate-900 text-white p-2 rounded-xl border border-slate-800 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1 text-slate-300 text-xs">Placement on Page</label>
+                      <select
+                        value={editingArticle?.videoPlacement || 'hero'}
+                        onChange={(e) => setEditingArticle({ ...editingArticle, videoPlacement: e.target.value as any })}
+                        className="w-full bg-slate-900 text-white p-2 rounded-xl border border-slate-800 text-xs"
+                      >
+                        <option value="hero">Top Hero Player (Featured Video)</option>
+                        <option value="before_content">Before Article Body</option>
+                        <option value="after_content">After Article Body</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1 text-slate-300 text-xs">Video Duration (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 04:30 or 12:15"
+                        value={editingArticle?.videoDuration || ''}
+                        onChange={(e) => setEditingArticle({ ...editingArticle, videoDuration: e.target.value })}
+                        className="w-full bg-slate-900 text-white p-2 rounded-xl border border-slate-800 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* One-Click Insert Into WYSIWYG Content Body & Quick Links */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Quick Fill:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingArticle({
+                            ...editingArticle,
+                            videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                            videoCaption: 'Special Video Report: National Economic & Industrial Strategy Briefing',
+                            videoPlacement: 'hero',
+                            isVideoArticle: true,
+                            videoDuration: '03:32'
+                          });
+                        }}
+                        className="text-[10px] px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 cursor-pointer"
+                      >
+                        YouTube Sample
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingArticle({
+                            ...editingArticle,
+                            videoUrl: 'https://www.youtube.com/shorts/3Xk_mY-tI-w',
+                            videoCaption: 'Breaking Snapshot: Super Eagles Training Camp Highlights',
+                            videoPlacement: 'hero',
+                            isVideoArticle: true,
+                            videoDuration: '00:58'
+                          });
+                        }}
+                        className="text-[10px] px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 cursor-pointer"
+                      >
+                        Shorts / Reel Sample
+                      </button>
+                    </div>
+
+                    {editingArticle?.videoUrl && parseVideoUrl(editingArticle.videoUrl).isValid && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const embedHtml = generateVideoEmbedHtml({
+                            url: editingArticle.videoUrl!.trim(),
+                            caption: editingArticle.videoCaption || 'Featured Video Report',
+                            credit: 'NaijaTrendiInfo Media',
+                            aspectRatio: '16:9'
+                          });
+                          if (embedHtml) {
+                            const current = editingArticle.content || '';
+                            setEditingArticle({
+                              ...editingArticle,
+                              content: current ? current + '\n\n' + embedHtml : embedHtml
+                            });
+                            triggerSuccessNotification('Video player snippet inserted into article body text!');
+                          }
+                        }}
+                        className="text-[11px] px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Film className="w-3.5 h-3.5" />
+                        <span>➕ Insert Video Player Into Content Body</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pt-1">
+                    <label className="inline-flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editingArticle?.isVideoArticle || false}
+                        onChange={(e) => setEditingArticle({ ...editingArticle, isVideoArticle: e.target.checked })}
+                        className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-200">
+                        Mark as "Video Report / Watch Story" (Displays video badge & play overlay across website grids)
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div>

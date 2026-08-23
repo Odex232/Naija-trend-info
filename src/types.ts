@@ -46,6 +46,11 @@ export interface Article {
   seoKeywords?: string[];
   canonicalUrl?: string;
   isNoIndex?: boolean;
+  videoUrl?: string;
+  videoCaption?: string;
+  videoPlacement?: 'hero' | 'before_content' | 'after_content';
+  isVideoArticle?: boolean;
+  videoDuration?: string;
 }
 
 export interface Category {

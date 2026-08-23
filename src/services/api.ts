@@ -206,7 +206,14 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
         views: article.views || 0,
         read_time_minutes: article.readTimeMinutes || 3,
         published_at: article.publishedAt || new Date().toISOString(),
-        updated_at: article.updatedAt || new Date().toISOString()
+        updated_at: article.updatedAt || new Date().toISOString(),
+        seo_title: article.seoTitle || article.title,
+        seo_description: article.seoDescription || article.summary,
+        video_url: article.videoUrl || '',
+        video_caption: article.videoCaption || '',
+        video_placement: article.videoPlacement || 'hero',
+        is_video_article: !!article.isVideoArticle,
+        video_duration: article.videoDuration || ''
       }, { onConflict: 'id' });
     } catch (e) {
       console.warn('Relational article upsert note:', e);
@@ -1200,7 +1207,17 @@ export const api = {
       views: article.views || 0,
       readTimeMinutes: article.readTimeMinutes || Math.max(1, Math.ceil((article.content || '').split(' ').length / 200)),
       publishedAt: article.publishedAt || now,
-      updatedAt: now
+      updatedAt: now,
+      seoTitle: article.seoTitle || article.title,
+      seoDescription: article.seoDescription || article.summary,
+      seoKeywords: article.seoKeywords || [],
+      canonicalUrl: article.canonicalUrl,
+      isNoIndex: article.isNoIndex,
+      videoUrl: article.videoUrl || '',
+      videoCaption: article.videoCaption || '',
+      videoPlacement: article.videoPlacement || 'hero',
+      isVideoArticle: !!article.isVideoArticle || Boolean(article.videoUrl),
+      videoDuration: article.videoDuration || ''
     };
 
     // 1. Commit to LocalStorage immediately
