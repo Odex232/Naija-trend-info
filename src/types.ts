@@ -48,6 +48,7 @@ export interface Article {
   isNoIndex?: boolean;
   videoUrl?: string;
   videoCaption?: string;
+  videoType?: 'none' | 'standard' | 'short';
   videoPlacement?: 'hero' | 'before_content' | 'after_content';
   isVideoArticle?: boolean;
   videoDuration?: string;

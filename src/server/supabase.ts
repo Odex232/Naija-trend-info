@@ -699,7 +699,13 @@ export const dbAdapter = {
                 readTimeMinutes: row.read_time_minutes || 3,
                 publishedAt: row.published_at,
                 createdAt: row.created_at,
-                updatedAt: row.updated_at
+                updatedAt: row.updated_at,
+                videoUrl: row.video_url || '',
+                videoCaption: row.video_caption || '',
+                videoType: row.video_type || 'none',
+                videoPlacement: row.video_placement || 'hero',
+                isVideoArticle: !!row.is_video_article || Boolean(row.video_url),
+                videoDuration: row.video_duration || ''
               };
             });
         }
@@ -808,7 +814,13 @@ export const dbAdapter = {
             readTimeMinutes: data.read_time_minutes || 3,
             publishedAt: data.published_at,
             createdAt: data.created_at,
-            updatedAt: data.updated_at
+            updatedAt: data.updated_at,
+            videoUrl: data.video_url || '',
+            videoCaption: data.video_caption || '',
+            videoType: data.video_type || 'none',
+            videoPlacement: data.video_placement || 'hero',
+            isVideoArticle: !!data.is_video_article || Boolean(data.video_url),
+            videoDuration: data.video_duration || ''
           };
         }
       } catch (e) {
@@ -866,6 +878,7 @@ export const dbAdapter = {
       isNoIndex: article.isNoIndex,
       videoUrl: article.videoUrl || '',
       videoCaption: article.videoCaption || '',
+      videoType: article.videoType || 'none',
       videoPlacement: article.videoPlacement || 'hero',
       isVideoArticle: !!article.isVideoArticle || Boolean(article.videoUrl),
       videoDuration: article.videoDuration || ''
@@ -899,7 +912,13 @@ export const dbAdapter = {
           read_time_minutes: newArticle.readTimeMinutes,
           published_at: newArticle.publishedAt,
           created_at: newArticle.createdAt,
-          updated_at: newArticle.updatedAt
+          updated_at: newArticle.updatedAt,
+          video_url: newArticle.videoUrl,
+          video_caption: newArticle.videoCaption,
+          video_type: newArticle.videoType,
+          video_placement: newArticle.videoPlacement,
+          is_video_article: newArticle.isVideoArticle,
+          video_duration: newArticle.videoDuration
         };
 
         const { error } = await client.from('articles').upsert(dbPayload, { onConflict: 'id' });
@@ -954,6 +973,12 @@ export const dbAdapter = {
         if (updates.views !== undefined) dbPayload.views = updates.views;
         if (updates.readTimeMinutes !== undefined) dbPayload.read_time_minutes = updates.readTimeMinutes;
         if (updates.publishedAt !== undefined) dbPayload.published_at = updates.publishedAt;
+        if (updates.videoUrl !== undefined) dbPayload.video_url = updates.videoUrl;
+        if (updates.videoCaption !== undefined) dbPayload.video_caption = updates.videoCaption;
+        if (updates.videoType !== undefined) dbPayload.video_type = updates.videoType;
+        if (updates.videoPlacement !== undefined) dbPayload.video_placement = updates.videoPlacement;
+        if (updates.isVideoArticle !== undefined) dbPayload.is_video_article = updates.isVideoArticle;
+        if (updates.videoDuration !== undefined) dbPayload.video_duration = updates.videoDuration;
 
         await client.from('articles').update(dbPayload).eq('id', id);
 

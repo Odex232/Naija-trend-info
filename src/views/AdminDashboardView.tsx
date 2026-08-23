@@ -601,6 +601,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       authorAvatar: currentUser.avatar,
       videoUrl: editingArticle.videoUrl?.trim() || '',
       videoCaption: editingArticle.videoCaption?.trim() || '',
+      videoType: editingArticle.videoType || (editingArticle.videoUrl?.trim() ? (parseVideoUrl(editingArticle.videoUrl).isShort ? 'short' : 'standard') : 'none'),
       videoPlacement: editingArticle.videoPlacement || 'hero',
       isVideoArticle: editingArticle.isVideoArticle !== undefined ? editingArticle.isVideoArticle : Boolean(editingArticle.videoUrl?.trim()),
       videoDuration: editingArticle.videoDuration?.trim() || ''
@@ -5586,19 +5587,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     <label className="block font-semibold mb-1 text-slate-300 text-xs">
                       Video URL Link / Embed Source
                       <span className="text-[10px] text-slate-400 ml-2 font-normal">
-                        (e.g., https://www.youtube.com/watch?v=..., https://youtu.be/..., https://tiktok.com/@... or .mp4 link)
+                        (Paste video URL here — YouTube, Shorts, TikTok, Facebook, MP4 direct stream, etc.)
                       </span>
                     </label>
                     <div className="relative">
                       <input
                         type="url"
-                        placeholder="https://www.youtube.com/watch?v=..."
+                        placeholder="Paste video URL here (YouTube, TikTok, Facebook, MP4, etc.)"
                         value={editingArticle?.videoUrl || ''}
                         onChange={(e) => {
                           const url = e.target.value;
+                          const parsed = parseVideoUrl(url);
+                          const autoType = url.trim() ? (parsed.isShort ? 'short' : 'standard') : 'none';
                           setEditingArticle({
                             ...editingArticle,
                             videoUrl: url,
+                            videoType: editingArticle?.videoType || autoType,
                             isVideoArticle: url.trim().length > 0 ? true : editingArticle?.isVideoArticle
                           });
                         }}
@@ -5610,17 +5614,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   {/* LIVE VIDEO PLAYER PREVIEW */}
                   {editingArticle?.videoUrl && parseVideoUrl(editingArticle.videoUrl).isValid && (() => {
                     const parsed = parseVideoUrl(editingArticle.videoUrl);
+                    const isVertical = editingArticle.videoType === 'short' || parsed.isShort;
                     return (
                       <div className="bg-slate-900/90 p-3.5 rounded-xl border border-indigo-500/30 space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-bold text-indigo-300 flex items-center space-x-1.5">
                             <Play className="w-3.5 h-3.5 fill-current" />
-                            <span>Live Video Player Preview</span>
+                            <span>Live Video Player Preview {isVertical ? '(Vertical / Short Format)' : '(16:9 Standard Format)'}</span>
                           </span>
                           <span className="text-[10px] text-slate-400">Status: Ready for broadcast</span>
                         </div>
 
-                        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner border border-slate-800">
+                        <div className={`relative w-full ${isVertical ? 'aspect-[9/16] max-w-[280px] mx-auto' : 'aspect-video'} rounded-xl overflow-hidden bg-black shadow-inner border border-slate-800`}>
                           {parsed.provider === 'direct' ? (
                             <video controls className="w-full h-full object-contain">
                               <source src={parsed.embedUrl} type="video/mp4" />
@@ -5640,7 +5645,20 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     );
                   })()}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-slate-300 text-xs">Video Format / Type</label>
+                      <select
+                        value={editingArticle?.videoType || (editingArticle?.videoUrl ? (parseVideoUrl(editingArticle.videoUrl).isShort ? 'short' : 'standard') : 'none')}
+                        onChange={(e) => setEditingArticle({ ...editingArticle, videoType: e.target.value as any })}
+                        className="w-full bg-slate-900 text-white p-2 rounded-xl border border-slate-800 text-xs focus:border-indigo-500 focus:outline-none"
+                      >
+                        <option value="none">None (No Video)</option>
+                        <option value="standard">Standard Landscape (16:9)</option>
+                        <option value="short">Short / Vertical Reel (9:16)</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block font-semibold mb-1 text-slate-300 text-xs">Video Caption / Title</label>
                       <input

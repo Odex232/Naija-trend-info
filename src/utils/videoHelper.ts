@@ -8,42 +8,56 @@ export interface ParsedVideo {
   thumbnailUrl?: string;
   isValid: boolean;
   providerLabel: string;
+  isShort?: boolean;
+}
+
+/**
+ * Sanitize and validate video URL / input
+ */
+export function sanitizeVideoUrl(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  // Disallow dangerous script / javascript protocols
+  if (/^(javascript:|data:|vbscript:)/i.test(trimmed)) {
+    return '';
+  }
+  return trimmed;
 }
 
 /**
  * Parse any video URL or embed code to identify provider, extract video ID, generate safe embed URL and thumbnail
  */
 export function parseVideoUrl(inputUrl: string): ParsedVideo {
-  if (!inputUrl || typeof inputUrl !== 'string') {
+  const sanitized = sanitizeVideoUrl(inputUrl);
+  if (!sanitized) {
     return {
       provider: 'unknown',
       originalUrl: '',
       isValid: false,
-      providerLabel: 'Unknown Provider'
+      providerLabel: 'No Video URL'
     };
   }
 
-  const raw = inputUrl.trim();
+  const raw = sanitized;
 
   // 1. Direct iframe embed snippet pasted by user
   if (raw.startsWith('<iframe') && raw.includes('src=')) {
     const srcMatch = raw.match(/src=["']([^"']+)["']/i);
     const src = srcMatch ? srcMatch[1] : '';
-    return {
-      provider: 'iframe',
-      originalUrl: raw,
-      embedUrl: src,
-      isValid: Boolean(src),
-      providerLabel: 'Custom Embed Code'
-    };
+    if (src && !/^(javascript:|data:)/i.test(src)) {
+      return {
+        provider: 'iframe',
+        originalUrl: raw,
+        embedUrl: src,
+        isValid: Boolean(src),
+        providerLabel: 'Custom Embed'
+      };
+    }
   }
 
   // 2. YouTube Parsing (Regular, Shortened, Shorts, Embed, Live)
-  // https://www.youtube.com/watch?v=dQw4w9WgXcQ
-  // https://youtu.be/dQw4w9WgXcQ
-  // https://www.youtube.com/shorts/3Xk_mY-tI-w
-  // https://www.youtube.com/embed/dQw4w9WgXcQ
-  // https://youtube.com/live/dQw4w9WgXcQ
+  // youtube.com/watch?v=VIDEO_ID, youtu.be/VIDEO_ID, youtube.com/shorts/VIDEO_ID, youtube.com/embed/VIDEO_ID
+  const isYtShort = /youtube\.com\/shorts\//i.test(raw);
   const ytMatch = raw.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/i);
   if (ytMatch && ytMatch[1]) {
     const videoId = ytMatch[1];
@@ -54,12 +68,12 @@ export function parseVideoUrl(inputUrl: string): ParsedVideo {
       embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&enablejsapi=1`,
       thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
       isValid: true,
-      providerLabel: 'YouTube Video'
+      providerLabel: isYtShort ? 'YouTube Shorts' : 'YouTube Video',
+      isShort: isYtShort
     };
   }
 
   // 3. Vimeo Parsing
-  // https://vimeo.com/123456789 or https://player.vimeo.com/video/123456789
   const vimeoMatch = raw.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)([0-9]+)/i);
   if (vimeoMatch && vimeoMatch[1]) {
     const videoId = vimeoMatch[1];
@@ -69,22 +83,24 @@ export function parseVideoUrl(inputUrl: string): ParsedVideo {
       videoId,
       embedUrl: `https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0`,
       isValid: true,
-      providerLabel: 'Vimeo Video'
+      providerLabel: 'Vimeo Video',
+      isShort: false
     };
   }
 
   // 4. TikTok Parsing
-  // https://www.tiktok.com/@user/video/1234567890123456789
-  const tikTokMatch = raw.match(/tiktok\.com\/@[^/]+\/video\/([0-9]+)/i);
-  if (tikTokMatch && tikTokMatch[1]) {
-    const videoId = tikTokMatch[1];
+  // tiktok.com/@user/video/1234567890123456789 or tiktok.com/v/1234567890
+  const tikTokMatch = raw.match(/tiktok\.com\/(?:@[^/]+\/video\/|v\/|t\/)?([0-9a-zA-Z_-]+)/i);
+  if (tikTokMatch && /tiktok\.com/i.test(raw)) {
+    const videoId = raw.match(/video\/([0-9]+)/i)?.[1] || tikTokMatch[1];
     return {
       provider: 'tiktok',
       originalUrl: raw,
       videoId,
-      embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
+      embedUrl: videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : raw,
       isValid: true,
-      providerLabel: 'TikTok Video / Reel'
+      providerLabel: 'TikTok Video',
+      isShort: true
     };
   }
 
@@ -96,7 +112,8 @@ export function parseVideoUrl(inputUrl: string): ParsedVideo {
       originalUrl: raw,
       embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodedUrl}&show_text=false&t=0`,
       isValid: true,
-      providerLabel: 'Facebook Video'
+      providerLabel: 'Facebook Video',
+      isShort: false
     };
   }
 
@@ -110,7 +127,8 @@ export function parseVideoUrl(inputUrl: string): ParsedVideo {
       videoId,
       embedUrl: `https://www.dailymotion.com/embed/video/${videoId}`,
       isValid: true,
-      providerLabel: 'Dailymotion Video'
+      providerLabel: 'Dailymotion Video',
+      isShort: false
     };
   }
 
@@ -121,18 +139,20 @@ export function parseVideoUrl(inputUrl: string): ParsedVideo {
       originalUrl: raw,
       embedUrl: raw,
       isValid: true,
-      providerLabel: 'Direct Video File (MP4/WebM)'
+      providerLabel: 'Direct Video (MP4/WebM)',
+      isShort: false
     };
   }
 
-  // 8. Generic web URL with video keyword or protocol
+  // 8. General HTTPS Video Stream / Embed Link
   if (/^https?:\/\//i.test(raw)) {
     return {
       provider: 'direct',
       originalUrl: raw,
       embedUrl: raw,
       isValid: true,
-      providerLabel: 'Web Video Stream'
+      providerLabel: 'Web Video Stream',
+      isShort: false
     };
   }
 
@@ -140,7 +160,8 @@ export function parseVideoUrl(inputUrl: string): ParsedVideo {
     provider: 'unknown',
     originalUrl: raw,
     isValid: false,
-    providerLabel: 'Invalid Video Link'
+    providerLabel: 'Invalid Video Link',
+    isShort: false
   };
 }
 
@@ -161,10 +182,11 @@ export function generateVideoEmbedHtml(options: GenerateEmbedOptions): string {
 
   if (!parsed.isValid) return '';
 
-  const aspectClass = isShorts || aspectRatio === '9:16' 
-    ? 'aspect-[9/16] max-w-sm mx-auto' 
-    : aspectRatio === '4:3' 
-      ? 'aspect-[4/3]' 
+  const isVertical = isShorts || parsed.isShort || aspectRatio === '9:16';
+  const aspectClass = isVertical
+    ? 'aspect-[9/16] max-w-sm mx-auto'
+    : aspectRatio === '4:3'
+      ? 'aspect-[4/3]'
       : 'aspect-video';
 
   let playerSnippet = '';

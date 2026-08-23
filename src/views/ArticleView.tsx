@@ -296,8 +296,9 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             {/* Video Player Component */}
             {article.videoUrl && parseVideoUrl(article.videoUrl).isValid && (() => {
               const parsed = parseVideoUrl(article.videoUrl);
+              const isVertical = article.videoType === 'short' || parsed.isShort;
               const videoElement = (
-                <div className="mb-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl">
+                <div className={`mb-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl ${isVertical ? 'max-w-md mx-auto' : 'w-full'}`}>
                   <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span className="flex h-2 w-2 relative">
@@ -306,7 +307,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
                       </span>
                       <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                         <Film className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Featured Video Report</span>
+                        <span>{isVertical ? 'Vertical Short / Reel' : 'Featured Video Report'}</span>
                       </span>
                       <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-800">
                         {parsed.providerLabel}
@@ -319,7 +320,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
                     )}
                   </div>
 
-                  <div className="relative w-full aspect-video bg-black">
+                  <div className={`relative w-full ${isVertical ? 'aspect-[9/16]' : 'aspect-video'} bg-black`}>
                     {parsed.provider === 'direct' ? (
                       <video controls playsInline className="w-full h-full object-contain">
                         <source src={parsed.embedUrl} type="video/mp4" />
@@ -371,18 +372,19 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             {/* Video Player when placement is before_content */}
             {article.videoUrl && article.videoPlacement === 'before_content' && parseVideoUrl(article.videoUrl).isValid && (() => {
               const parsed = parseVideoUrl(article.videoUrl);
+              const isVertical = article.videoType === 'short' || parsed.isShort;
               return (
-                <div className="mb-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl">
+                <div className={`mb-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl ${isVertical ? 'max-w-md mx-auto' : 'w-full'}`}>
                   <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
                     <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                       <Film className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Video Coverage</span>
+                      <span>{isVertical ? 'Vertical Short / Reel' : 'Video Coverage'}</span>
                     </span>
                     <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-800">
                       {parsed.providerLabel}
                     </span>
                   </div>
-                  <div className="relative w-full aspect-video bg-black">
+                  <div className={`relative w-full ${isVertical ? 'aspect-[9/16]' : 'aspect-video'} bg-black`}>
                     {parsed.provider === 'direct' ? (
                       <video controls playsInline className="w-full h-full object-contain">
                         <source src={parsed.embedUrl} type="video/mp4" />
@@ -413,18 +415,19 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             {/* Video Player when placement is after_content */}
             {article.videoUrl && article.videoPlacement === 'after_content' && parseVideoUrl(article.videoUrl).isValid && (() => {
               const parsed = parseVideoUrl(article.videoUrl);
+              const isVertical = article.videoType === 'short' || parsed.isShort;
               return (
-                <div className="my-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl">
+                <div className={`my-8 overflow-hidden rounded-2xl bg-slate-950 border border-indigo-500/30 shadow-2xl ${isVertical ? 'max-w-md mx-auto' : 'w-full'}`}>
                   <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
                     <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                       <Film className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Supplementary Video Coverage</span>
+                      <span>{isVertical ? 'Vertical Short / Reel' : 'Supplementary Video Coverage'}</span>
                     </span>
                     <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded border border-indigo-800">
                       {parsed.providerLabel}
                     </span>
                   </div>
-                  <div className="relative w-full aspect-video bg-black">
+                  <div className={`relative w-full ${isVertical ? 'aspect-[9/16]' : 'aspect-video'} bg-black`}>
                     {parsed.provider === 'direct' ? (
                       <video controls playsInline className="w-full h-full object-contain">
                         <source src={parsed.embedUrl} type="video/mp4" />

@@ -211,6 +211,7 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
         seo_description: article.seoDescription || article.summary,
         video_url: article.videoUrl || '',
         video_caption: article.videoCaption || '',
+        video_type: article.videoType || 'none',
         video_placement: article.videoPlacement || 'hero',
         is_video_article: !!article.isVideoArticle,
         video_duration: article.videoDuration || ''
@@ -1215,6 +1216,7 @@ export const api = {
       isNoIndex: article.isNoIndex,
       videoUrl: article.videoUrl || '',
       videoCaption: article.videoCaption || '',
+      videoType: article.videoType || 'none',
       videoPlacement: article.videoPlacement || 'hero',
       isVideoArticle: !!article.isVideoArticle || Boolean(article.videoUrl),
       videoDuration: article.videoDuration || ''
