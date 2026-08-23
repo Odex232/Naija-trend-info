@@ -711,9 +711,13 @@ async function startServer() {
     const settings = {
       googleAdSense: {
         enabled: db.settings?.googleAdSenseEnabled !== false,
-        publisherId: db.settings?.googleAdsensePubId || 'ca-pub-1234567890123456',
+        publisherId: db.settings?.googleAdsensePubId || process.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-1234567890123456',
+        globalScript: db.settings?.googleAdSenseGlobalScript || '',
         autoAds: db.settings?.googleAdSenseAutoAds || false,
-        testMode: db.settings?.googleAdSenseTestMode || false
+        testMode: db.settings?.googleAdSenseTestMode || false,
+        verificationStatus: db.settings?.googleAdSenseVerificationStatus || 'active',
+        lastTestedAt: db.settings?.googleAdSenseLastTestedAt || '',
+        adsenseTagMode: db.settings?.googleAdSenseTagMode || 'official_script'
       },
       adsterra: {
         enabled: db.settings?.adsterraEnabled !== false
@@ -738,8 +742,12 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
     if (newSettings.googleAdSense) {
       db.settings.googleAdsensePubId = newSettings.googleAdSense.publisherId;
       db.settings.googleAdSenseEnabled = newSettings.googleAdSense.enabled;
+      db.settings.googleAdSenseGlobalScript = newSettings.googleAdSense.globalScript;
       db.settings.googleAdSenseAutoAds = newSettings.googleAdSense.autoAds;
       db.settings.googleAdSenseTestMode = newSettings.googleAdSense.testMode;
+      db.settings.googleAdSenseVerificationStatus = newSettings.googleAdSense.verificationStatus;
+      db.settings.googleAdSenseLastTestedAt = newSettings.googleAdSense.lastTestedAt;
+      db.settings.googleAdSenseTagMode = newSettings.googleAdSense.adsenseTagMode;
     }
     if (newSettings.adsterra) {
       db.settings.adsterraEnabled = newSettings.adsterra.enabled;
@@ -2391,6 +2399,23 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
           html = html.replace(/<meta name="p:domain_verify" content=".*?"\s*\/?>/i, `<meta name="p:domain_verify" content="${escapeXml(pinterestCode)}" />`);
         } else {
           html = html.replace('</head>', `  <meta name="p:domain_verify" content="${escapeXml(pinterestCode)}" />\n  </head>`);
+        }
+      }
+
+      // Dynamic Google AdSense Global Script Injection
+      const adsenseEnabled = db.settings?.googleAdSenseEnabled !== false;
+      const adsensePubId = db.settings?.googleAdsensePubId || process.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-1234567890123456';
+      const customAdsenseScript = db.settings?.googleAdSenseGlobalScript;
+
+      if (adsenseEnabled && !html.includes('adsbygoogle.js')) {
+        let scriptHtml = '';
+        if (customAdsenseScript && customAdsenseScript.includes('<script')) {
+          scriptHtml = `  ${customAdsenseScript}\n`;
+        } else if (adsensePubId) {
+          scriptHtml = `  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${escapeXml(adsensePubId)}" crossorigin="anonymous"></script>\n`;
+        }
+        if (scriptHtml) {
+          html = html.replace('</head>', `${scriptHtml}  </head>`);
         }
       }
 

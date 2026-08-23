@@ -131,16 +131,30 @@ export const AdSlot: React.FC<AdSlotProps> = ({
     if (ad.type === 'google_adsense') {
       try {
         const pubId = ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
+        const globalScript = settings?.googleAdSense?.globalScript;
         
         // Ensure Google AdSense script is in <head>
         const scriptId = 'google-adsense-script';
-        if (!document.getElementById(scriptId)) {
-          const script = document.createElement('script');
-          script.id = scriptId;
-          script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${pubId}`;
-          script.async = true;
-          script.crossOrigin = 'anonymous';
-          document.head.appendChild(script);
+        if (!document.getElementById(scriptId) && !document.querySelector('script[src*="adsbygoogle.js"]')) {
+          if (globalScript && globalScript.includes('<script')) {
+            const temp = document.createElement('div');
+            temp.innerHTML = globalScript.trim();
+            const tag = temp.querySelector('script');
+            if (tag) {
+              const script = document.createElement('script');
+              script.id = scriptId;
+              Array.from(tag.attributes).forEach((attr) => script.setAttribute(attr.name, attr.value));
+              if (tag.innerHTML) script.innerHTML = tag.innerHTML;
+              document.head.appendChild(script);
+            }
+          } else {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${pubId}`;
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            document.head.appendChild(script);
+          }
         }
 
         // Trigger adsbygoogle push after DOM attachment only on strictly uninitialized and unpushed tags
@@ -340,15 +354,30 @@ export const AdSlot: React.FC<AdSlotProps> = ({
             </div>
           ) : ad?.type === 'google_adsense' ? (
             <div className="w-full text-center py-2">
-              {ad.adCode && !ad.adCode.includes('ca-pub-1234567890123456') ? (
+              {settings?.googleAdSense?.testMode ? (
+                <div className="p-4 bg-blue-950/40 border border-blue-800/60 rounded-xl text-center space-y-2">
+                  <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-blue-900/60 border border-blue-700/60 text-blue-300 text-[10px] font-bold">
+                    <span>Google AdSense Test Mode</span>
+                  </div>
+                  <div className="text-xs text-slate-300 font-mono">
+                    Publisher: <span className="text-blue-400 font-semibold">{ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456'}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Slot ID: <span className="text-emerald-400 font-semibold">{placement?.adSlotId || ad.adUnitId || '9876543210'}</span> • Format: <span className="text-amber-300">{placement?.adFormat || 'auto/responsive'}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    Live ad queries will render here when test mode is toggled off in Admin &gt; Ads Manager &gt; Google AdSense.
+                  </p>
+                </div>
+              ) : ad.adCode && !ad.adCode.includes('ca-pub-1234567890123456') ? (
                 <div dangerouslySetInnerHTML={{ __html: ad.adCode }} />
               ) : (
                 <ins
                   className="adsbygoogle"
-                  style={{ display: 'block', textAlign: 'center' }}
+                  style={{ display: 'block', textAlign: 'center', width: '100%' }}
                   data-ad-client={ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456'}
-                  data-ad-slot={ad.adUnitId || '9876543210'}
-                  data-ad-format="auto"
+                  data-ad-slot={placement?.adSlotId || ad.adUnitId || '9876543210'}
+                  data-ad-format={placement?.adFormat || 'auto'}
                   data-full-width-responsive="true"
                 ></ins>
               )}

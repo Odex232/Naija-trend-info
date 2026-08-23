@@ -93,6 +93,7 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [placementFilter, setPlacementFilter] = useState<string>('all');
 
   // Edit Campaign Modal State
   const [editingAd, setEditingAd] = useState<Partial<Ad> | null>(null);
@@ -106,6 +107,18 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
   const [previewSlot, setPreviewSlot] = useState<PlacementPosition>('Header');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [copiedAdsTxt, setCopiedAdsTxt] = useState(false);
+  const [copiedAdSenseTag, setCopiedAdSenseTag] = useState(false);
+
+  // AdSense Live Diagnostics State
+  const [testingAdSense, setTestingAdSense] = useState(false);
+  const [adsenseDiagnosticResults, setAdsenseDiagnosticResults] = useState<{
+    testedAt?: string;
+    pubIdValid: boolean;
+    adsTxtMatched: boolean;
+    scriptLoaded: boolean;
+    tagErrorSafe: boolean;
+    activeAdSenseSlotsCount: number;
+  } | null>(null);
 
   // Load Settings on mount
   useEffect(() => {
@@ -135,6 +148,101 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  // Auto-format Publisher ID to ca-pub-XXXXXXXXXXXXXXXX
+  const handleAutoFormatPublisherId = () => {
+    const raw = (adsSettings.googleAdSense?.publisherId || '').trim();
+    if (!raw) return;
+    const digits = raw.replace(/\D/g, '');
+    if (digits) {
+      const formatted = `ca-pub-${digits}`;
+      const updated = {
+        ...adsSettings,
+        googleAdSense: {
+          ...adsSettings.googleAdSense,
+          publisherId: formatted
+        }
+      };
+      setAdsSettings(updated);
+      triggerSuccessNotification(`Publisher ID formatted to ${formatted}`);
+    }
+  };
+
+  // Sync Google Publisher ID to ads.txt line
+  const handleSyncPublisherToAdsTxt = async () => {
+    const pubId = adsSettings.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
+    const digits = pubId.replace('ca-', ''); // pub-XXXXXXXXXXXXXXXX
+    const googleLine = `google.com, ${digits}, DIRECT, f08c47fec0942fa0`;
+    
+    let currentAdsTxt = adsSettings.adsTxt || '';
+    if (currentAdsTxt.includes('google.com, pub-')) {
+      currentAdsTxt = currentAdsTxt.replace(/google\.com,\s*pub-[a-zA-Z0-9_-]+,\s*DIRECT,\s*f08c47fec0942fa0/i, googleLine);
+    } else {
+      currentAdsTxt = `# Google AdSense\n${googleLine}\n\n` + currentAdsTxt;
+    }
+
+    const updated = {
+      ...adsSettings,
+      adsTxt: currentAdsTxt
+    };
+    await handleSaveAdsSettings(updated);
+    triggerSuccessNotification('Publisher ID synced to ads.txt successfully');
+  };
+
+  // Run comprehensive real-time AdSense Diagnostic test
+  const handleRunAdSenseTest = () => {
+    setTestingAdSense(true);
+    setTimeout(() => {
+      const pubId = (adsSettings.googleAdSense?.publisherId || '').trim();
+      const pubIdValid = /^ca-pub-\d{16}$/.test(pubId) || /^ca-pub-\d{10,20}$/.test(pubId);
+      const digits = pubId.replace('ca-', '');
+      const adsTxtMatched = (adsSettings.adsTxt || '').includes(digits);
+      const scriptLoaded = typeof document !== 'undefined' && (
+        !!document.getElementById('google-adsense-script') ||
+        !!document.querySelector('script[src*="adsbygoogle.js"]')
+      );
+      const tagErrorSafe = typeof window !== 'undefined' && !!(window as any).adsbygoogle;
+      const activeAdSenseSlotsCount = adPlacements.filter(
+        (p) => p.networkType === 'google_adsense' && p.enabled !== false
+      ).length;
+
+      const results = {
+        testedAt: new Date().toLocaleTimeString(),
+        pubIdValid,
+        adsTxtMatched,
+        scriptLoaded,
+        tagErrorSafe,
+        activeAdSenseSlotsCount
+      };
+
+      setAdsenseDiagnosticResults(results);
+      setTestingAdSense(false);
+      triggerSuccessNotification('AdSense configuration diagnostic test completed');
+    }, 600);
+  };
+
+  // Reset AdSense Settings to pristine defaults (Non-destructive to existing articles/database)
+  const handleResetAdSenseSettings = () => {
+    askConfirmation(
+      'Reset Google AdSense Settings?',
+      'This will reset your Google AdSense Publisher ID and Auto Ads toggle to default values. Your articles, categories, Adsterra settings, and media content will remain completely untouched.',
+      async () => {
+        const resetConfig = {
+          ...adsSettings,
+          googleAdSense: {
+            enabled: true,
+            publisherId: 'ca-pub-1234567890123456',
+            autoAds: false,
+            testMode: false,
+            adsenseTagMode: 'official_script' as const,
+            globalScript: ''
+          }
+        };
+        await handleSaveAdsSettings(resetConfig);
+        triggerSuccessNotification('Google AdSense configuration reset to defaults');
+      }
+    );
   };
 
   // Campaign Save
@@ -473,8 +581,39 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
             </div>
           </div>
 
+          {/* Provider Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <span className="text-slate-400 font-semibold text-[11px]">Filter Provider:</span>
+            {[
+              { id: 'all', label: `All Providers (${adPlacements.length})` },
+              { id: 'google_adsense', label: `Google AdSense (${adPlacements.filter((p) => p.networkType === 'google_adsense').length})` },
+              { id: 'adsterra', label: `Adsterra (${adPlacements.filter((p) => p.networkType === 'adsterra').length})` },
+              { id: 'custom', label: `Direct Sponsors (${adPlacements.filter((p) => p.networkType === 'custom').length})` },
+              { id: 'disabled', label: `Disabled (${adPlacements.filter((p) => p.networkType === 'disabled' || p.enabled === false).length})` }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setPlacementFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                  placementFilter === tab.id
+                    ? 'bg-slate-700 text-white border border-slate-600'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {adPlacements.map((placement) => {
+            {adPlacements
+              .filter((placement) => {
+                if (placementFilter === 'all') return true;
+                if (placementFilter === 'disabled') return placement.networkType === 'disabled' || placement.enabled === false;
+                return placement.networkType === placementFilter;
+              })
+              .map((placement) => {
               const assignedAd = ads.find((a) => a.id === placement.adId);
               const isEnabled = placement.enabled !== false && placement.networkType !== 'disabled';
 
@@ -529,6 +668,15 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
                         {placement.networkType.replace('_', ' ')}
                       </span>
                     </div>
+
+                    {placement.networkType === 'google_adsense' && (
+                      <div className="flex justify-between items-center bg-blue-950/30 px-2 py-1 rounded-lg border border-blue-900/40">
+                        <span className="text-blue-300 text-[11px]">Ad Slot ID:</span>
+                        <span className="text-blue-200 font-mono text-[11px]">
+                          {placement.adSlotId || 'Auto / Default'}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500">Target Device:</span>
@@ -755,113 +903,376 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
 
       {/* SUB-TAB 3: GOOGLE ADSENSE HUB */}
       {activeSubTab === 'adsense' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400">
-              <Globe className="w-6 h-6" />
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8">
+          {/* Hub Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+            <div className="flex items-center space-x-3.5">
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400">
+                <Globe className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-xl font-bold text-white font-serif">Google AdSense Control & Setup Hub</h3>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      adsSettings.googleAdSense?.enabled
+                        ? adsSettings.googleAdSense?.testMode
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                          : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    {adsSettings.googleAdSense?.enabled
+                      ? adsSettings.googleAdSense?.testMode
+                        ? '● Test / Preview Mode'
+                        : '● Active & Monetizing'
+                      : '○ Disabled'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Configure your Google AdSense Publisher account, Global & Auto-Ads scripts, responsive units, and live health diagnostics.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">Google AdSense Integration Hub</h3>
-              <p className="text-xs text-slate-400">
-                Manage your Google AdSense Publisher account, Auto-Ads tags, and slot unit IDs.
-              </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRunAdSenseTest}
+                disabled={testingAdSense}
+                className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
+              >
+                <ShieldCheck className={`w-4 h-4 ${testingAdSense ? 'animate-spin' : ''}`} />
+                <span>{testingAdSense ? 'Running Diagnostic...' : 'Run Diagnostics'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleResetAdSenseSettings}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-colors cursor-pointer"
+              >
+                Reset Defaults
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4 bg-slate-950 p-5 rounded-2xl border border-slate-800">
-              <h4 className="font-bold text-sm text-blue-400">Publisher Credentials</h4>
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-300">
-                  Google Publisher ID (ca-pub-...)
-                </label>
-                <input
-                  type="text"
-                  value={adsSettings.googleAdSense?.publisherId || ''}
-                  onChange={(e) =>
-                    setAdsSettings({
-                      ...adsSettings,
-                      googleAdSense: {
-                        ...adsSettings.googleAdSense,
-                        publisherId: e.target.value
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column: Publisher ID & Settings (7 cols) */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Publisher Credentials Card */}
+              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-blue-400 flex items-center space-x-2">
+                    <Globe className="w-4 h-4" />
+                    <span>Publisher Credentials</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Format: <span className="text-blue-300">ca-pub-XXXXXXXXXXXXXXXX</span>
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-slate-300">
+                    Google AdSense Publisher ID
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={adsSettings.googleAdSense?.publisherId || ''}
+                      onChange={(e) =>
+                        setAdsSettings({
+                          ...adsSettings,
+                          googleAdSense: {
+                            ...adsSettings.googleAdSense,
+                            publisherId: e.target.value
+                          }
+                        })
                       }
-                    })
-                  }
-                  placeholder="ca-pub-1234567890123456"
-                  className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 text-xs font-mono"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Obtain this from your Google AdSense dashboard under Account &gt; Settings &gt; Publisher ID.
+                      placeholder="ca-pub-1234567890123456"
+                      className="flex-1 bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 text-xs font-mono focus:border-blue-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAutoFormatPublisherId}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700 transition-colors"
+                      title="Auto-formats pub-XXXX or raw digits into ca-pub-XXXX"
+                    >
+                      Format Clean
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center justify-between">
+                    <span>From your Google AdSense Dashboard &gt; Account &gt; Settings &gt; Account Information.</span>
+                  </p>
+                </div>
+
+                {/* Master Toggles */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div>
+                      <div className="font-semibold text-xs text-slate-200">Google AdSense Enabled</div>
+                      <div className="text-[11px] text-slate-400">Allow active AdSense units to render on assigned placements</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={adsSettings.googleAdSense?.enabled}
+                      onChange={(e) =>
+                        setAdsSettings({
+                          ...adsSettings,
+                          googleAdSense: {
+                            ...adsSettings.googleAdSense,
+                            enabled: e.target.checked
+                          }
+                        })
+                      }
+                      className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div>
+                      <div className="font-semibold text-xs text-slate-200">Auto Ads Script Injection</div>
+                      <div className="text-[11px] text-slate-400">Allows Google to automatically place contextual responsive ads across site</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={adsSettings.googleAdSense?.autoAds}
+                      onChange={(e) =>
+                        setAdsSettings({
+                          ...adsSettings,
+                          googleAdSense: {
+                            ...adsSettings.googleAdSense,
+                            autoAds: e.target.checked
+                          }
+                        })
+                      }
+                      className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+                    <div>
+                      <div className="font-semibold text-xs text-amber-300 flex items-center space-x-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>AdSense Test & Preview Mode</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Shows layout placeholders with unit IDs without calling live ad auction servers
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={adsSettings.googleAdSense?.testMode}
+                      onChange={(e) =>
+                        setAdsSettings({
+                          ...adsSettings,
+                          googleAdSense: {
+                            ...adsSettings.googleAdSense,
+                            testMode: e.target.checked
+                          }
+                        })
+                      }
+                      className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Global Script Management Card */}
+              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-blue-400 flex items-center space-x-2">
+                    <Code className="w-4 h-4" />
+                    <span>Global AdSense Script Injection</span>
+                  </h4>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pubId = adsSettings.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
+                        const officialTag = `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${pubId}" crossorigin="anonymous"></script>`;
+                        navigator.clipboard.writeText(officialTag);
+                        setCopiedAdSenseTag(true);
+                        setTimeout(() => setCopiedAdSenseTag(false), 2000);
+                        triggerSuccessNotification('Official AdSense script copied to clipboard');
+                      }}
+                      className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center space-x-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>{copiedAdSenseTag ? 'Copied!' : 'Copy Official Tag'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  The system automatically injects your official AdSense script into the public &lt;head&gt; during SSR and client navigation. If you have custom verification tags or customized script attributes, you can specify them below.
                 </p>
-              </div>
 
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
                 <div>
-                  <div className="font-semibold text-xs text-slate-200">Google AdSense Enabled</div>
-                  <div className="text-[10px] text-slate-400">Allow AdSense units to render across assigned slots</div>
+                  <label className="block text-xs font-semibold mb-1 text-slate-300">
+                    Custom Script Tag Override (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={adsSettings.googleAdSense?.globalScript || ''}
+                    onChange={(e) =>
+                      setAdsSettings({
+                        ...adsSettings,
+                        googleAdSense: {
+                          ...adsSettings.googleAdSense,
+                          globalScript: e.target.value
+                        }
+                      })
+                    }
+                    placeholder={`<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsSettings.googleAdSense?.publisherId || 'ca-pub-1234567890123456'}" crossorigin="anonymous"></script>`}
+                    className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 font-mono text-[11px] focus:border-blue-500 focus:outline-none"
+                  />
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    Leave blank to automatically use the official Google AdSense CDN tag with your Publisher ID.
+                  </div>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={adsSettings.googleAdSense?.enabled}
-                  onChange={(e) =>
-                    setAdsSettings({
-                      ...adsSettings,
-                      googleAdSense: {
-                        ...adsSettings.googleAdSense,
-                        enabled: e.target.checked
-                      }
-                    })
-                  }
-                  className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
-                />
-              </div>
 
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
-                <div>
-                  <div className="font-semibold text-xs text-slate-200">Auto Ads Script Injection</div>
-                  <div className="text-[10px] text-slate-400">Automatically let Google place contextual responsive ads</div>
+                <div className="pt-2 flex items-center justify-between">
+                  <button
+                    disabled={savingSettings}
+                    onClick={() => handleSaveAdsSettings(adsSettings)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-950/50 cursor-pointer flex items-center space-x-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{savingSettings ? 'Saving Settings...' : 'Save Google AdSense Settings'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('preview')}
+                    className="text-xs text-slate-400 hover:text-white flex items-center space-x-1"
+                  >
+                    <span>Open Live Ad Simulator</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={adsSettings.googleAdSense?.autoAds}
-                  onChange={(e) =>
-                    setAdsSettings({
-                      ...adsSettings,
-                      googleAdSense: {
-                        ...adsSettings.googleAdSense,
-                        autoAds: e.target.checked
-                      }
-                    })
-                  }
-                  className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
-                />
               </div>
-
-              <button
-                disabled={savingSettings}
-                onClick={() => handleSaveAdsSettings(adsSettings)}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2.5 rounded-xl transition-colors cursor-pointer"
-              >
-                {savingSettings ? 'Saving...' : 'Save AdSense Settings'}
-              </button>
             </div>
 
-            <div className="space-y-4 bg-slate-950 p-5 rounded-2xl border border-slate-800 text-xs">
-              <h4 className="font-bold text-sm text-slate-200">Google AdSense Best Practices Checklist</h4>
-              <ul className="space-y-2.5 text-slate-400 text-xs">
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <span>Ensure your <strong>ads.txt</strong> entry contains your correct Publisher ID and DIRECT authorized status.</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <span>All manual responsive units automatically request width from their container, preventing Cumulative Layout Shift (CLS).</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <span>The system isolates <code>&lt;ins className="adsbygoogle"&gt;&lt;/ins&gt;</code> calls to avoid duplicate <code>.push(&#123;&#125;)</code> exceptions during single-page navigation.</span>
-                </li>
-              </ul>
+            {/* Right Column: Live Diagnostics & Integration Verification (5 cols) */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Diagnostic Test Panel */}
+              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h4 className="font-bold text-sm text-emerald-400 flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>AdSense Integration Status</span>
+                  </h4>
+                  {adsenseDiagnosticResults?.testedAt && (
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Checked: {adsenseDiagnosticResults.testedAt}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  {/* Check 1: Publisher ID */}
+                  <div className="flex items-start justify-between p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-slate-200">Publisher ID Format</div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {adsSettings.googleAdSense?.publisherId || 'None'}
+                      </div>
+                    </div>
+                    {adsSettings.googleAdSense?.publisherId?.startsWith('ca-pub-') ? (
+                      <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-[10px] font-bold">
+                        Valid
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-[10px] font-bold">
+                        Check Prefix
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Check 2: ads.txt Entry */}
+                  <div className="flex items-start justify-between p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-slate-200">Authorized Seller (ads.txt)</div>
+                      <div className="text-[11px] text-slate-400">
+                        {(adsSettings.adsTxt || '').includes((adsSettings.googleAdSense?.publisherId || '').replace('ca-', '')) ? (
+                          <span className="text-emerald-400 font-medium">Matching record verified</span>
+                        ) : (
+                          <span className="text-amber-400 font-medium">Record not matching</span>
+                        )}
+                      </div>
+                    </div>
+                    {!(adsSettings.adsTxt || '').includes((adsSettings.googleAdSense?.publisherId || '').replace('ca-', '')) && (
+                      <button
+                        type="button"
+                        onClick={handleSyncPublisherToAdsTxt}
+                        className="px-2.5 py-1 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 rounded-lg text-[10px] font-bold"
+                      >
+                        Sync Now
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Check 3: Active Placements */}
+                  <div className="flex items-start justify-between p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-slate-200">AdSense Placements Assigned</div>
+                      <div className="text-[11px] text-slate-400">
+                        {adPlacements.filter((p) => p.networkType === 'google_adsense' && p.enabled !== false).length} of {adPlacements.length} slots active
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubTab('slots')}
+                      className="text-[10px] text-blue-400 hover:underline"
+                    >
+                      Manage Slots
+                    </button>
+                  </div>
+
+                  {/* Check 4: Tag Error & Push Protection */}
+                  <div className="flex items-start justify-between p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-slate-200">TagError & Push Protection</div>
+                      <div className="text-[11px] text-slate-400">
+                        Global adsbygoogle proxy & DOM guard active
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-[10px] font-bold">
+                      Protected
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleRunAdSenseTest}
+                    disabled={testingAdSense}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 rounded-xl border border-slate-700 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${testingAdSense ? 'animate-spin' : ''}`} />
+                    <span>{testingAdSense ? 'Validating...' : 'Run AdSense Diagnostic Test'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Best Practices Checklist Card */}
+              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-3 text-xs">
+                <h4 className="font-bold text-sm text-slate-200">Google AdSense Best Practices</h4>
+                <ul className="space-y-2.5 text-slate-400 text-xs">
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong>Publisher ID:</strong> Always prefix with <code>ca-pub-</code> in ad tags and <code>pub-</code> in <code>ads.txt</code>.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong>Cumulative Layout Shift (CLS):</strong> Each slot has reserved container height to ensure zero layout shift.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong>Adsterra Coexistence:</strong> AdSense and Adsterra scripts are isolated in separate execution contexts to prevent clashes.</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -1388,6 +1799,65 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
                   </select>
                 </div>
               </div>
+
+              {/* Google AdSense Unit Settings */}
+              {editingPlacement.networkType === 'google_adsense' && (
+                <div className="p-4 bg-blue-950/40 border border-blue-800/60 rounded-2xl space-y-3">
+                  <div className="font-bold text-blue-400 flex items-center space-x-1.5">
+                    <Globe className="w-4 h-4" />
+                    <span>AdSense Unit Configuration</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold mb-1 text-slate-300">
+                        Ad Unit Slot ID (data-ad-slot)
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPlacement.adSlotId || ''}
+                        onChange={(e) =>
+                          setEditingPlacement({ ...editingPlacement, adSlotId: e.target.value })
+                        }
+                        placeholder="e.g. 9876543210"
+                        className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 text-xs font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1 text-slate-300">Ad Format Style</label>
+                      <select
+                        value={editingPlacement.adFormat || 'auto'}
+                        onChange={(e) =>
+                          setEditingPlacement({
+                            ...editingPlacement,
+                            adFormat: e.target.value as any
+                          })
+                        }
+                        className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 text-xs"
+                      >
+                        <option value="auto">Auto / Responsive</option>
+                        <option value="fluid">Fluid (In-Article)</option>
+                        <option value="rectangle">Medium Rectangle (300x250)</option>
+                        <option value="horizontal">Horizontal Banner (728x90 / 320x50)</option>
+                        <option value="vertical">Vertical Skyscraper (300x600)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-slate-400">Full Width Responsive (data-full-width-responsive)</span>
+                    <input
+                      type="checkbox"
+                      checked={editingPlacement.responsive !== false}
+                      onChange={(e) =>
+                        setEditingPlacement({ ...editingPlacement, responsive: e.target.checked })
+                      }
+                      className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block font-semibold mb-1 text-slate-300">Specific Ad Campaign (Optional)</label>

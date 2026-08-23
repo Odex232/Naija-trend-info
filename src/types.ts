@@ -147,19 +147,27 @@ export interface AdPlacement {
   label?: string;
   adId?: string; // Selected Ad ID
   networkType: 'google_adsense' | 'adsterra' | 'custom' | 'disabled';
+  adSlotId?: string; // Google AdSense Ad Slot ID e.g. "9876543210"
+  adFormat?: 'auto' | 'fluid' | 'rectangle' | 'horizontal' | 'vertical' | 'responsive';
+  responsive?: boolean;
   deviceTarget: AdDeviceTarget;
   reservedHeight?: number; // CLS reserved pixel height
   description?: string;
   enabled?: boolean;
   priority?: number;
+  adCode?: string;
   updatedAt?: string;
 }
 
 export interface GoogleAdSenseConfig {
   enabled: boolean;
   publisherId: string; // ca-pub-XXXXXXXXXXXXXXXX
+  globalScript?: string; // custom script tag or auto-generated
   autoAds: boolean;
   testMode?: boolean;
+  verificationStatus?: 'active' | 'pending' | 'unverified';
+  lastTestedAt?: string;
+  adsenseTagMode?: 'official_script' | 'custom_snippet';
 }
 
 export interface AdsterraConfig {
