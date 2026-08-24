@@ -129,6 +129,11 @@ export const AdSlot: React.FC<AdSlotProps> = ({
 
     // GOOGLE ADSENSE HANDLER
     if (ad.type === 'google_adsense') {
+      // If in test mode, do not load external script or push ads
+      if (settings?.googleAdSense?.testMode) {
+        return;
+      }
+
       try {
         const pubId = ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
         const globalScript = settings?.googleAdSense?.globalScript;
@@ -168,15 +173,29 @@ export const AdSlot: React.FC<AdSlotProps> = ({
                 const hasIframe = ins.querySelector('iframe') !== null;
                 const hasChildren = (ins.children && ins.children.length > 0);
 
-                if (!status && !isPushed && !hasIframe && !hasChildren) {
+                if (!status && !isPushed && !hasIframe && !hasChildren && ins.isConnected) {
                   // Mark as pushed immediately before executing push
                   ins.setAttribute('data-adsbygoogle-pushed', 'true');
                   try {
                     if (typeof window !== 'undefined') {
-                      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+                      const allIns = document.querySelectorAll('ins.adsbygoogle');
+                      let hasPending = false;
+                      for (let i = 0; i < allIns.length; i++) {
+                        const el = allIns[i];
+                        if (!el.getAttribute('data-adsbygoogle-status') && !el.getAttribute('data-ad-status') && el.children.length === 0) {
+                          hasPending = true;
+                          break;
+                        }
+                      }
+                      if (hasPending) {
+                        const queue = (window as any).adsbygoogle = (window as any).adsbygoogle || [];
+                        if (typeof queue.push === 'function') {
+                          queue.push({});
+                        }
+                      }
                     }
                   } catch (pushErr: any) {
-                    console.debug('adsbygoogle push suppressed:', pushErr?.message || pushErr);
+                    console.debug('adsbygoogle push safely guarded:', pushErr?.message || pushErr);
                   }
                 }
               });

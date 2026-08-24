@@ -4,6 +4,62 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment &amp; Trending Stories</title>
+    
+    <!-- Early AdSense & Third-party TagError Global Safeguard -->
+    <script>
+      (function() {
+        var _adsbygoogle = window.adsbygoogle || [];
+        function wrapPush(obj) {
+          if (!obj || typeof obj.push !== 'function') return obj;
+          if (obj._safePushWrapped) return obj;
+          var origPush = obj.push.bind(obj);
+          obj.push = function() {
+            try {
+              return origPush.apply(this, arguments);
+            } catch (err) {
+              console.debug('adsbygoogle TagError handled safely:', err && err.message ? err.message : err);
+              return 0;
+            }
+          };
+          obj._safePushWrapped = true;
+          return obj;
+        }
+        wrapPush(_adsbygoogle);
+
+        try {
+          Object.defineProperty(window, 'adsbygoogle', {
+            get: function() { return _adsbygoogle; },
+            set: function(val) { _adsbygoogle = wrapPush(val); },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          window.adsbygoogle = _adsbygoogle;
+        }
+
+        window.addEventListener('error', function(event) {
+          var msg = (event && event.message ? event.message : '').toLowerCase();
+          var errObj = event && event.error;
+          var errStr = (errObj && (errObj.message || errObj.name) ? (errObj.message || errObj.name) : String(errObj || '')).toLowerCase();
+          if (
+            msg.indexOf('adsbygoogle') !== -1 ||
+            msg.indexOf('tagerror') !== -1 ||
+            msg.indexOf("all 'ins' elements") !== -1 ||
+            msg.indexOf('already have ads in them') !== -1 ||
+            errStr.indexOf('adsbygoogle') !== -1 ||
+            errStr.indexOf('tagerror') !== -1 ||
+            errStr.indexOf("all 'ins' elements") !== -1 ||
+            errStr.indexOf('already have ads in them') !== -1
+          ) {
+            if (event.preventDefault) event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            if (event.stopPropagation) event.stopPropagation();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
+
     <meta name="description" content="Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting." />
     <meta name="keywords" content="NaijaTrendiInfo, Nigeria news, Nigerian news, breaking news Nigeria, sports news Nigeria, football news, entertainment news, tech news Nigeria, business news, Naija trend info" />
     <meta name="author" content="NaijaTrendiInfo" />
