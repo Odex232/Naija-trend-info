@@ -668,10 +668,24 @@ export const dbAdapter = {
 
         const { data, error } = await query;
         if (!error && Array.isArray(data) && data.length > 0) {
+          // If any of the returned active articles was accidentally in deletedSet, purge it
+          const activeIds = new Set(data.map((r: any) => r.id));
+          const activeSlugs = new Set(data.map((r: any) => r.slug));
+          let cleanedDeleted = Array.from(deletedSet).filter((x) => !activeIds.has(x) && !activeSlugs.has(x));
+          if (cleanedDeleted.length !== deletedSet.size) {
+            db.deletedArticles = cleanedDeleted;
+            saveLocalDb(db);
+            client.from('supabase_document_store').upsert({
+              key: 'deletedArticles',
+              data: cleanedDeleted,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'key' }).then(() => {}, () => {});
+          }
+
           const corrName = db.settings?.editorialCorrespondent?.correspondentName || 'Habbey Tech Solutions';
           const corrAvatar = db.settings?.editorialCorrespondent?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
           return data
-            .filter((row) => !deletedSet.has(row.id) && !deletedSet.has(row.slug))
+            .filter((row) => !cleanedDeleted.includes(row.id) && !cleanedDeleted.includes(row.slug))
             .map((row) => {
               const isCorr = !row.author_name || row.author_name === 'Ajayi Odunayo' || row.author_name === 'Ajayi odunayo' || row.author_id === 'usr-1' || row.author_name === 'Habbey Tech Solutions';
               return {
@@ -2082,8 +2096,20 @@ export const dbAdapter = {
         ]);
 
         if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
+          const activeIds = new Set(articlesRes.value.data.map((r: any) => r.id));
+          const activeSlugs = new Set(articlesRes.value.data.map((r: any) => r.slug));
+          const cleanedDel = Array.from(deletedSet).filter((x) => !activeIds.has(x) && !activeSlugs.has(x));
+          if (cleanedDel.length !== deletedSet.size) {
+            db.deletedArticles = cleanedDel;
+            client.from('supabase_document_store').upsert({
+              key: 'deletedArticles',
+              data: cleanedDel,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'key' }).then(() => {}, () => {});
+          }
+
           db.articles = articlesRes.value.data
-            .filter((row: any) => !deletedSet.has(row.id) && !deletedSet.has(row.slug))
+            .filter((row: any) => !cleanedDel.includes(row.id) && !cleanedDel.includes(row.slug))
             .map((row: any) => ({
               id: row.id,
               title: row.title,

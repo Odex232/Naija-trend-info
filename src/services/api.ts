@@ -119,56 +119,87 @@ export async function fetchArticlesFromSupabase(): Promise<Article[] | null> {
   const sb = getClientSupabase();
   if (!sb) return null;
   try {
-    // 0. Fetch global deleted articles set from Supabase document store
+    // 0. Fetch global deleted articles list from Supabase document store
     const delDoc = await getDocFromSupabase<string[]>('deletedArticles');
-    const globalDeleted = new Set<string>(Array.isArray(delDoc) ? delDoc : []);
-    const localDeleted = getLocalData<string[]>('naija_deleted_articles', []);
-    localDeleted.forEach((id) => globalDeleted.add(id));
-    if (globalDeleted.size > localDeleted.length) {
-      setLocalData('naija_deleted_articles', Array.from(globalDeleted));
-    }
+    const rawDeletedList = Array.isArray(delDoc) ? delDoc : [];
+    const localDeletedList = getLocalData<string[]>('naija_deleted_articles', []);
+    const deletedSet = new Set<string>([...rawDeletedList, ...localDeletedList]);
 
-    // 1. Try document store for rich nested fields
-    const docArticles = await getDocFromSupabase<Article[]>('articles');
-    if (Array.isArray(docArticles) && docArticles.length > 0) {
-      return docArticles.filter((a) => !globalDeleted.has(a.id) && !globalDeleted.has(a.slug));
-    }
-
-    // 2. Try relational table
-    const { data, error } = await sb
+    // 1. Fetch relational table rows
+    const { data: tableRows, error: tableError } = await sb
       .from('articles')
       .select('*')
       .order('published_at', { ascending: false });
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      return data
-        .filter((row: any) => !globalDeleted.has(row.id) && !globalDeleted.has(row.slug))
-        .map((row: any) => ({
+    // 2. Fetch document store articles
+    const docArticles = await getDocFromSupabase<Article[]>('articles');
+
+    const combinedMap = new Map<string, Article>();
+
+    // Add document store items first
+    if (Array.isArray(docArticles)) {
+      docArticles.forEach((art) => {
+        if (art && art.id) {
+          combinedMap.set(art.id, art);
+        }
+      });
+    }
+
+    // Merge / add relational table rows (source of truth for SQL persistence)
+    if (!tableError && Array.isArray(tableRows)) {
+      tableRows.forEach((row: any) => {
+        const existing = combinedMap.get(row.id);
+        const mapped: Article = {
           id: row.id,
-          title: row.title || 'Untitled Article',
-          slug: row.slug || row.id,
-          summary: row.summary || '',
-          content: row.content || '',
-          categoryId: row.category_id || 'cat-politics',
-          categoryName: row.category_name || 'General',
-          tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : []),
-          featuredImage: row.featured_image || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
-          imageCaption: row.image_caption || '',
-          imageCredit: row.image_credit || '',
-          galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : [],
-          authorId: row.author_id || 'usr-1',
-          authorName: row.author_name || 'Ajayi Odunayo',
-          authorAvatar: row.author_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-          status: row.status || 'published',
-          isFeatured: !!row.is_featured,
-          isPinned: !!row.is_pinned,
-          isBreaking: !!row.is_breaking,
-          isEditorPick: !!row.is_editor_pick,
-          views: Number(row.views) || 0,
-          readTimeMinutes: Number(row.read_time_minutes) || 3,
-          publishedAt: row.published_at || row.created_at || new Date().toISOString(),
-          updatedAt: row.updated_at || new Date().toISOString()
-        }));
+          title: row.title || existing?.title || 'Untitled Article',
+          slug: row.slug || existing?.slug || row.id,
+          summary: row.summary || existing?.summary || '',
+          content: row.content || existing?.content || '',
+          categoryId: row.category_id || existing?.categoryId || 'cat-politics',
+          categoryName: row.category_name || existing?.categoryName || 'General',
+          tags: Array.isArray(row.tags) ? row.tags : (existing?.tags || []),
+          featuredImage: row.featured_image || existing?.featuredImage || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
+          imageCaption: row.image_caption || existing?.imageCaption || '',
+          imageCredit: row.image_credit || existing?.imageCredit || '',
+          galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : (existing?.galleryImages || []),
+          authorId: row.author_id || existing?.authorId || 'usr-1',
+          authorName: row.author_name || existing?.authorName || 'Habbey Tech Solutions',
+          authorAvatar: row.author_avatar || existing?.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+          status: (row.status as any) || existing?.status || 'published',
+          isFeatured: row.is_featured !== undefined ? !!row.is_featured : !!existing?.isFeatured,
+          isPinned: row.is_pinned !== undefined ? !!row.is_pinned : !!existing?.isPinned,
+          isBreaking: row.is_breaking !== undefined ? !!row.is_breaking : !!existing?.isBreaking,
+          isEditorPick: row.is_editor_pick !== undefined ? !!row.is_editor_pick : !!existing?.isEditorPick,
+          views: Number(row.views !== undefined ? row.views : existing?.views) || 0,
+          readTimeMinutes: Number(row.read_time_minutes || existing?.readTimeMinutes) || 3,
+          publishedAt: row.published_at || existing?.publishedAt || row.created_at || new Date().toISOString(),
+          updatedAt: row.updated_at || existing?.updatedAt || new Date().toISOString(),
+          videoUrl: row.video_url || existing?.videoUrl || '',
+          videoCaption: row.video_caption || existing?.videoCaption || '',
+          videoType: row.video_type || existing?.videoType || 'none',
+          videoPlacement: row.video_placement || existing?.videoPlacement || 'hero',
+          isVideoArticle: !!row.is_video_article || !!existing?.isVideoArticle || Boolean(row.video_url || existing?.videoUrl),
+          videoDuration: row.video_duration || existing?.videoDuration || ''
+        };
+        combinedMap.set(row.id, mapped);
+      });
+    }
+
+    const allArticles = Array.from(combinedMap.values());
+
+    if (allArticles.length > 0) {
+      // Active articles must NEVER be in deleted list
+      const activeIds = new Set(allArticles.map((a) => a.id));
+      const activeSlugs = new Set(allArticles.map((a) => a.slug));
+      
+      const cleanedDeleted = Array.from(deletedSet).filter((x) => !activeIds.has(x) && !activeSlugs.has(x));
+      if (cleanedDeleted.length !== deletedSet.size) {
+        setLocalData('naija_deleted_articles', cleanedDeleted);
+        setDocInSupabase('deletedArticles', cleanedDeleted).catch(() => {});
+      }
+
+      allArticles.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+      return allArticles;
     }
   } catch (e) {
     console.warn('Notice querying Supabase articles:', e);
@@ -180,6 +211,20 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
   const sb = getClientSupabase();
   if (!sb) return;
   try {
+    // 0. Ensure this article is removed from deleted registries
+    const localDeleted = getLocalData<string[]>('naija_deleted_articles', []);
+    const filteredDeleted = localDeleted.filter((id) => id !== article.id && id !== article.slug);
+    if (filteredDeleted.length !== localDeleted.length) {
+      setLocalData('naija_deleted_articles', filteredDeleted);
+    }
+    const remoteDeleted = await getDocFromSupabase<string[]>('deletedArticles');
+    if (Array.isArray(remoteDeleted)) {
+      const filteredRemote = remoteDeleted.filter((id) => id !== article.id && id !== article.slug);
+      if (filteredRemote.length !== remoteDeleted.length) {
+        await setDocInSupabase('deletedArticles', filteredRemote);
+      }
+    }
+
     // 1. Relational row upsert
     try {
       const basePayload: any = {
@@ -196,7 +241,7 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
         image_credit: article.imageCredit || '',
         gallery_images: article.galleryImages || [],
         author_id: article.authorId || 'usr-1',
-        author_name: article.authorName || 'Ajayi Odunayo',
+        author_name: article.authorName || 'Habbey Tech Solutions',
         author_avatar: article.authorAvatar || '',
         status: article.status || 'published',
         is_featured: !!article.isFeatured,
@@ -229,9 +274,10 @@ export async function persistArticleToSupabase(article: Article): Promise<void> 
       console.warn('Relational article upsert note:', e);
     }
 
-    // 2. Document store update with complete array
-    const currentArticles = getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
-    const updated = [article, ...currentArticles.filter((a) => a.id !== article.id)];
+    // 2. Document store update with merged array (does not overwrite with stale local data)
+    const remoteArticles = await getDocFromSupabase<Article[]>('articles');
+    const baseList = Array.isArray(remoteArticles) ? remoteArticles : getLocalData<Article[]>('naija_articles', INITIAL_ARTICLES);
+    const updated = [article, ...baseList.filter((a) => a.id !== article.id && a.slug !== article.slug)];
     await setDocInSupabase('articles', updated);
   } catch (e) {
     console.warn('Supabase article persist error:', e);
@@ -560,12 +606,20 @@ export const api = {
         ]);
 
         if (Array.isArray(sbArticles) && sbArticles.length > 0) {
+          const activeIds = new Set(sbArticles.map((a) => a.id));
+          const activeSlugs = new Set(sbArticles.map((a) => a.slug));
+          const cleanDeletedArticles = Array.from(deletedIds).filter((x) => !activeIds.has(x) && !activeSlugs.has(x));
+          if (cleanDeletedArticles.length !== deletedIds.size) {
+            setLocalData('naija_deleted_articles', cleanDeletedArticles);
+            setDocInSupabase('deletedArticles', cleanDeletedArticles).catch(() => {});
+          }
+
           const activeCorr = sbSettings?.editorialCorrespondent || getLocalData<WebsiteSettings>('naija_settings', INITIAL_SETTINGS)?.editorialCorrespondent;
           const corrName = activeCorr?.correspondentName || 'Habbey Tech Solutions';
           const corrAvatar = activeCorr?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250';
 
           const cleanArticles = sbArticles
-            .filter((a) => !deletedIds.has(a.id) && !deletedIds.has(a.slug))
+            .filter((a) => !cleanDeletedArticles.includes(a.id) && !cleanDeletedArticles.includes(a.slug))
             .map((a) => {
               const isCorr = !a.authorName || a.authorName === 'Ajayi Odunayo' || a.authorName === 'Ajayi odunayo' || a.authorId === 'usr-1' || a.authorName === 'Habbey Tech Solutions';
               return {
