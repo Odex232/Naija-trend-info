@@ -135,7 +135,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
       }
 
       try {
-        const pubId = ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
+        const pubId = ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1327306895336694';
         const globalScript = settings?.googleAdSense?.globalScript;
         
         // Ensure Google AdSense script is in <head>
@@ -379,7 +379,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
                     <span>Google AdSense Test Mode</span>
                   </div>
                   <div className="text-xs text-slate-300 font-mono">
-                    Publisher: <span className="text-blue-400 font-semibold">{ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456'}</span>
+                    Publisher: <span className="text-blue-400 font-semibold">{ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1327306895336694'}</span>
                   </div>
                   <div className="text-[11px] text-slate-400 font-mono">
                     Slot ID: <span className="text-emerald-400 font-semibold">{placement?.adSlotId || ad.adUnitId || '9876543210'}</span> • Format: <span className="text-amber-300">{placement?.adFormat || 'auto/responsive'}</span>
@@ -388,13 +388,13 @@ export const AdSlot: React.FC<AdSlotProps> = ({
                     Live ad queries will render here when test mode is toggled off in Admin &gt; Ads Manager &gt; Google AdSense.
                   </p>
                 </div>
-              ) : ad.adCode && !ad.adCode.includes('ca-pub-1234567890123456') ? (
+              ) : ad.adCode && !ad.adCode.includes('ca-pub-1234567890123456') && !ad.adCode.includes('ca-pub-1327306895336694') ? (
                 <div dangerouslySetInnerHTML={{ __html: ad.adCode }} />
               ) : (
                 <ins
                   className="adsbygoogle"
                   style={{ display: 'block', textAlign: 'center', width: '100%' }}
-                  data-ad-client={ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1234567890123456'}
+                  data-ad-client={ad.publisherId || settings?.googleAdSense?.publisherId || 'ca-pub-1327306895336694'}
                   data-ad-slot={placement?.adSlotId || ad.adUnitId || '9876543210'}
                   data-ad-format={placement?.adFormat || 'auto'}
                   data-full-width-responsive="true"

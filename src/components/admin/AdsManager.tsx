@@ -72,16 +72,16 @@ export const AdsManager: React.FC<AdsManagerProps> = ({
   const [adsSettings, setAdsSettings] = useState<AdsSettings>({
     googleAdSense: {
       enabled: settings?.googleAdsensePubId ? true : false,
-      publisherId: settings?.googleAdsensePubId || 'ca-pub-1234567890123456',
+      publisherId: settings?.googleAdsensePubId || 'ca-pub-1327306895336694',
       autoAds: false,
       testMode: false
     },
     adsterra: {
       enabled: true
     },
-    adsTxt: `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
+    adsTxt: `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (https://naijatrendinfo.com.ng & https://www.naijatrendinfo.com.ng)
 # Google AdSense
-google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+google.com, pub-1327306895336694, DIRECT, f08c47fec0942fa0
 
 # Adsterra Network
 # adsterra.com, DIRECT
@@ -171,7 +171,7 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
 
   // Sync Google Publisher ID to ads.txt line
   const handleSyncPublisherToAdsTxt = async () => {
-    const pubId = adsSettings.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
+    const pubId = adsSettings.googleAdSense?.publisherId || 'ca-pub-1327306895336694';
     const digits = pubId.replace('ca-', ''); // pub-XXXXXXXXXXXXXXXX
     const googleLine = `google.com, ${digits}, DIRECT, f08c47fec0942fa0`;
     
@@ -232,7 +232,7 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
           ...adsSettings,
           googleAdSense: {
             enabled: true,
-            publisherId: 'ca-pub-1234567890123456',
+            publisherId: 'ca-pub-1327306895336694',
             autoAds: false,
             testMode: false,
             adsenseTagMode: 'official_script' as const,
@@ -987,7 +987,7 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
                           }
                         })
                       }
-                      placeholder="ca-pub-1234567890123456"
+                      placeholder="ca-pub-1327306895336694"
                       className="flex-1 bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 text-xs font-mono focus:border-blue-500 focus:outline-none"
                     />
                     <button
@@ -1087,7 +1087,7 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
                     <button
                       type="button"
                       onClick={() => {
-                        const pubId = adsSettings.googleAdSense?.publisherId || 'ca-pub-1234567890123456';
+                        const pubId = adsSettings.googleAdSense?.publisherId || 'ca-pub-1327306895336694';
                         const officialTag = `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${pubId}" crossorigin="anonymous"></script>`;
                         navigator.clipboard.writeText(officialTag);
                         setCopiedAdSenseTag(true);
@@ -1122,7 +1122,7 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
                         }
                       })
                     }
-                    placeholder={`<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsSettings.googleAdSense?.publisherId || 'ca-pub-1234567890123456'}" crossorigin="anonymous"></script>`}
+                    placeholder={`<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsSettings.googleAdSense?.publisherId || 'ca-pub-1327306895336694'}" crossorigin="anonymous"></script>`}
                     className="w-full bg-slate-900 text-white p-2.5 rounded-xl border border-slate-800 font-mono text-[11px] focus:border-blue-500 focus:outline-none"
                   />
                   <div className="text-[10px] text-slate-500 mt-1">

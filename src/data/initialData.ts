@@ -312,9 +312,9 @@ export const INITIAL_ADS: Ad[] = [
     id: 'ad-2',
     name: 'Google AdSense Auto Responsive Banner',
     type: 'google_adsense',
-    publisherId: 'ca-pub-1234567890123456',
+    publisherId: 'ca-pub-1327306895336694',
     adUnitId: '9876543210',
-    adCode: '<div style="padding:15px; background:#f0fdf4; border:1px solid #bbf7d0; text-align:center; color:#166534; font-weight:600; border-radius:8px;">[ Google AdSense Responsive Display Unit - ca-pub-1234567890123456 ]</div>',
+    adCode: '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1327306895336694" data-ad-slot="9876543210" data-ad-format="auto" data-full-width-responsive="true"></ins>',
     desktopVisible: true,
     mobileVisible: true,
     isActive: true,
@@ -358,16 +358,16 @@ export const INITIAL_AD_PLACEMENTS: AdPlacement[] = [
 export const INITIAL_ADS_SETTINGS: AdsSettings = {
   googleAdSense: {
     enabled: true,
-    publisherId: 'ca-pub-1234567890123456',
+    publisherId: 'ca-pub-1327306895336694',
     autoAds: false,
     testMode: false
   },
   adsterra: {
     enabled: true
   },
-  adsTxt: `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
+  adsTxt: `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (https://naijatrendinfo.com.ng & https://www.naijatrendinfo.com.ng)
 # Google AdSense
-google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+google.com, pub-1327306895336694, DIRECT, f08c47fec0942fa0
 
 # Adsterra Network (Add official publisher records below)
 # adsterra.com, PUBLISHER_ID, DIRECT
@@ -387,7 +387,7 @@ export const INITIAL_SETTINGS: WebsiteSettings = {
   officeAddress: '14 Broad Street, Marina, Lagos State / Plot 502 Central Business District, Abuja, Nigeria',
   timeZone: 'Africa/Lagos (GMT+1)',
   language: 'English (NG)',
-  googleAdsensePubId: 'ca-pub-1234567890123456',
+  googleAdsensePubId: 'ca-pub-1327306895336694',
   adsterraSmartlinkUrl: 'https://adsterra.example.com/smartlink-naijatrendiinfo',
   analyticsId: 'G-NAIJA2026TREND',
   seoTitle: 'NaijaTrendiInfo – Latest Nigerian News, Sports, Entertainment & Trending Stories',

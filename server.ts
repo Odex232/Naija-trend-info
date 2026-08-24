@@ -711,7 +711,7 @@ async function startServer() {
     const settings = {
       googleAdSense: {
         enabled: db.settings?.googleAdSenseEnabled !== false,
-        publisherId: db.settings?.googleAdsensePubId || process.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-1234567890123456',
+        publisherId: db.settings?.googleAdsensePubId || process.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-1327306895336694',
         globalScript: db.settings?.googleAdSenseGlobalScript || '',
         autoAds: db.settings?.googleAdSenseAutoAds || false,
         testMode: db.settings?.googleAdSenseTestMode || false,
@@ -724,7 +724,7 @@ async function startServer() {
       },
       adsTxt: db.settings?.adsTxt || db.adsTxt || `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
 # Google AdSense
-google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+google.com, pub-1327306895336694, DIRECT, f08c47fec0942fa0
 
 # Adsterra Network
 # adsterra.com, DIRECT
@@ -2293,9 +2293,9 @@ function isBlockedFileType(filename: string): boolean {
       res.header('Content-Type', 'text/plain; charset=utf-8');
       return res.send(customAdsTxt);
     }
-    const defaultAdsTxt = `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (www.naijatrendinfo.com.ng)
+    const defaultAdsTxt = `# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (https://naijatrendinfo.com.ng & https://www.naijatrendinfo.com.ng)
 # Google AdSense
-google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
+google.com, pub-1327306895336694, DIRECT, f08c47fec0942fa0
 
 # Adsterra Network
 # adsterra.com, DIRECT
@@ -2402,10 +2402,18 @@ google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
         }
       }
 
-      // Dynamic Google AdSense Global Script Injection
+      // Dynamic Google AdSense Global Account Meta & Script Injection
       const adsenseEnabled = db.settings?.googleAdSenseEnabled !== false;
-      const adsensePubId = db.settings?.googleAdsensePubId || process.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-1234567890123456';
+      const adsensePubId = db.settings?.googleAdsensePubId || process.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-1327306895336694';
       const customAdsenseScript = db.settings?.googleAdSenseGlobalScript;
+
+      if (adsensePubId) {
+        if (html.includes('name="google-adsense-account"')) {
+          html = html.replace(/<meta name="google-adsense-account" content=".*?"\s*\/?>/i, `<meta name="google-adsense-account" content="${escapeXml(adsensePubId)}" />`);
+        } else {
+          html = html.replace('</head>', `  <meta name="google-adsense-account" content="${escapeXml(adsensePubId)}" />\n  </head>`);
+        }
+      }
 
       if (adsenseEnabled && !html.includes('adsbygoogle.js')) {
         let scriptHtml = '';

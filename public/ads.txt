@@ -1,0 +1,6 @@
+# Authorized Digital Sellers (ads.txt) for NaijaTrendiInfo (https://naijatrendinfo.com.ng & https://www.naijatrendinfo.com.ng)
+# Google AdSense
+google.com, pub-1327306895336694, DIRECT, f08c47fec0942fa0
+
+# Adsterra Network
+# adsterra.com, DIRECT

@@ -18,6 +18,7 @@ export interface SEOHeadProps {
   googleSiteVerification?: string;
   bingSiteVerification?: string;
   pinterestVerificationCode?: string;
+  googleAdsenseAccount?: string;
 }
 
 const PRODUCTION_ORIGIN = 'https://www.naijatrendinfo.com.ng';
@@ -39,7 +40,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   structuredData,
   googleSiteVerification,
   bingSiteVerification,
-  pinterestVerificationCode = '61e1ab291f2ad5fb3b64dd51934c2241'
+  pinterestVerificationCode = '61e1ab291f2ad5fb3b64dd51934c2241',
+  googleAdsenseAccount = 'ca-pub-1327306895336694'
 }) => {
   useEffect(() => {
     // 1. Dynamic Page Title
@@ -133,7 +135,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     setMetaTag('name', 'twitter:description', finalDesc);
     setMetaTag('name', 'twitter:image', finalImage);
 
-    // 8. Search Console & Webmaster Verification
+    // 8. Search Console, Monetization & Webmaster Verification
     if (googleSiteVerification) {
       setMetaTag('name', 'google-site-verification', googleSiteVerification);
     }
@@ -142,6 +144,9 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     }
     if (pinterestVerificationCode) {
       setMetaTag('name', 'p:domain_verify', pinterestVerificationCode);
+    }
+    if (googleAdsenseAccount) {
+      setMetaTag('name', 'google-adsense-account', googleAdsenseAccount);
     }
 
     // 9. Dynamic JSON-LD Structured Data Injection
@@ -227,7 +232,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     structuredData,
     googleSiteVerification,
     bingSiteVerification,
-    pinterestVerificationCode
+    pinterestVerificationCode,
+    googleAdsenseAccount
   ]);
 
   return null;
