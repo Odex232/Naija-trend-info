@@ -304,7 +304,7 @@
       "imageCredit": "",
       "galleryImages": [],
       "authorId": "usr-1",
-      "authorName": "Habbey Tech Solutions",
+      "authorName": "Ajayi Odunayo",
       "authorAvatar": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
       "status": "published",
       "isFeatured": true,
@@ -315,13 +315,7 @@
       "readTimeMinutes": 1,
       "publishedAt": "2026-08-23T10:20:10.117+00:00",
       "createdAt": "2026-08-23T10:20:11.752099+00:00",
-      "updatedAt": "2026-08-23T10:23:38.295+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-23T10:23:38.295+00:00"
     },
     {
       "id": "art-1787440246602",
@@ -348,13 +342,7 @@
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-22T23:10:46.593+00:00",
       "createdAt": "2026-08-22T23:10:48.253359+00:00",
-      "updatedAt": "2026-08-22T23:10:46.593+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-22T23:10:46.593+00:00"
     },
     {
       "id": "art-1787404162883",
@@ -381,13 +369,7 @@
       "readTimeMinutes": 1,
       "publishedAt": "2026-08-22T13:09:22.873+00:00",
       "createdAt": "2026-08-22T13:09:24.514987+00:00",
-      "updatedAt": "2026-08-22T13:09:22.873+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-22T13:09:22.873+00:00"
     },
     {
       "id": "art-1787403888976",
@@ -414,13 +396,7 @@
       "readTimeMinutes": 1,
       "publishedAt": "2026-08-22T13:04:48.928+00:00",
       "createdAt": "2026-08-22T13:04:59.840086+00:00",
-      "updatedAt": "2026-08-22T13:04:48.928+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-22T13:04:48.928+00:00"
     },
     {
       "id": "art-1787335362187",
@@ -447,13 +423,7 @@
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-21T18:02:42.168+00:00",
       "createdAt": "2026-08-21T18:02:43.902678+00:00",
-      "updatedAt": "2026-08-21T18:02:42.168+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-21T18:02:42.168+00:00"
     },
     {
       "id": "art-1787155003191",
@@ -470,7 +440,7 @@
       "galleryImages": [],
       "authorId": "usr-1",
       "authorName": "Habbey Tech Solutions",
-      "authorAvatar": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": true,
       "isPinned": false,
@@ -480,13 +450,7 @@
       "readTimeMinutes": 1,
       "publishedAt": "2026-08-19T15:56:43.179+00:00",
       "createdAt": "2026-08-21T10:00:49.684+00:00",
-      "updatedAt": "2026-08-21T10:00:49.684+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-21T10:00:49.684+00:00"
     },
     {
       "id": "art-1787123465216",
@@ -513,13 +477,7 @@
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-19T07:11:05.205+00:00",
       "createdAt": "2026-08-21T10:00:49.92+00:00",
-      "updatedAt": "2026-08-21T10:00:49.92+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-21T10:00:49.92+00:00"
     },
     {
       "id": "art-1787039631278",
@@ -546,13 +504,7 @@
       "readTimeMinutes": 2,
       "publishedAt": "2026-08-18T07:53:51.266+00:00",
       "createdAt": "2026-08-21T10:00:50.124+00:00",
-      "updatedAt": "2026-08-21T10:00:50.124+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-21T10:00:50.124+00:00"
     },
     {
       "id": "art-1",
@@ -587,13 +539,7 @@
       "readTimeMinutes": 4,
       "publishedAt": "2026-08-08T06:30:00+00:00",
       "createdAt": "2026-08-21T06:20:36.208+00:00",
-      "updatedAt": "2026-08-08T06:30:00+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-08T06:30:00+00:00"
     },
     {
       "id": "art-2",
@@ -626,13 +572,7 @@
       "readTimeMinutes": 3,
       "publishedAt": "2026-08-08T05:00:00+00:00",
       "createdAt": "2026-08-21T06:20:36.208+00:00",
-      "updatedAt": "2026-08-08T05:00:00+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-08T05:00:00+00:00"
     },
     {
       "id": "art-3",
@@ -666,13 +606,7 @@
       "readTimeMinutes": 5,
       "publishedAt": "2026-08-07T18:45:00+00:00",
       "createdAt": "2026-08-21T06:20:36.208+00:00",
-      "updatedAt": "2026-08-07T18:45:00+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-07T18:45:00+00:00"
     },
     {
       "id": "art-4",
@@ -706,13 +640,7 @@
       "readTimeMinutes": 3,
       "publishedAt": "2026-08-07T14:20:00+00:00",
       "createdAt": "2026-08-21T06:20:36.208+00:00",
-      "updatedAt": "2026-08-07T14:20:00+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-07T14:20:00+00:00"
     },
     {
       "id": "art-5",
@@ -734,8 +662,8 @@
       "imageCredit": "Entertainment Desk",
       "galleryImages": [],
       "authorId": "usr-1",
-      "authorName": "Habbey Tech Solutions",
-      "authorAvatar": "https://c.ndtvimg.com/2026-08/1ot7gvc4_ai-bar_625x300_17_August_26.png?im=FitAndFill,algorithm=dnn,width=400,height=225&q=70",
+      "authorName": "Chidubem Okechukwu",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
       "status": "published",
       "isFeatured": false,
       "isPinned": false,
@@ -745,13 +673,7 @@
       "readTimeMinutes": 3,
       "publishedAt": "2026-08-07T11:10:00+00:00",
       "createdAt": "2026-08-21T06:20:36.208+00:00",
-      "updatedAt": "2026-08-07T11:10:00+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-07T11:10:00+00:00"
     },
     {
       "id": "art-6",
@@ -784,13 +706,7 @@
       "readTimeMinutes": 4,
       "publishedAt": "2026-08-06T16:00:00+00:00",
       "createdAt": "2026-08-21T06:20:36.208+00:00",
-      "updatedAt": "2026-08-06T16:00:00+00:00",
-      "videoUrl": "",
-      "videoCaption": "",
-      "videoType": "none",
-      "videoPlacement": "hero",
-      "isVideoArticle": false,
-      "videoDuration": ""
+      "updatedAt": "2026-08-06T16:00:00+00:00"
     }
   ],
   "sportsFixtures": [],

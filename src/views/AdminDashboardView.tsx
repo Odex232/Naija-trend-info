@@ -173,6 +173,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
   const [articleModalOpen, setArticleModalOpen] = useState(false);
 
+  // Article CMS Filter & Batch Deletion States
+  const [articleSearchQuery, setArticleSearchQuery] = useState('');
+  const [articleCategoryFilter, setArticleCategoryFilter] = useState('all');
+  const [articleStatusFilter, setArticleStatusFilter] = useState('all');
+  const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
   // Category Modal State
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
 
@@ -582,7 +589,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     const articleTitle = title ? ` "${title}"` : '';
     askConfirmation(
       'Delete Article',
-      `Are you sure you want to permanently delete article${articleTitle}? This action cannot be undone.`,
+      `Are you sure you want to permanently delete article${articleTitle}? This action will permanently remove it from the website and cannot be undone.`,
       async () => {
         setDeletingId(id);
         try {
@@ -591,7 +598,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             setArticleModalOpen(false);
             setEditingArticle(null);
           }
-          triggerSuccessNotification(res.message || 'Article deleted successfully');
+          setSelectedArticleIds((prev) => prev.filter((item) => item !== id));
+          triggerSuccessNotification(res.message || 'Article permanently deleted successfully');
           onRefreshData();
         } catch (e: any) {
           console.error('Delete article failed:', e);
@@ -601,6 +609,33 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         }
       },
       { confirmLabel: 'Delete Article', isDanger: true }
+    );
+  };
+
+  // Batch Delete Selected Articles
+  const handleBatchDeleteArticles = () => {
+    if (selectedArticleIds.length === 0) return;
+    askConfirmation(
+      'Batch Delete Articles',
+      `Are you sure you want to permanently delete all ${selectedArticleIds.length} selected articles? This action cannot be undone.`,
+      async () => {
+        setBatchDeleting(true);
+        try {
+          let count = 0;
+          for (const id of selectedArticleIds) {
+            await api.deleteArticle(id);
+            count++;
+          }
+          setSelectedArticleIds([]);
+          triggerSuccessNotification(`Successfully deleted ${count} articles.`);
+          onRefreshData();
+        } catch (e: any) {
+          triggerErrorNotification(e.message || 'Failed to delete some articles.');
+        } finally {
+          setBatchDeleting(false);
+        }
+      },
+      { confirmLabel: `Delete ${selectedArticleIds.length} Articles`, isDanger: true }
     );
   };
 
@@ -1744,24 +1779,37 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               {/* Recent Activity & Recent Articles */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                  <h3 className="font-bold text-sm text-white flex items-center space-x-2">
-                    <FileText className="w-4 h-4 text-emerald-400" />
-                    <span>Recent Editorial Content</span>
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-emerald-400" />
+                      <span>Recent Editorial Content ({articles.length} Total Articles)</span>
+                    </h3>
+                    <button
+                      onClick={() => setActiveTab('articles')}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 font-bold hover:underline cursor-pointer flex items-center space-x-1"
+                    >
+                      <span>Manage All {articles.length} Articles</span>
+                      <span>→</span>
+                    </button>
+                  </div>
 
                   <div className="divide-y divide-slate-800">
-                    {articles.slice(0, 5).map((art) => (
-                      <div key={art.id} className="py-3 flex items-center justify-between text-xs">
-                        <div>
-                          <div className="font-bold text-white hover:text-emerald-400 cursor-pointer" onClick={() => onNavigateSite('article', art.slug)}>
+                    {articles.slice(0, 6).map((art) => (
+                      <div key={art.id} className="py-3 flex items-center justify-between text-xs gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-white hover:text-emerald-400 cursor-pointer truncate" onClick={() => onNavigateSite('article', art.slug)}>
                             {art.title}
                           </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            {art.categoryName} • {art.authorName} • {art.views} views
+                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-2">
+                            <span className="text-emerald-400 font-medium">{art.categoryName}</span>
+                            <span>•</span>
+                            <span>{art.authorName}</span>
+                            <span>•</span>
+                            <span className="font-mono">{art.views.toLocaleString()} views</span>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${art.status === 'published' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
+                        <div className="flex items-center space-x-2 shrink-0">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${art.status === 'published' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700/50' : 'bg-slate-800 text-slate-400'}`}>
                             {art.status}
                           </span>
                           <button
@@ -1770,10 +1818,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               setEditingArticle(art);
                               setArticleModalOpen(true);
                             }}
-                            className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer flex items-center space-x-1 border border-slate-700"
                             title="Edit Article"
                           >
-                            <Edit className="w-3.5 h-3.5" />
+                            <Edit className="w-3 h-3 text-emerald-400" />
+                            <span className="text-[11px] font-semibold">Edit</span>
                           </button>
                           <button
                             disabled={deletingId === art.id}
@@ -1781,10 +1830,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               e.stopPropagation();
                               handleDeleteArticle(art.id, art.title);
                             }}
-                            className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 rounded-lg transition-colors cursor-pointer border border-red-800/50 disabled:opacity-50"
-                            title="Delete Article"
+                            className="px-2.5 py-1 bg-red-950/80 hover:bg-red-600 text-red-300 hover:text-white rounded-lg transition-colors cursor-pointer border border-red-800/60 hover:border-red-500 disabled:opacity-50 flex items-center space-x-1 font-bold"
+                            title={`Delete ${art.title}`}
                           >
-                            {deletingId === art.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            {deletingId === art.id ? <Loader2 className="w-3 h-3 animate-spin text-red-300" /> : <Trash2 className="w-3 h-3 text-red-400" />}
+                            <span className="text-[11px]">Delete</span>
                           </button>
                         </div>
                       </div>
@@ -1831,94 +1881,369 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           )}
 
           {/* TAB 2: ARTICLES CMS */}
-          {activeTab === 'articles' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold font-serif text-white">Articles CMS</h1>
-                  <p className="text-xs text-slate-400 mt-1">Create, edit, schedule, publish, or delete news articles.</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setEditingArticle({ title: '', content: '', summary: '', categoryId: categories[0]?.id });
-                    setArticleModalOpen(true);
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create Article</span>
-                </button>
-              </div>
+          {activeTab === 'articles' && (() => {
+            const filteredArticles = articles.filter((art) => {
+              const q = articleSearchQuery.toLowerCase().trim();
+              const matchesSearch =
+                !q ||
+                art.title.toLowerCase().includes(q) ||
+                (art.categoryName || '').toLowerCase().includes(q) ||
+                (art.authorName || '').toLowerCase().includes(q) ||
+                (art.summary || '').toLowerCase().includes(q) ||
+                (art.slug || '').toLowerCase().includes(q);
+              const matchesCat = articleCategoryFilter === 'all' || art.categoryId === articleCategoryFilter;
+              const matchesStatus = articleStatusFilter === 'all' || art.status === articleStatusFilter;
+              return matchesSearch && matchesCat && matchesStatus;
+            });
 
-              {/* Articles Table */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-                    <tr>
-                      <th className="p-4">Title & Category</th>
-                      <th className="p-4">Author</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Flags</th>
-                      <th className="p-4">Views</th>
-                      <th className="p-4">Date</th>
-                      <th className="p-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {articles.map((art) => (
-                      <tr key={art.id} className="hover:bg-slate-800/50">
-                        <td className="p-4">
-                          <div className="font-bold text-white hover:text-emerald-400 cursor-pointer" onClick={() => onNavigateSite('article', art.slug)}>
-                            {art.title}
-                          </div>
-                          <div className="text-[11px] text-emerald-400 mt-0.5">{art.categoryName}</div>
-                        </td>
-                        <td className="p-4 text-slate-300 font-medium">{art.authorName}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${art.status === 'published' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
-                            {art.status}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex gap-1">
-                            {art.isFeatured && <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[9px] font-bold">Featured</span>}
-                            {art.isPinned && <span className="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[9px] font-bold">Pinned</span>}
-                            {art.isBreaking && <span className="bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded text-[9px] font-bold">Breaking</span>}
-                          </div>
-                        </td>
-                        <td className="p-4 font-mono">{art.views.toLocaleString()}</td>
-                        <td className="p-4 text-slate-400">{new Date(art.publishedAt).toLocaleDateString()}</td>
-                        <td className="p-4 text-right space-x-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingArticle(art);
-                              setArticleModalOpen(true);
-                            }}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors cursor-pointer"
-                            title="Edit Article"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            disabled={deletingId === art.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteArticle(art.id, art.title);
-                            }}
-                            className="p-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                            title="Delete Article"
-                          >
-                            {deletingId === art.id ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            const allSelected = filteredArticles.length > 0 && filteredArticles.every((a) => selectedArticleIds.includes(a.id));
+
+            return (
+              <div className="space-y-6">
+                {/* Header & Main Stats Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                  <div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <Newspaper className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-bold font-serif text-white">Articles CMS & Publication Manager</h1>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Manage, edit, publish, or permanently delete news stories across NaijaTrendiInfo.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-center">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total Live Articles</div>
+                      <div className="text-lg font-extrabold text-emerald-400 font-mono">{articles.length} Published</div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setEditingArticle({ title: '', content: '', summary: '', categoryId: categories[0]?.id });
+                        setArticleModalOpen(true);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow-md cursor-pointer transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create New Article</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search, Filters, and Batch Actions Toolbar */}
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+                    {/* Search Bar */}
+                    <div className="relative w-full md:w-80">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder={`Search all ${articles.length} articles...`}
+                        value={articleSearchQuery}
+                        onChange={(e) => setArticleSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 text-white text-xs pl-9 pr-8 py-2 rounded-xl border border-slate-800 focus:outline-hidden focus:border-emerald-500"
+                      />
+                      {articleSearchQuery && (
+                        <button
+                          onClick={() => setArticleSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter Pills / Dropdowns */}
+                    <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+                      <select
+                        value={articleCategoryFilter}
+                        onChange={(e) => setArticleCategoryFilter(e.target.value)}
+                        className="bg-slate-950 text-slate-300 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:outline-hidden focus:border-emerald-500"
+                      >
+                        <option value="all">All Categories ({categories.length})</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({articles.filter((a) => a.categoryId === c.id).length})
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={articleStatusFilter}
+                        onChange={(e) => setArticleStatusFilter(e.target.value)}
+                        className="bg-slate-950 text-slate-300 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:outline-hidden focus:border-emerald-500"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="published">Published ({articles.filter((a) => a.status === 'published').length})</option>
+                        <option value="draft">Drafts ({articles.filter((a) => a.status === 'draft').length})</option>
+                      </select>
+
+                      {(articleSearchQuery || articleCategoryFilter !== 'all' || articleStatusFilter !== 'all') && (
+                        <button
+                          onClick={() => {
+                            setArticleSearchQuery('');
+                            setArticleCategoryFilter('all');
+                            setArticleStatusFilter('all');
+                          }}
+                          className="text-xs text-slate-400 hover:text-white px-2 py-1.5 hover:underline cursor-pointer"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Batch Actions Bar (visible when articles selected) */}
+                  {selectedArticleIds.length > 0 && (
+                    <div className="bg-red-950/40 border border-red-800/80 rounded-xl p-3 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400 animate-ping"></span>
+                        <span className="text-xs font-bold text-red-200">
+                          {selectedArticleIds.length} of {articles.length} articles selected
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setSelectedArticleIds([])}
+                          className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-800"
+                        >
+                          Deselect All
+                        </button>
+                        <button
+                          disabled={batchDeleting}
+                          onClick={handleBatchDeleteArticles}
+                          className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg flex items-center space-x-1.5 shadow-md cursor-pointer disabled:opacity-50 transition-colors"
+                        >
+                          {batchDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          <span>Delete Selected ({selectedArticleIds.length})</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Articles Table with Dedicated Delete Button for Each Article */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span className="font-semibold">
+                      Displaying <strong className="text-white">{filteredArticles.length}</strong> of{' '}
+                      <strong className="text-emerald-400">{articles.length}</strong> total published articles
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Each article is equipped with instant Edit & Delete action buttons
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                        <tr>
+                          <th className="p-4 w-10">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedArticleIds(filteredArticles.map((a) => a.id));
+                                } else {
+                                  setSelectedArticleIds([]);
+                                }
+                              }}
+                              className="rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                              title="Select / Deselect All Articles"
+                            />
+                          </th>
+                          <th className="p-4">Article Title & Category</th>
+                          <th className="p-4">Author</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4">Flags</th>
+                          <th className="p-4">Views</th>
+                          <th className="p-4">Date</th>
+                          <th className="p-4 text-right">Delete & Edit Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {filteredArticles.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="p-8 text-center text-slate-500">
+                              <AlertCircle className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+                              <p className="font-bold text-slate-400">No articles match your search or filter.</p>
+                              <button
+                                onClick={() => {
+                                  setArticleSearchQuery('');
+                                  setArticleCategoryFilter('all');
+                                  setArticleStatusFilter('all');
+                                }}
+                                className="mt-2 text-xs text-emerald-400 hover:underline"
+                              >
+                                Reset all filters
+                              </button>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredArticles.map((art, idx) => {
+                            const isSelected = selectedArticleIds.includes(art.id);
+                            return (
+                              <tr
+                                key={art.id}
+                                className={`hover:bg-slate-800/60 transition-colors ${isSelected ? 'bg-emerald-950/20' : ''}`}
+                              >
+                                {/* Selection Checkbox */}
+                                <td className="p-4">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedArticleIds((prev) => [...prev, art.id]);
+                                      } else {
+                                        setSelectedArticleIds((prev) => prev.filter((id) => id !== art.id));
+                                      }
+                                    }}
+                                    className="rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                  />
+                                </td>
+
+                                {/* Title & Category */}
+                                <td className="p-4">
+                                  <div className="flex items-start space-x-3">
+                                    <span className="text-[11px] font-mono text-slate-500 font-bold w-4 shrink-0 mt-0.5">
+                                      {idx + 1}.
+                                    </span>
+                                    <div>
+                                      <div
+                                        className="font-bold text-white hover:text-emerald-400 cursor-pointer line-clamp-2 leading-snug"
+                                        onClick={() => onNavigateSite('article', art.slug)}
+                                        title={art.title}
+                                      >
+                                        {art.title}
+                                      </div>
+                                      <div className="flex items-center space-x-2 mt-1">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                                          {art.categoryName || 'General'}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 font-mono truncate max-w-xs">
+                                          ID: {art.id}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Author */}
+                                <td className="p-4 text-slate-300 font-medium whitespace-nowrap">
+                                  {art.authorName || 'Habbey Tech'}
+                                </td>
+
+                                {/* Status */}
+                                <td className="p-4 whitespace-nowrap">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                      art.status === 'published'
+                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                    }`}
+                                  >
+                                    {art.status}
+                                  </span>
+                                </td>
+
+                                {/* Flags */}
+                                <td className="p-4 whitespace-nowrap">
+                                  <div className="flex gap-1 flex-wrap">
+                                    {art.isFeatured && (
+                                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                        Featured
+                                      </span>
+                                    )}
+                                    {art.isPinned && (
+                                      <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                        Pinned
+                                      </span>
+                                    )}
+                                    {art.isBreaking && (
+                                      <span className="bg-red-500/20 text-red-300 border border-red-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                        Breaking
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Views */}
+                                <td className="p-4 font-mono font-bold text-slate-200 whitespace-nowrap">
+                                  {art.views.toLocaleString()}
+                                </td>
+
+                                {/* Date */}
+                                <td className="p-4 text-slate-400 whitespace-nowrap font-mono text-[11px]">
+                                  {new Date(art.publishedAt).toLocaleDateString()}
+                                </td>
+
+                                {/* DEDICATED ACTION BUTTONS: DELETE & EDIT FOR EACH ARTICLE */}
+                                <td className="p-4 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end space-x-2">
+                                    {/* Edit Button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingArticle(art);
+                                        setArticleModalOpen(true);
+                                      }}
+                                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition-colors cursor-pointer border border-slate-700 flex items-center space-x-1 font-semibold text-xs shadow-xs"
+                                      title={`Edit ${art.title}`}
+                                    >
+                                      <Edit className="w-3.5 h-3.5 text-emerald-400" />
+                                      <span>Edit</span>
+                                    </button>
+
+                                    {/* Dedicated Red Delete Button */}
+                                    <button
+                                      disabled={deletingId === art.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteArticle(art.id, art.title);
+                                      }}
+                                      className="px-3 py-1.5 bg-red-950/90 hover:bg-red-600 text-red-200 hover:text-white border border-red-800/90 hover:border-red-500 rounded-lg transition-all cursor-pointer disabled:opacity-50 flex items-center space-x-1.5 font-bold text-xs shadow-md group"
+                                      title={`Permanently delete article: ${art.title}`}
+                                    >
+                                      {deletingId === art.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-300" />
+                                      ) : (
+                                        <Trash2 className="w-3.5 h-3.5 text-red-400 group-hover:text-white transition-colors" />
+                                      )}
+                                      <span>Delete</span>
+                                    </button>
+
+                                    {/* View Live Article Button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNavigateSite('article', art.slug);
+                                      }}
+                                      className="p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-emerald-300 rounded-lg transition-colors cursor-pointer border border-slate-700"
+                                      title="Preview Live Story on Website"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 3: BREAKING NEWS */}
           {activeTab === 'breaking' && (

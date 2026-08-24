@@ -2082,8 +2082,8 @@ export const dbAdapter = {
         }
 
         // Hydrate from Supabase tables & document store
-        const [articlesRes, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes, adsDocRes, placementsDocRes, mediaDocRes] = await Promise.allSettled([
-          client.from('articles').select('*').order('published_at', { ascending: false }),
+        const [fetchedArticles, categoriesRes, breakingRes, settingsRes, sportsRes, usersDocRes, editorialDocRes, adsDocRes, placementsDocRes, mediaDocRes] = await Promise.allSettled([
+          dbAdapter.getArticles(),
           client.from('categories').select('*').order('display_order', { ascending: true }),
           client.from('breaking_news').select('*').order('created_at', { ascending: false }),
           client.from('site_settings').select('data').eq('id', 'default').single(),
@@ -2095,48 +2095,8 @@ export const dbAdapter = {
           client.from('supabase_document_store').select('data').eq('key', 'mediaFiles').maybeSingle()
         ]);
 
-        if (articlesRes.status === 'fulfilled' && articlesRes.value.data && articlesRes.value.data.length > 0) {
-          const activeIds = new Set(articlesRes.value.data.map((r: any) => r.id));
-          const activeSlugs = new Set(articlesRes.value.data.map((r: any) => r.slug));
-          const cleanedDel = Array.from(deletedSet).filter((x) => !activeIds.has(x) && !activeSlugs.has(x));
-          if (cleanedDel.length !== deletedSet.size) {
-            db.deletedArticles = cleanedDel;
-            client.from('supabase_document_store').upsert({
-              key: 'deletedArticles',
-              data: cleanedDel,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'key' }).then(() => {}, () => {});
-          }
-
-          db.articles = articlesRes.value.data
-            .filter((row: any) => !cleanedDel.includes(row.id) && !cleanedDel.includes(row.slug))
-            .map((row: any) => ({
-              id: row.id,
-              title: row.title,
-              slug: row.slug,
-              summary: row.summary,
-              content: row.content,
-              categoryId: row.category_id,
-              categoryName: row.category_name,
-              tags: row.tags || [],
-              featuredImage: row.featured_image,
-              imageCaption: row.image_caption,
-              imageCredit: row.image_credit,
-              galleryImages: row.gallery_images || [],
-              authorId: row.author_id,
-              authorName: row.author_name || 'Habbey Tech Solutions',
-              authorAvatar: row.author_avatar,
-              status: row.status,
-              isFeatured: row.is_featured,
-              isPinned: row.is_pinned,
-              isBreaking: row.is_breaking,
-              isEditorPick: row.is_editor_pick,
-              views: row.views || 0,
-              readTimeMinutes: row.read_time_minutes || 3,
-              publishedAt: row.published_at,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at
-            }));
+        if (fetchedArticles.status === 'fulfilled' && Array.isArray(fetchedArticles.value) && fetchedArticles.value.length > 0) {
+          db.articles = fetchedArticles.value;
         }
 
         if (categoriesRes.status === 'fulfilled' && categoriesRes.value.data && categoriesRes.value.data.length > 0) {

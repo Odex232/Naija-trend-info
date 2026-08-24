@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Article, Category, BreakingNews, Ad, AdPlacement, SportsFixture, WebsiteSettings } from '../types';
 import { ArticleCard } from '../components/ArticleCard';
 import { AdDisplay } from '../components/AdDisplay';
 import { SportsSection } from '../components/SportsSection';
 import { PublicMediaDownloadsSection } from '../components/PublicMediaDownloadsSection';
 import { SEOHead } from '../components/SEOHead';
-import { Flame, Star, TrendingUp, Sparkles, ChevronRight, Newspaper, Radio, Globe, Shield, Landmark } from 'lucide-react';
+import { Flame, Star, TrendingUp, Sparkles, ChevronRight, Newspaper, Radio, Globe, Shield, Landmark, Layers } from 'lucide-react';
 
 interface HomeViewProps {
   articles: Article[];
@@ -30,18 +30,59 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onSelectArticle,
   onNavigate
 }) => {
+  const [streamFilter, setStreamFilter] = useState<string>('all');
+
   const publishedArticles = (articles || []).filter((a) => a?.status === 'published');
 
   const leadStory = publishedArticles.find((a) => a?.isFeatured && a?.isPinned) || publishedArticles[0];
-  const subHeroStories = publishedArticles.filter((a) => a?.id !== leadStory?.id && a?.isFeatured).slice(0, 4);
+  const otherStories = publishedArticles.filter((a) => a?.id !== leadStory?.id);
+  
+  // Fill up to 4 sub-hero cards prioritizing featured, then recent
+  const subHeroStories = [
+    ...otherStories.filter((a) => a?.isFeatured),
+    ...otherStories.filter((a) => !a?.isFeatured)
+  ].slice(0, 4);
 
   const editorPicks = publishedArticles.filter((a) => a?.isEditorPick).slice(0, 5);
   const trendingStories = [...publishedArticles].sort((a, b) => (b?.views || 0) - (a?.views || 0)).slice(0, 5);
-  const sportsArticles = publishedArticles.filter((a) => a?.categoryId === 'cat-9' || a?.categoryId === 'cat-10').slice(0, 3);
+  
+  // Dynamic category groupings matching by ID, slug, or name keywords
+  const sportsArticles = publishedArticles.filter((a) => 
+    a?.categoryId === 'cat-9' || 
+    a?.categoryId === 'cat-10' || 
+    a?.categoryName?.toLowerCase().includes('sport') || 
+    a?.categoryName?.toLowerCase().includes('football')
+  ).slice(0, 3);
 
-  const politicsArticles = publishedArticles.filter((a) => a?.categoryId === 'cat-2').slice(0, 4);
-  const metroArticles = publishedArticles.filter((a) => a?.categoryId === 'cat-3').slice(0, 4);
-  const businessArticles = publishedArticles.filter((a) => a?.categoryId === 'cat-4' || a?.categoryId === 'cat-5').slice(0, 4);
+  const politicsArticles = publishedArticles.filter((a) => 
+    a?.categoryId === 'cat-2' || 
+    a?.categoryName?.toLowerCase().includes('politic') || 
+    a?.categoryName?.toLowerCase().includes('govern') || 
+    a?.categoryName?.toLowerCase().includes('osun') ||
+    a?.categoryName?.toLowerCase().includes('election')
+  ).slice(0, 4);
+
+  const businessArticles = publishedArticles.filter((a) => 
+    a?.categoryId === 'cat-4' || 
+    a?.categoryId === 'cat-5' || 
+    a?.categoryName?.toLowerCase().includes('business') || 
+    a?.categoryName?.toLowerCase().includes('econom') || 
+    a?.categoryName?.toLowerCase().includes('wealth') || 
+    a?.categoryName?.toLowerCase().includes('money')
+  ).slice(0, 4);
+
+  // Filter for the comprehensive news stream
+  const filteredStreamArticles = streamFilter === 'all' 
+    ? publishedArticles 
+    : publishedArticles.filter((a) => {
+        const cat = (a.categoryName || '').toLowerCase();
+        return cat.includes(streamFilter.toLowerCase()) || a.categoryId === streamFilter;
+      });
+
+  // Extract unique category names present in published articles for quick filters
+  const availableCategories = Array.from(
+    new Set(publishedArticles.map((a) => a.categoryName).filter(Boolean))
+  );
 
   return (
     <div className="space-y-10 py-6">
@@ -71,7 +112,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
           <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400">
             <span className="w-2 h-2 rounded-full bg-[#00B87C] animate-ping"></span>
-            <span>Live Nigerian Newsroom</span>
+            <span>{publishedArticles.length} Live Nigerian Stories</span>
           </div>
         </div>
 
@@ -103,27 +144,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* Left Feed Column (8 cols) */}
           <div className="lg:col-span-8 space-y-10">
             {/* Category Block 1: Politics & National Governance */}
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-6">
-                <h3 className="text-lg font-bold font-serif text-white uppercase tracking-wider flex items-center space-x-2.5">
-                  <span className="w-3.5 h-3.5 bg-[#00B87C] rounded-sm flex items-center justify-center text-[9px] text-slate-950 font-black">★</span>
-                  <span>Politics & Governance</span>
-                </h3>
-                <button
-                  onClick={() => onNavigate('category', 'politics')}
-                  className="text-xs font-bold text-[#00B87C] hover:text-emerald-300 hover:underline flex items-center space-x-1 cursor-pointer"
-                >
-                  <span>See All Politics</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+            {politicsArticles.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-6">
+                  <h3 className="text-lg font-bold font-serif text-white uppercase tracking-wider flex items-center space-x-2.5">
+                    <span className="w-3.5 h-3.5 bg-[#00B87C] rounded-sm flex items-center justify-center text-[9px] text-slate-950 font-black">★</span>
+                    <span>Politics & Governance</span>
+                  </h3>
+                  <button
+                    onClick={() => onNavigate('category', 'politics')}
+                    className="text-xs font-bold text-[#00B87C] hover:text-emerald-300 hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    <span>See All Politics</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {politicsArticles.map((art) => (
-                  <ArticleCard key={art.id} article={art} onSelect={onSelectArticle} variant="grid" />
-                ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {politicsArticles.map((art) => (
+                    <ArticleCard key={art.id} article={art} onSelect={onSelectArticle} variant="grid" />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* In-Feed Ad Placement */}
             <AdDisplay position="Between Articles" placements={adPlacements} ads={ads} />
@@ -137,39 +180,76 @@ export const HomeView: React.FC<HomeViewProps> = ({
             />
 
             {/* Category Block 2: Business, Economy & Markets */}
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-6">
-                <h3 className="text-lg font-bold font-serif text-white uppercase tracking-wider flex items-center space-x-2.5">
-                  <span className="w-3.5 h-3.5 bg-[#F5B942] rounded-sm flex items-center justify-center text-[9px] text-slate-950 font-black">₦</span>
-                  <span>Business, Economy & Markets</span>
-                </h3>
-                <button
-                  onClick={() => onNavigate('category', 'business')}
-                  className="text-xs font-bold text-[#F5B942] hover:text-amber-300 hover:underline flex items-center space-x-1 cursor-pointer"
-                >
-                  <span>See All Business</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+            {businessArticles.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-6">
+                  <h3 className="text-lg font-bold font-serif text-white uppercase tracking-wider flex items-center space-x-2.5">
+                    <span className="w-3.5 h-3.5 bg-[#F5B942] rounded-sm flex items-center justify-center text-[9px] text-slate-950 font-black">₦</span>
+                    <span>Business, Economy & Markets</span>
+                  </h3>
+                  <button
+                    onClick={() => onNavigate('category', 'business')}
+                    className="text-xs font-bold text-[#F5B942] hover:text-amber-300 hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    <span>See All Business</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {businessArticles.map((art) => (
+                    <ArticleCard key={art.id} article={art} onSelect={onSelectArticle} variant="grid" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* COMPREHENSIVE LATEST NEWS FEED STREAM (All 14 Published Articles) */}
+            <div className="bg-[#0A1628]/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3 mb-6">
+                <div>
+                  <div className="flex items-center space-x-2.5">
+                    <Newspaper className="w-5 h-5 text-[#00B87C]" />
+                    <h3 className="text-lg font-bold font-serif text-white uppercase tracking-wider">
+                      All Published Stories & News Stream
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Showing {filteredStreamArticles.length} of {publishedArticles.length} total published articles on NaijaTrendiInfo
+                  </p>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => setStreamFilter('all')}
+                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      streamFilter === 'all'
+                        ? 'bg-[#00B87C] text-slate-950 shadow-md font-extrabold'
+                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    All ({publishedArticles.length})
+                  </button>
+                  {availableCategories.slice(0, 5).map((catName) => (
+                    <button
+                      key={catName}
+                      onClick={() => setStreamFilter(catName)}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                        streamFilter === catName
+                          ? 'bg-[#00B87C] text-slate-950 shadow-md font-extrabold'
+                          : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {catName}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {businessArticles.map((art) => (
-                  <ArticleCard key={art.id} article={art} onSelect={onSelectArticle} variant="grid" />
-                ))}
-              </div>
-            </div>
-
-            {/* Latest News Feed Stream */}
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-6">
-                <h3 className="text-lg font-bold font-serif text-white uppercase tracking-wider flex items-center space-x-2.5">
-                  <Newspaper className="w-5 h-5 text-[#00B87C]" />
-                  <span>Latest News Stream</span>
-                </h3>
-              </div>
-
+              {/* Complete Article Stream Grid/List */}
               <div className="space-y-4">
-                {publishedArticles.slice(0, 6).map((art) => (
+                {filteredStreamArticles.map((art) => (
                   <ArticleCard key={art.id} article={art} onSelect={onSelectArticle} variant="horizontal" />
                 ))}
               </div>
