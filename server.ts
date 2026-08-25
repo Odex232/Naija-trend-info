@@ -2304,6 +2304,23 @@ google.com, pub-1327306895336694, DIRECT, f08c47fec0942fa0
     res.send(defaultAdsTxt);
   });
 
+  // SEO: Pinterest HTML File Verification
+  app.get(['/pinterest-:token.html', '/pinterest-site-verification.html', '/pinterest-site-verification.txt'], (req, res) => {
+    const code = db.settings?.pinterestVerificationCode || '61e1ab291f2ad5fb3b64dd51934c2241';
+    res.header('Content-Type', 'text/html; charset=utf-8');
+    res.header('Cache-Control', 'public, max-age=86400');
+    res.send(`<!DOCTYPE html>
+<html>
+<head>
+    <meta name="p:domain_verify" content="${escapeXml(code)}"/>
+    <title>Pinterest Domain Verification</title>
+</head>
+<body>
+pinterest-site-verification=${escapeXml(code)}
+</body>
+</html>`);
+  });
+
   // SEO: Robots.txt
   app.get('/robots.txt', (req, res) => {
     const allowIndexing = db.settings?.allowIndexing !== false;

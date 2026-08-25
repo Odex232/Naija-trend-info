@@ -875,7 +875,7 @@
     "defaultOgImage": "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=1200",
     "seoDescription": "Nigeria’s premier digital news and media platform providing breaking news, politics, business, sports, entertainment, tech, and investigative reporting.",
     "siteDescription": "Nigeria’s premier digital platform for breaking news, political analysis, business insights, sports, entertainment, and investigative reporting.",
-    "googleAdsensePubId": "ca-pub-1234567890123456",
+    "googleAdsensePubId": "ca-pub-1327306895336694",
     "adsterraSmartlinkUrl": "https://adsterra.example.com/smartlink-naijatrendiinfo",
     "editorialCorrespondent": {
       "bio": "Veteran newsroom correspondent and investigative journalist covering national breaking news, politics, and governance.",
@@ -2304,6 +2304,8 @@
     "ad-1787490072386",
     "ad-1787491379062",
     "ad-1787491264724",
-    "ad-1787523635521"
+    "ad-1787523635521",
+    "ad-1787575625585",
+    "ad-1787574238061"
   ]
 }
